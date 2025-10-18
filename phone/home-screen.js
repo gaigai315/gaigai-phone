@@ -8,12 +8,16 @@ export class HomeScreen {
     }
     
    render() {
-    // ✅ 获取自定义壁纸
-    const imageManager = new (window.ImageUploadManager || class {
-        getWallpaper() { return null; }
-    })(window.VirtualPhone?.storage);
+    // ✅ 获取自定义壁纸 - 修复版
+    let customWallpaper = null;
+    try {
+        if (window.VirtualPhone?.imageManager) {
+            customWallpaper = window.VirtualPhone.imageManager.getWallpaper();
+        }
+    } catch (e) {
+        console.warn('获取壁纸失败:', e);
+    }
     
-    const customWallpaper = imageManager.getWallpaper();
     const wallpaperStyle = customWallpaper 
         ? `background-image: url('${customWallpaper}'); background-size: cover; background-position: center;`
         : `background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);`;
