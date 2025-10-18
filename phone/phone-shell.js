@@ -39,7 +39,7 @@ export class PhoneShell {
                 
                 <div class="phone-panel-buttons">
                     <button class="phone-panel-btn" id="phone-panel-home" title="返回主页">🏠 主页</button>
-                    <button class="phone-panel-btn" id="phone-panel-power" title="锁屏">🔒 锁屏</button>
+                    <button class="phone-panel-btn" id="phone-panel-power" title="锁屏并关闭">🔒 锁屏</button>
                 </div>
             </div>
         `;
@@ -53,48 +53,62 @@ export class PhoneShell {
         return this.container;
     }
     
- bindPanelEvents() {
-    const homeBtn = document.getElementById('phone-panel-home');
-    const powerBtn = document.getElementById('phone-panel-power');
-    
-    // 返回主页
-    if (homeBtn) {
-        homeBtn.addEventListener('click', () => {
-            this.goHome();
-        });
-    }
-    
-    // 锁屏 - 模拟点击顶部图标
-    if (powerBtn) {
-        powerBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // 方案1：直接触发图标点击
-            const icon = document.getElementById('phoneDrawerIcon');
-            if (icon) {
-                console.log('🔒 触发图标点击关闭');
-                icon.click();
-                return;
-            }
-            
-            // 方案2：手动操作DOM
-            const panel = document.getElementById('phone-panel');
-            if (panel && panel.classList.contains('openDrawer')) {
-                panel.classList.remove('openDrawer');
-                panel.classList.add('closedDrawer');
+    bindPanelEvents() {
+        const homeBtn = document.getElementById('phone-panel-home');
+        const powerBtn = document.getElementById('phone-panel-power');
+        
+        // 返回主页
+        if (homeBtn) {
+            homeBtn.addEventListener('click', () => {
+                this.goHome();
+            });
+        }
+        
+        // 锁屏并关闭抽屉
+        if (powerBtn) {
+            powerBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 
-                const drawerIcon = document.getElementById('phoneDrawerIcon');
-                if (drawerIcon) {
-                    drawerIcon.classList.remove('openIcon');
-                    drawerIcon.classList.add('closedIcon');
+                console.log('🔒 锁屏按钮被点击');
+                
+                // 直接触发顶部图标点击（模拟用户点击）
+                const icon = document.getElementById('phoneDrawerIcon');
+                if (icon) {
+                    // 使用原生点击事件
+                    const clickEvent = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    icon.dispatchEvent(clickEvent);
+                    console.log('✅ 已触发图标关闭事件');
+                } else {
+                    console.warn('⚠️ 找不到手机图标，尝试手动关闭');
+                    // 备用方案：手动操作DOM
+                    this.manualCloseDrawer();
                 }
-                
-                console.log('🔒 手动关闭抽屉');
-            }
-        });
+            });
+        }
     }
-}
+    
+    // 备用方案：手动关闭抽屉
+    manualCloseDrawer() {
+        const panel = document.getElementById('phone-panel');
+        const icon = document.getElementById('phoneDrawerIcon');
+        
+        if (panel && panel.classList.contains('openDrawer')) {
+            panel.classList.remove('openDrawer');
+            panel.classList.add('closedDrawer');
+            
+            if (icon) {
+                icon.classList.remove('openIcon');
+                icon.classList.add('closedIcon');
+            }
+            
+            console.log('✅ 手动关闭成功');
+        }
+    }
     
     getCurrentTime() {
         const now = new Date();
