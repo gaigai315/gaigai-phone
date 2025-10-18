@@ -53,44 +53,51 @@ export class PhoneShell {
         return this.container;
     }
     
-    bindPanelEvents() {
-        const homeBtn = document.getElementById('phone-panel-home');
-        const powerBtn = document.getElementById('phone-panel-power');
-        
-        // 返回主页
-        if (homeBtn) {
-            homeBtn.addEventListener('click', () => {
-                this.goHome();
-            });
-        }
-        
-        // 锁屏并关闭抽屉
-        if (powerBtn) {
-            powerBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                console.log('🔒 锁屏按钮被点击');
-                
-                // 直接触发顶部图标点击（模拟用户点击）
+     bindPanelEvents() {
+    const homeBtn = document.getElementById('phone-panel-home');
+    const powerBtn = document.getElementById('phone-panel-power');
+    
+    // 返回主页
+    if (homeBtn) {
+        homeBtn.addEventListener('click', () => {
+            this.goHome();
+        });
+    }
+    
+    // 锁屏并关闭
+    if (powerBtn) {
+        powerBtn.addEventListener('click', () => {
+            console.log('🔒 锁屏按钮点击');
+            
+            // 方案1：使用setTimeout延迟触发
+            setTimeout(() => {
                 const icon = document.getElementById('phoneDrawerIcon');
                 if (icon) {
-                    // 使用原生点击事件
-                    const clickEvent = new MouseEvent('click', {
-                        view: window,
-                        bubbles: true,
-                        cancelable: true
-                    });
-                    icon.dispatchEvent(clickEvent);
-                    console.log('✅ 已触发图标关闭事件');
-                } else {
-                    console.warn('⚠️ 找不到手机图标，尝试手动关闭');
-                    // 备用方案：手动操作DOM
-                    this.manualCloseDrawer();
+                    icon.click();
+                    console.log('✅ 图标点击完成');
                 }
-            });
-        }
+            }, 10);
+            
+            // 方案2：同时手动关闭（双保险）
+            setTimeout(() => {
+                const panel = document.getElementById('phone-panel');
+                const drawerIcon = document.getElementById('phoneDrawerIcon');
+                
+                if (panel) {
+                    panel.classList.remove('openDrawer');
+                    panel.classList.add('closedDrawer');
+                }
+                
+                if (drawerIcon) {
+                    drawerIcon.classList.remove('openIcon');
+                    drawerIcon.classList.add('closedIcon');
+                }
+                
+                console.log('✅ 手动关闭完成');
+            }, 50);
+        });
     }
+}
     
     // 备用方案：手动关闭抽屉
     manualCloseDrawer() {
