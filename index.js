@@ -357,36 +357,36 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             });
             
             // 监听打开APP
-            window.addEventListener('phone:openApp', (e) => {
-                const { appId } = e.detail;
-                console.log('📱 打开APP:', appId);
-                
-                const app = currentApps.find(a => a.id === appId);
-                if (app) {
-                    app.badge = 0;
-                    totalNotifications = currentApps.reduce((sum, a) => sum + (a.badge || 0), 0);
-                    updateNotificationBadge(totalNotifications);
-                    saveData();
-                }
-                
-                // 打开对应的APP
-                if (appId === 'settings') {
-                    const settingsApp = new SettingsApp(phoneShell, storage, settings);
-                    settingsApp.render();
-                } else if (appId === 'wechat') {
-                    // ✅ 打开微信APP
-                    import('./apps/wechat/wechat-app.js').then(module => {
-                        const wechatApp = new module.WechatApp(phoneShell, storage);
-                        window.currentWechatApp = wechatApp;
-                        wechatApp.render();
-                    }).catch(err => {
-                        console.error('加载微信APP失败:', err);
-                        phoneShell?.showNotification('错误', '微信加载失败', '❌');
-                    });
-                } else {
-                    phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
-                }
-            });
+window.addEventListener('phone:openApp', (e) => {
+    const { appId } = e.detail;
+    console.log('📱 打开APP:', appId);
+    
+    const app = currentApps.find(a => a.id === appId);
+    if (app) {
+        app.badge = 0;
+        totalNotifications = currentApps.reduce((sum, a) => sum + (a.badge || 0), 0);
+        updateNotificationBadge(totalNotifications);
+        saveData();
+    }
+    
+    // 打开对应的APP
+    if (appId === 'settings') {
+        const settingsApp = new SettingsApp(phoneShell, storage, settings);
+        settingsApp.render();
+    } else if (appId === 'wechat') {
+        // ⬇️⬇️⬇️ 改这里 ⬇️⬇️⬇️
+        import('./apps/wechat/wechat-app.js').then(module => {  // ✅ 小写apps
+            const wechatApp = new module.WechatApp(phoneShell, storage);
+            window.currentWechatApp = wechatApp;
+            wechatApp.render();
+        }).catch(err => {
+            console.error('加载微信APP失败:', err);
+            phoneShell?.showNotification('错误', '微信加载失败', '❌');
+        });
+    } else {
+        phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
+    }
+});
             
             // ✅ 监听从微信发送到聊天的消息
             window.addEventListener('phone:sendToChat', (e) => {
