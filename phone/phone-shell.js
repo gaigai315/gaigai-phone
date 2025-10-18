@@ -52,8 +52,8 @@ export class PhoneShell {
         
         return this.container;
     }
-    
-     bindPanelEvents() {
+
+    bindPanelEvents() {
     const homeBtn = document.getElementById('phone-panel-home');
     const powerBtn = document.getElementById('phone-panel-power');
     
@@ -64,58 +64,37 @@ export class PhoneShell {
         });
     }
     
-    // 锁屏并关闭
+    // 锁屏 - 强制关闭抽屉
     if (powerBtn) {
-        powerBtn.addEventListener('click', () => {
-            console.log('🔒 锁屏按钮点击');
+        powerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('🔒 锁屏按钮触发');
             
-            // 方案1：使用setTimeout延迟触发
-            setTimeout(() => {
-                const icon = document.getElementById('phoneDrawerIcon');
-                if (icon) {
-                    icon.click();
-                    console.log('✅ 图标点击完成');
-                }
-            }, 10);
+            // 直接查找并操作DOM元素
+            const panel = document.getElementById('phone-panel');
+            const icon = document.getElementById('phoneDrawerIcon');
             
-            // 方案2：同时手动关闭（双保险）
+            if (!panel || !icon) {
+                console.error('❌ 找不到面板或图标');
+                return;
+            }
+            
+            // 强制修改类名
+            panel.classList.remove('openDrawer');
+            panel.classList.add('closedDrawer');
+            icon.classList.remove('openIcon');
+            icon.classList.add('closedIcon');
+            
+            // 额外保险：修改样式
+            panel.style.display = 'none';
             setTimeout(() => {
-                const panel = document.getElementById('phone-panel');
-                const drawerIcon = document.getElementById('phoneDrawerIcon');
-                
-                if (panel) {
-                    panel.classList.remove('openDrawer');
-                    panel.classList.add('closedDrawer');
-                }
-                
-                if (drawerIcon) {
-                    drawerIcon.classList.remove('openIcon');
-                    drawerIcon.classList.add('closedIcon');
-                }
-                
-                console.log('✅ 手动关闭完成');
-            }, 50);
+                panel.style.display = '';
+            }, 100);
+            
+            console.log('✅ 已强制关闭手机面板');
         });
     }
 }
-    
-    // 备用方案：手动关闭抽屉
-    manualCloseDrawer() {
-        const panel = document.getElementById('phone-panel');
-        const icon = document.getElementById('phoneDrawerIcon');
-        
-        if (panel && panel.classList.contains('openDrawer')) {
-            panel.classList.remove('openDrawer');
-            panel.classList.add('closedDrawer');
-            
-            if (icon) {
-                icon.classList.remove('openIcon');
-                icon.classList.add('closedIcon');
-            }
-            
-            console.log('✅ 手动关闭成功');
-        }
-    }
     
     getCurrentTime() {
         const now = new Date();
