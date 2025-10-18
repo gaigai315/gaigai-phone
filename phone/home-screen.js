@@ -2,10 +2,10 @@
 import { APPS } from '../config/apps.js';
 
 export class HomeScreen {
-    constructor(phoneShell) {
-        this.phoneShell = phoneShell;
-        this.apps = APPS;
-    }
+    constructor(phoneShell, apps) {
+    this.phoneShell = phoneShell;
+    this.apps = apps || APPS;
+}
     
     render() {
         const html = `
