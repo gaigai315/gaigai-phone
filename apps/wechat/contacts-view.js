@@ -138,12 +138,15 @@ export class ContactsView {
     }
     
     scrollToLetter(letter) {
-        // 滚动到指定字母
-        const element = document.querySelector(`.group-letter:contains(${letter})`);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
+    // 滚动到指定字母
+    const groups = document.querySelectorAll('.group-letter');
+    for (const group of groups) {
+        if (group.textContent.trim() === letter) {
+            group.scrollIntoView({ behavior: 'smooth' });
+            break;
         }
     }
+}
     
     openContactChat(contactId) {
         const contact = this.app.data.getContact(contactId);
