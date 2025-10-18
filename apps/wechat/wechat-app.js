@@ -22,14 +22,14 @@ export class WechatApp {
     }
     
     loadStyles() {
-        if (!document.getElementById('wechat-styles')) {
-            const link = document.createElement('link');
-            link.id = 'wechat-styles';
-            link.rel = 'stylesheet';
-            link.href = '/scripts/extensions/third-party/虚拟手机/apps/wechat/wechat.css';
-            document.head.appendChild(link);
-        }
+    if (!document.getElementById('wechat-styles')) {
+        const link = document.createElement('link');
+        link.id = 'wechat-styles';
+        link.rel = 'stylesheet';
+        link.href = '/scripts/extensions/third-party/虚拟手机/apps/wechat/wechat.css';  // ✅ 小写
+        document.head.appendChild(link);
     }
+}
     
     render() {
         const chatList = this.data.getChatList();
