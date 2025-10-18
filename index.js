@@ -72,9 +72,9 @@ import { PhoneStorage } from './config/storage.js';
                             角色: <span id="phone-char-name">加载中...</span>
                         </div>
                     </div>
-                    <div id="phone-panel-content" style="padding: 10px; height: calc(100% - 60px); overflow: auto;">
-                        ${!settings.enabled ? '<div style="text-align:center; padding:40px; color:#999;">手机功能已禁用<br><small>点击上方"设置"启用</small></div>' : ''}
-                    </div>
+                   <div id="phone-panel-content" style="padding: 10px; height: calc(100% - 60px); overflow: auto;">
+                   ${!settings.enabled ? '<div style="text-align:center; padding:40px; color:#999;">手机功能已禁用<br><small>点击上方"设置"启用</small></div>' : '<div style="text-align:center; padding:20px; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> 加载中...</div>'}
+                   </div>
                 </div>
             </div>
         `;
@@ -103,11 +103,20 @@ import { PhoneStorage } from './config/storage.js';
             }
         });
         
-        // 更新角色名显示
-        updateCharacterName();
-        
-        console.log('✅ 顶部面板已创建');
-    }
+       // 更新角色名显示
+updateCharacterName();
+
+// ✅ 立即创建手机界面（如果功能已启用）
+if (settings.enabled) {
+    setTimeout(() => {
+        const content = document.getElementById('phone-panel-content');
+        if (content && !content.querySelector('.phone-in-panel')) {
+            createPhoneInPanel();
+        }
+    }, 100);
+}
+
+console.log('✅ 顶部面板已创建');
     
     // 更新角色名显示
     function updateCharacterName() {
@@ -248,25 +257,31 @@ import { PhoneStorage } from './config/storage.js';
     }
     
     // 切换抽屉
-    function toggleDrawer(icon, panel) {
-        const isOpen = panel.classList.contains('openDrawer');
+function toggleDrawer(icon, panel) {
+    const isOpen = panel.classList.contains('openDrawer');
+    
+    if (isOpen) {
+        // 关闭
+        panel.classList.remove('openDrawer');
+        panel.classList.add('closedDrawer');
+        icon.classList.remove('openIcon');
+        icon.classList.add('closedIcon');
+    } else {
+        // 打开
+        panel.classList.add('openDrawer');
+        panel.classList.remove('closedDrawer');
+        icon.classList.add('openIcon');
+        icon.classList.remove('closedIcon');
         
-        if (isOpen) {
-            panel.classList.remove('openDrawer');
-            panel.classList.add('closedDrawer');
-            icon.classList.remove('openIcon');
-            icon.classList.add('closedIcon');
-        } else {
-            panel.classList.add('openDrawer');
-            panel.classList.remove('closedDrawer');
-            icon.classList.add('openIcon');
-            icon.classList.remove('closedIcon');
-            
-            if (!phoneShell && settings.enabled) {
+        // ✅ 修复：无论是否已创建，都尝试创建或刷新手机界面
+        if (settings.enabled) {
+            const content = document.getElementById('phone-panel-content');
+            if (content && !content.querySelector('.phone-in-panel')) {
                 createPhoneInPanel();
             }
         }
     }
+}
     
     // 在面板中创建手机
     function createPhoneInPanel() {
