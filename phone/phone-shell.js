@@ -59,18 +59,11 @@ export class PhoneShell {
     });
     
     document.getElementById('phone-panel-power')?.addEventListener('click', () => {
-        // ✅ 点击锁屏时关闭整个抽屉
-        const panel = document.getElementById('phone-panel');
+        // ✅ 直接点击顶部图标来关闭
         const icon = document.getElementById('phoneDrawerIcon');
-        
-        if (panel && icon && panel.classList.contains('openDrawer')) {
-            // 关闭抽屉
-            panel.classList.remove('openDrawer');
-            panel.classList.add('closedDrawer');
-            icon.classList.remove('openIcon');
-            icon.classList.add('closedIcon');
-            
-            console.log('🔒 已关闭手机面板');
+        if (icon) {
+            icon.click();
+            console.log('🔒 触发锁屏关闭');
         }
     });
 }
