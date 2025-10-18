@@ -46,7 +46,7 @@
     border-radius: 50%;
     font-size: 9px;
     color: #fff;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     font-weight: bold;
@@ -471,5 +471,7 @@
     
     #phone-top-button {
         right: 80px;
+    }
+}
     }
 }
