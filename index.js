@@ -387,12 +387,20 @@ import { SettingsApp } from './apps/settings/settings-app.js';
     
     setTimeout(init, 1000);
     
-    window.VirtualPhone = {
-        phone: phoneShell,
-        home: homeScreen,
-        storage: storage,
-        settings: settings,
-        version: '1.0.0'
-    };
+   // ✅ 导入图片管理器
+import { ImageUploadManager } from './apps/settings/image-upload.js';
+
+// ... 文件底部
+window.VirtualPhone = {
+    phone: phoneShell,
+    home: homeScreen,
+    storage: storage,
+    settings: settings,
+    imageManager: new ImageUploadManager(storage), // ✅ 新增
+    version: '1.0.0'
+};
+
+// ✅ 暴露到全局
+window.ImageUploadManager = ImageUploadManager;
     
 })();
