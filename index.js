@@ -74,36 +74,35 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             toggleDrawer(drawerIcon, drawerPanel);
         });
         
-        // ✅ 默认不创建，点击时才创建
-         console.log('✅ 顶部面板已创建（默认收起）');
+        console.log('✅ 顶部面板已创建（默认收起）');
     }
     
     // 切换抽屉
-function toggleDrawer(icon, panel) {
-    const isOpen = panel.classList.contains('openDrawer');
-    
-    if (isOpen) {
-        // 关闭
-        panel.classList.remove('openDrawer');
-        panel.classList.add('closedDrawer');
-        icon.classList.remove('openIcon');
-        icon.classList.add('closedIcon');
-    } else {
-        // 打开
-        panel.classList.add('openDrawer');
-        panel.classList.remove('closedDrawer');
-        icon.classList.add('openIcon');
-        icon.classList.remove('closedIcon');
+    function toggleDrawer(icon, panel) {
+        const isOpen = panel.classList.contains('openDrawer');
         
-        // ✅ 只在第一次打开时创建手机界面
-        if (settings.enabled) {
-            const content = document.getElementById('phone-panel-content');
-            if (content && !content.querySelector('.phone-in-panel')) {
-                createPhoneInPanel();
+        if (isOpen) {
+            // 关闭
+            panel.classList.remove('openDrawer');
+            panel.classList.add('closedDrawer');
+            icon.classList.remove('openIcon');
+            icon.classList.add('closedIcon');
+        } else {
+            // 打开
+            panel.classList.add('openDrawer');
+            panel.classList.remove('closedDrawer');
+            icon.classList.add('openIcon');
+            icon.classList.remove('closedIcon');
+            
+            // 只在第一次打开时创建手机界面
+            if (settings.enabled) {
+                const content = document.getElementById('phone-panel-content');
+                if (content && !content.querySelector('.phone-in-panel')) {
+                    createPhoneInPanel();
+                }
             }
         }
     }
-}
     
     // 在面板中创建手机
     function createPhoneInPanel() {
@@ -167,7 +166,7 @@ function toggleDrawer(icon, panel) {
         
         switch (app) {
             case 'wechat':
-                handleWechatCommand(action, data);
+                handleWechatMessage(data);  // ✅ 改为调用新函数
                 break;
             case 'browser':
                 handleBrowserCommand(action, data);
@@ -184,71 +183,58 @@ function toggleDrawer(icon, panel) {
     }
     
     function handleWechatCommand(action, data) {
-    if (action === 'receiveMessage') {
-        // ✅ 支持单条消息
-        if (data.message) {
-            phoneShell?.showNotification(
-                data.from || '新消息', 
-                data.message, 
-                '💬'
-            );
+        if (action === 'receiveMessage') {
+            // 支持单条消息
+            if (data.message) {
+                phoneShell?.showNotification(
+                    data.from || '新消息', 
+                    data.message, 
+                    '💬'
+                );
+                updateAppBadge('wechat', 1);
+                totalNotifications++;
+                updateNotificationBadge(totalNotifications);
+            }
+            
+            // 支持多条消息
+            if (data.messages && Array.isArray(data.messages)) {
+                data.messages.forEach((msg, index) => {
+                    setTimeout(() => {
+                        phoneShell?.showNotification(
+                            data.from || '新消息', 
+                            msg.text || msg.message, 
+                            '💬'
+                        );
+                    }, index * 1500);
+                });
+                
+                updateAppBadge('wechat', data.messages.length);
+                totalNotifications += data.messages.length;
+                updateNotificationBadge(totalNotifications);
+            }
+            
+            console.log('📱 收到微信消息:', data);
+        }
+        
+        // 兼容旧的 newMessage action
+        if (action === 'newMessage') {
+            phoneShell?.showNotification(data.from || '新消息', data.message || '', '💬');
             updateAppBadge('wechat', 1);
             totalNotifications++;
             updateNotificationBadge(totalNotifications);
         }
-        
-        // ✅ 支持多条消息
-        if (data.messages && Array.isArray(data.messages)) {
-            data.messages.forEach((msg, index) => {
-                setTimeout(() => {
-                    phoneShell?.showNotification(
-                        data.from || '新消息', 
-                        msg.text || msg.message, 
-                        '💬'
-                    );
-                }, index * 1500); // 每条消息间隔1.5秒
-            });
-            
-            updateAppBadge('wechat', data.messages.length);
-            totalNotifications += data.messages.length;
-            updateNotificationBadge(totalNotifications);
-        }
-        
-        console.log('📱 收到微信消息:', data);
     }
     
-    // ✅ 兼容旧的 newMessage action
-    if (action === 'newMessage') {
-        phoneShell?.showNotification(data.from || '新消息', data.message || '', '💬');
-        updateAppBadge('wechat', 1);
-        totalNotifications++;
-        updateNotificationBadge(totalNotifications);
-    }
-}
-
     // ✅ 处理微信消息（支持新的微信APP）
-function handleWechatMessage(data) {
-    // 如果微信APP正在运行，直接发送到APP
-    if (window.currentWechatApp) {
-        window.currentWechatApp.receiveMessage(data);
-    } else {
-        // 否则用通知方式
-        handleWechatCommand('receiveMessage', data);
+    function handleWechatMessage(data) {
+        // 如果微信APP正在运行，直接发送到APP
+        if (window.currentWechatApp) {
+            window.currentWechatApp.receiveMessage(data);
+        } else {
+            // 否则用通知方式
+            handleWechatCommand('receiveMessage', data);
+        }
     }
-}
-
-// 监听从微信发送到聊天的消息
-window.addEventListener('phone:sendToChat', (e) => {
-    const { message, chatId, chatName } = e.detail;
-    
-    // 发送到酒馆聊天框
-    const context = getContext();
-    if (context && context.sendMessage) {
-        context.sendMessage(message);
-    } else {
-        console.warn('无法发送消息到聊天框');
-    }
-});
     
     function handleBrowserCommand(action, data) {
         if (action === 'open') {
@@ -366,6 +352,7 @@ window.addEventListener('phone:sendToChat', (e) => {
             // 监听返回主页
             window.addEventListener('phone:goHome', () => {
                 currentApp = null;
+                window.currentWechatApp = null;  // ✅ 清理微信实例
                 if (homeScreen) homeScreen.render();
             });
             
@@ -384,18 +371,42 @@ window.addEventListener('phone:sendToChat', (e) => {
                 
                 // 打开对应的APP
                 if (appId === 'settings') {
-                const settingsApp = new SettingsApp(phoneShell, storage, settings);
-                settingsApp.render();
+                    const settingsApp = new SettingsApp(phoneShell, storage, settings);
+                    settingsApp.render();
                 } else if (appId === 'wechat') {
-               // ✅ 打开微信APP
-        import('./apps/wechat/wechat-app.js').then(module => {
-        const wechatApp = new module.WechatApp(phoneShell, storage);
-        window.currentWechatApp = wechatApp; // 保存实例用于接收消息
-        wechatApp.render();
-    });
-} else {
-    phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
-});
+                    // ✅ 打开微信APP
+                    import('./apps/wechat/wechat-app.js').then(module => {
+                        const wechatApp = new module.WechatApp(phoneShell, storage);
+                        window.currentWechatApp = wechatApp;
+                        wechatApp.render();
+                    }).catch(err => {
+                        console.error('加载微信APP失败:', err);
+                        phoneShell?.showNotification('错误', '微信加载失败', '❌');
+                    });
+                } else {
+                    phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
+                }
+            });
+            
+            // ✅ 监听从微信发送到聊天的消息
+            window.addEventListener('phone:sendToChat', (e) => {
+                const { message, chatId, chatName } = e.detail;
+                
+                // 发送到酒馆聊天框
+                const textarea = document.querySelector('#send_textarea');
+                if (textarea) {
+                    textarea.value = message;
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    // 可选：自动发送
+                    const sendButton = document.querySelector('#send_but');
+                    if (sendButton && settings.autoSend) {
+                        setTimeout(() => sendButton.click(), 100);
+                    }
+                } else {
+                    console.warn('找不到聊天输入框');
+                }
+            });
             
             // 监听清空数据
             window.addEventListener('phone:clearCurrentData', () => {
