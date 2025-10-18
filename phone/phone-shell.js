@@ -53,19 +53,27 @@ export class PhoneShell {
         return this.container;
     }
     
-    bindPanelEvents() {
-        document.getElementById('phone-panel-home')?.addEventListener('click', () => {
-            this.goHome();
-        });
+   bindPanelEvents() {
+    document.getElementById('phone-panel-home')?.addEventListener('click', () => {
+        this.goHome();
+    });
+    
+    document.getElementById('phone-panel-power')?.addEventListener('click', () => {
+        // ✅ 点击锁屏时关闭整个抽屉
+        const panel = document.getElementById('phone-panel');
+        const icon = document.getElementById('phoneDrawerIcon');
         
-        document.getElementById('phone-panel-power')?.addEventListener('click', () => {
-    // ✅ 点击锁屏时关闭抽屉
-    const drawerIcon = document.getElementById('phoneDrawerIcon');
-    if (drawerIcon) {
-        drawerIcon.click();  // 触发图标点击，关闭抽屉
-    }
-});
-    }
+        if (panel && icon && panel.classList.contains('openDrawer')) {
+            // 关闭抽屉
+            panel.classList.remove('openDrawer');
+            panel.classList.add('closedDrawer');
+            icon.classList.remove('openIcon');
+            icon.classList.add('closedIcon');
+            
+            console.log('🔒 已关闭手机面板');
+        }
+    });
+}
     
     getCurrentTime() {
         const now = new Date();
