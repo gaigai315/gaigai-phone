@@ -1,108 +1,67 @@
 /* ========================================
-   虚拟手机 - 完整样式 v2.0
+   虚拟手机 - 完整样式
    ======================================== */
 
-/* 顶部状态栏按钮 */
-#phone-top-button {
-    position: fixed;
-    top: 10px;
-    right: 150px;
-    width: 36px;
-    height: 36px;
-    background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
-    border: none;
-    border-radius: 50%;
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    box-shadow: 
-        0 2px 10px rgba(255, 105, 180, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    transition: all 0.3s;
-    z-index: 100000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#phone-top-button:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 15px rgba(255, 105, 180, 0.6);
-}
-
-#phone-top-button:active {
-    transform: scale(0.95);
-}
-
-/* 红点提醒 */
-#phone-top-button .notification-dot {
+/* 通知红点 */
+.badge-notification {
     position: absolute;
     top: -2px;
     right: -2px;
-    width: 14px;
-    height: 14px;
+    min-width: 16px;
+    height: 16px;
     background: #ff3b30;
     border: 2px solid #fff;
-    border-radius: 50%;
-    font-size: 9px;
+    border-radius: 10px;
     color: #fff;
-    display: none;
+    font-size: 9px;
+    font-weight: bold;
+    display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    animation: pulse 2s infinite;
+    padding: 0 4px;
+    box-shadow: 0 2px 8px rgba(255, 59, 48, 0.5);
+    z-index: 10;
 }
 
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.1);
-        opacity: 0.8;
-    }
+#phoneDrawerIcon {
+    position: relative;
 }
 
-/* 手机容器 */
-#virtual-phone {
-    position: fixed;
-    top: 60px;
-    right: 20px;
-    z-index: 99999;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+/* 面板内容区域 - 完整居中显示 */
+#phone-panel-content {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 100% !important;
+    padding: 20px !important;
+    background: #f0f0f0 !important;
 }
 
-/* 隐藏状态 */
-#virtual-phone.hidden {
-    transform: translateX(400px) scale(0.8);
-    opacity: 0;
-    pointer-events: none;
+/* 手机在面板中的容器 */
+.phone-in-panel {
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto;
 }
 
-/* 显示状态 */
-#virtual-phone.visible {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-}
-
-/* 手机外壳 - 缩小版 */
-.phone-body {
-    width: 280px;
-    height: 600px;
+/* 手机外壳 - 面板版 */
+.phone-body-panel {
+    width: 100%;
+    max-width: 320px;
+    height: 680px;
+    margin: 0 auto;
     background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
     border-radius: 38px;
     box-shadow: 
-        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 10px 40px rgba(0, 0, 0, 0.4),
         0 0 0 6px #0a0a0a,
-        0 0 0 8px #1f1f1f,
         inset 0 0 20px rgba(255, 255, 255, 0.05);
     padding: 10px;
     position: relative;
     overflow: hidden;
 }
 
-/* 刘海 - 缩短版 */
+/* 刘海 */
 .phone-notch {
     position: absolute;
     top: 10px;
@@ -172,7 +131,7 @@
     margin-top: 38px;
 }
 
-#virtual-phone.screen-off .phone-screen {
+.screen-off .phone-screen {
     background: #000;
     opacity: 0.1;
 }
@@ -190,43 +149,34 @@
     z-index: 10;
 }
 
-/* 侧边按钮 */
-.phone-btn-power,
-.phone-btn-volume,
-.phone-btn-home {
-    position: absolute;
-    width: 26px;
-    height: 26px;
-    background: rgba(255, 255, 255, 0.1);
+/* 面板底部按钮 */
+.phone-panel-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.phone-panel-btn {
+    flex: 1;
+    padding: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: none;
-    border-radius: 50%;
+    border-radius: 8px;
     color: #fff;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
-    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
-.phone-btn-power:hover,
-.phone-btn-volume:hover,
-.phone-btn-home:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.1);
+.phone-panel-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
 }
 
-.phone-btn-power {
-    top: 80px;
-    right: -32px;
-}
-
-.phone-btn-volume {
-    top: 120px;
-    left: -32px;
-}
-
-.phone-btn-home {
-    bottom: 80px;
-    right: -32px;
+.phone-panel-btn:active {
+    transform: translateY(0);
 }
 
 /* 通知弹窗 */
@@ -292,7 +242,6 @@
     z-index: 0;
 }
 
-/* 主屏幕时间 - 显示剧情时间 */
 .home-time {
     position: relative;
     z-index: 1;
@@ -314,7 +263,7 @@
     margin-top: 4px;
 }
 
-/* APP网格 - 缩小版 */
+/* APP网格 */
 .app-grid {
     position: relative;
     z-index: 1;
@@ -324,7 +273,6 @@
     padding: 15px;
 }
 
-/* APP图标 - 缩小版 */
 .app-icon {
     display: flex;
     flex-direction: column;
@@ -375,7 +323,6 @@
     white-space: nowrap;
 }
 
-/* APP角标 - 缩小版 */
 .app-badge {
     position: absolute;
     top: -3px;
@@ -391,7 +338,7 @@
     box-shadow: 0 2px 6px rgba(255, 59, 48, 0.5);
 }
 
-/* Dock栏 - 缩小版 */
+/* Dock栏 */
 .dock {
     position: absolute;
     bottom: 15px;
@@ -458,212 +405,216 @@
 }
 
 /* 响应式 */
-@media (max-width: 768px) {
-    #virtual-phone {
-        top: 50px;
-        right: 10px;
+@media (max-height: 900px) {
+    .phone-body-panel {
+        height: 600px;
+        transform: scale(0.95);
     }
-    
-    .phone-body {
-        width: 240px;
-        height: 520px;
+}
+
+@media (max-height: 800px) {
+    .phone-body-panel {
+        height: 550px;
+        transform: scale(0.9);
     }
-    
-    #phone-top-button {
-        right: 80px;
+}
+
+@media (max-height: 700px) {
+    .phone-body-panel {
+        height: 500px;
+        transform: scale(0.85);
     }
 }
 
 /* ========================================
-   设置对话框样式
+   设置APP样式
    ======================================== */
 
-.phone-dialog-overlay {
-    position: fixed;
+.settings-app {
+    width: 100%;
+    height: 100%;
+    background: #f5f5f5;
+    overflow-y: auto;
+}
+
+.app-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.app-back-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.app-back-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.app-header h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.app-body {
+    padding: 15px;
+}
+
+.setting-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.setting-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.setting-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.setting-item:last-child {
+    border-bottom: none;
+}
+
+.setting-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.setting-label {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+.setting-desc {
+    font-size: 11px;
+    color: #999;
+    margin-top: 3px;
+}
+
+.setting-value {
+    font-size: 13px;
+    color: #666;
+}
+
+.setting-info {
+    font-size: 11px;
+    color: #999;
+    line-height: 1.6;
+    margin-top: 8px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 6px;
+}
+
+/* 开关按钮 */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 28px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 999999;
-    animation: fadeIn 0.2s ease;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 28px;
 }
 
-.phone-dialog {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    max-width: 500px;
-    width: 90%;
-    max-height: 80vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.phone-dialog-header {
-    padding: 20px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff;
-}
-
-.phone-dialog-header h3 {
-    margin: 0;
-    font-size: 18px;
-}
-
-.phone-dialog-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #fff;
-    cursor: pointer;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
     border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .toggle-slider {
+    background-color: #667eea;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+/* 按钮 */
+.setting-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
     transition: all 0.2s;
-}
-
-.phone-dialog-close:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.phone-dialog-body {
-    padding: 20px;
-    overflow-y: auto;
-    flex: 1;
-}
-
-.phone-setting-item {
-    margin-bottom: 20px;
-}
-
-.phone-setting-label {
     display: flex;
     align-items: center;
-    cursor: pointer;
-    margin-bottom: 5px;
+    justify-content: center;
+    gap: 8px;
 }
 
-.phone-setting-label input[type="checkbox"] {
-    margin-right: 10px;
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-}
-
-.phone-setting-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-}
-
-.phone-setting-desc {
-    display: block;
-    font-size: 12px;
-    color: #666;
-    margin-left: 28px;
-    line-height: 1.5;
-}
-
-.phone-setting-divider {
-    height: 1px;
-    background: #eee;
-    margin: 20px 0;
-}
-
-.phone-setting-info {
-    background: #f0f8ff;
-    padding: 15px;
-    border-radius: 8px;
-    font-size: 12px;
-    color: #555;
-    line-height: 1.6;
-}
-
-.phone-danger-btn {
-    background: #ff4444;
+.setting-btn-warning {
+    background: #ff9800;
     color: #fff;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s;
-    width: 100%;
 }
 
-.phone-danger-btn:hover {
-    background: #ff2222;
+.setting-btn-warning:hover {
+    background: #fb8c00;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
 }
 
-.phone-dialog-footer {
-    padding: 15px 20px;
-    border-top: 1px solid #eee;
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-}
-
-.phone-primary-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.setting-btn-danger {
+    background: #f44336;
     color: #fff;
-    border: none;
-    padding: 10px 24px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s;
 }
 
-.phone-primary-btn:hover {
+.setting-btn-danger:hover {
+    background: #e53935;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.phone-secondary-btn {
-    background: #f0f0f0;
-    color: #666;
-    border: none;
-    padding: 10px 24px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s;
-}
-
-.phone-secondary-btn:hover {
-    background: #e0e0e0;
-}
-    }
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
 }
