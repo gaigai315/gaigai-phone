@@ -7,21 +7,20 @@ export class PhoneShell {
         this.screen = null;
         this.isVisible = false;
         this.currentApp = null;
-        this.topButton = null;
     }
     
-    // 创建手机UI
-    create() {
-        // 先创建顶部按钮
-        this.createTopButton();
+    // ✅ 在面板中创建（新方法）
+    createInPanel(panelContainer) {
+        if (!panelContainer) {
+            console.error('❌ 面板容器不存在');
+            return;
+        }
         
         this.container = document.createElement('div');
-        this.container.id = 'virtual-phone';
-        this.container.className = `phone-container ${PHONE_CONFIG.position} ${PHONE_CONFIG.size}`;
+        this.container.className = 'phone-in-panel';
         
         this.container.innerHTML = `
-            <!-- 手机外壳 -->
-            <div class="phone-body">
+            <div class="phone-body-panel">
                 <!-- 刘海 -->
                 <div class="phone-notch"></div>
                 
@@ -42,88 +41,41 @@ export class PhoneShell {
                     <!-- APP内容会在这里显示 -->
                 </div>
                 
-                <!-- Home键指示器 (iPhone样式) -->
+                <!-- Home键指示器 -->
                 <div class="phone-home-indicator"></div>
                 
-                <!-- 侧边按钮 -->
-                <div class="phone-buttons">
-                    <button class="phone-btn-power" title="电源键">⏻</button>
-                    <button class="phone-btn-volume" title="音量">🔊</button>
-                    <button class="phone-btn-home" title="返回主页">🏠</button>
+                <!-- 底部按钮 -->
+                <div class="phone-panel-buttons">
+                    <button class="phone-panel-btn" id="phone-panel-home" title="返回主页">🏠 主页</button>
+                    <button class="phone-panel-btn" id="phone-panel-power" title="锁屏">🔒 锁屏</button>
                 </div>
             </div>
         `;
         
-        document.body.appendChild(this.container);
+        panelContainer.appendChild(this.container);
         this.screen = document.getElementById('phone-screen');
         
-        // 初始状态为隐藏
-        this.container.classList.add('hidden');
-        this.isVisible = false;
-        
-        this.bindEvents();
+        this.bindPanelEvents();
         this.startClock();
+        
+        console.log('✅ 手机已渲染到面板');
         
         return this.container;
     }
     
-    // 创建顶部按钮
-    createTopButton() {
-        // 移除旧按钮
-        const oldBtn = document.getElementById('phone-top-button');
-        if (oldBtn) oldBtn.remove();
-        
-        const topButton = document.createElement('button');
-        topButton.id = 'phone-top-button';
-        topButton.innerHTML = `
-            📱
-            <span class="notification-dot" id="phone-notification-dot" style="display:none;">0</span>
-        `;
-        topButton.title = '虚拟手机';
-        
-        topButton.addEventListener('click', () => {
-            this.togglePhone();
+    // 绑定面板事件
+    bindPanelEvents() {
+        const homeBtn = document.getElementById('phone-panel-home');
+        homeBtn?.addEventListener('click', () => {
+            console.log('点击了主页按钮');
+            this.goHome();
         });
         
-        document.body.appendChild(topButton);
-        this.topButton = topButton;
-    }
-    
-    // 切换手机显示/隐藏
-    togglePhone() {
-        if (this.container.classList.contains('hidden')) {
-            this.container.classList.remove('hidden');
-            this.container.classList.add('visible');
-            this.isVisible = true;
-        } else {
-            this.container.classList.add('hidden');
-            this.container.classList.remove('visible');
-            this.isVisible = false;
-        }
-    }
-    
-    // 更新顶部按钮红点
-    updateNotificationBadge(count) {
-        const dot = document.getElementById('phone-notification-dot');
-        if (!dot) return;
-        
-        if (count > 0) {
-            dot.style.display = 'flex';
-            dot.textContent = count > 99 ? '99+' : count;
-        } else {
-            dot.style.display = 'none';
-        }
-    }
-    
-    // 绑定事件
-    bindEvents() {
-        // 返回主页
-        const homeBtn = this.container.querySelector('.phone-btn-home');
-        homeBtn?.addEventListener('click', () => this.goHome());
-        
-        // 电源键
-        const powerBtn = this.container.querySelector('.phone-btn-power');
-        powerBtn?.addEventListener('click', () => this.toggleScreen());
+        const powerBtn = document.getElementById('phone-panel-power');
+        powerBtn?.addEventListener('click', () => {
+            console.log('点击了锁屏按钮');
+            this.toggleScreen();
+        });
     }
     
     // 获取当前时间
@@ -137,7 +89,7 @@ export class PhoneShell {
     // 更新时钟
     startClock() {
         setInterval(() => {
-            const timeEl = this.container.querySelector('.statusbar-left .time');
+            const timeEl = this.container?.querySelector('.statusbar-left .time');
             if (timeEl) {
                 timeEl.textContent = this.getCurrentTime();
             }
@@ -152,7 +104,9 @@ export class PhoneShell {
     
     // 开关屏幕
     toggleScreen() {
-        this.container.classList.toggle('screen-off');
+        if (this.container) {
+            this.container.classList.toggle('screen-off');
+        }
     }
     
     // 设置屏幕内容
@@ -164,6 +118,8 @@ export class PhoneShell {
     
     // 显示通知
     showNotification(title, message, icon = '📱') {
+        if (!this.container) return;
+        
         const notification = document.createElement('div');
         notification.className = 'phone-notification';
         notification.innerHTML = `
