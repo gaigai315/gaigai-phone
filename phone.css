@@ -4,30 +4,29 @@
    ======================================== */
 
 /* ========================================
-   超强覆盖 - 移除所有背景遮罩
+   精准覆盖 - 只针对手机面板
    ======================================== */
 
-/* 移除酒馆所有drawer相关的背景 */
-.drawer-content,
-[class*="drawer"],
-#phone-panel,
-#phone-panel *:not(.phone-body-panel):not(.phone-body-panel *) {
+/* 只针对手机面板去除背景 */
+#phone-panel.drawer-content,
+#phone-panel.drawer-content::before,
+#phone-panel.drawer-content::after {
     background: none !important;
     background-color: transparent !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
 
-/* 针对phone-panel的特殊处理 - 居中显示 */
-#phone-panel {
+/* 手机面板居中显示 */
+#phone-panel.drawer-content {
     position: fixed !important;
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
     width: auto !important;
     height: auto !important;
-    background: none !important;
-    backdrop-filter: none !important;
+    max-width: none !important;
+    max-height: none !important;
     padding: 0 !important;
     margin: 0 !important;
     border: none !important;
@@ -37,16 +36,12 @@
     pointer-events: none !important;
 }
 
-/* 移除所有可能的遮罩层 */
-.drawer-backdrop,
-#phone-panel::before,
-#phone-panel::after,
-#phone-panel-content::before,
-#phone-panel-content::after {
+/* 移除手机面板的遮罩层 */
+#phone-panel ~ .drawer-backdrop,
+#phone-panel .drawer-backdrop {
     display: none !important;
-    content: none !important;
-    background: none !important;
     opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 /* 隐藏拖拽手柄 */
@@ -60,7 +55,7 @@
     height: auto !important;
     padding: 0 !important;
     margin: 0 !important;
-    background: none !important;
+    background: transparent !important;
     overflow: visible !important;
     pointer-events: none !important;
 }
@@ -70,7 +65,7 @@
     width: auto !important;
     height: auto !important;
     padding: 0 !important;
-    background: none !important;
+    background: transparent !important;
     pointer-events: auto !important;
     position: relative !important;
 }
