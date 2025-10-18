@@ -34,89 +34,90 @@ import { PhoneStorage } from './config/storage.js';
     // 创建顶部面板按钮（集成到酒馆）
     // ========================================
     function createTopPanel() {
-        const topSettingsHolder = document.getElementById('top-settings-holder');
-        if (!topSettingsHolder) {
-            console.error('❌ 找不到 top-settings-holder');
-            return;
-        }
-        
-        const oldPanel = document.getElementById('phone-panel-holder');
-        if (oldPanel) oldPanel.remove();
-        
-        // 根据开关状态设置图标样式
-        const iconClass = settings.enabled ? 'fa-mobile-screen-button' : 'fa-mobile-screen-button';
-        const iconStyle = settings.enabled ? '' : 'opacity: 0.4; filter: grayscale(1);';
-        const statusText = settings.enabled ? '已启用' : '已禁用';
-        
-        const panelHTML = `
-            <div id="phone-panel-holder" class="drawer">
-                <div class="drawer-toggle drawer-header">
-                    <div id="phoneDrawerIcon" class="drawer-icon fa-solid ${iconClass} fa-fw closedIcon interactable" 
-                         title="虚拟手机 (${statusText})" 
-                         style="${iconStyle}"
-                         tabindex="0" 
-                         role="button">
-                        <span id="phone-badge" class="badge-notification" style="display:none;">0</span>
-                    </div>
-                </div>
-                <div id="phone-panel" class="drawer-content fillRight closedDrawer">
-                    <div id="phone-panel-header" class="fa-solid fa-grip drag-grabber"></div>
-                    <div id="phone-panel-toolbar" style="padding: 10px; border-bottom: 1px solid #ddd; display: flex; gap: 10px;">
-                        <button id="phone-settings-btn" class="menu_button" title="设置">
-                            <i class="fa-solid fa-gear"></i> 设置
-                        </button>
-                        <button id="phone-clear-btn" class="menu_button" title="清空当前角色数据">
-                            <i class="fa-solid fa-trash"></i> 清空数据
-                        </button>
-                        <div style="flex: 1; text-align: right; font-size: 11px; color: #666; padding-top: 8px;">
-                            角色: <span id="phone-char-name">加载中...</span>
-                        </div>
-                    </div>
-                   <div id="phone-panel-content" style="padding: 10px; height: calc(100% - 60px); overflow: auto;">
-                   ${!settings.enabled ? '<div style="text-align:center; padding:40px; color:#999;">手机功能已禁用<br><small>点击上方"设置"启用</small></div>' : '<div style="text-align:center; padding:20px; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> 加载中...</div>'}
-                   </div>
+    const topSettingsHolder = document.getElementById('top-settings-holder');
+    if (!topSettingsHolder) {
+        console.error('❌ 找不到 top-settings-holder');
+        return;
+    }
+    
+    const oldPanel = document.getElementById('phone-panel-holder');
+    if (oldPanel) oldPanel.remove();
+    
+    // 根据开关状态设置图标样式
+    const iconClass = settings.enabled ? 'fa-mobile-screen-button' : 'fa-mobile-screen-button';
+    const iconStyle = settings.enabled ? '' : 'opacity: 0.4; filter: grayscale(1);';
+    const statusText = settings.enabled ? '已启用' : '已禁用';
+    
+    const panelHTML = `
+        <div id="phone-panel-holder" class="drawer">
+            <div class="drawer-toggle drawer-header">
+                <div id="phoneDrawerIcon" class="drawer-icon fa-solid ${iconClass} fa-fw closedIcon interactable" 
+                     title="虚拟手机 (${statusText})" 
+                     style="${iconStyle}"
+                     tabindex="0" 
+                     role="button">
+                    <span id="phone-badge" class="badge-notification" style="display:none;">0</span>
                 </div>
             </div>
-        `;
-        
-        topSettingsHolder.insertAdjacentHTML('afterbegin', panelHTML);
-        
-        const drawerIcon = document.getElementById('phoneDrawerIcon');
-        const drawerPanel = document.getElementById('phone-panel');
-        
-        drawerIcon?.addEventListener('click', () => {
-            toggleDrawer(drawerIcon, drawerPanel);
-        });
-        
-        // 设置按钮
-        document.getElementById('phone-settings-btn')?.addEventListener('click', showSettings);
-        
-        // 清空数据按钮
-        document.getElementById('phone-clear-btn')?.addEventListener('click', async () => {
-            if (confirm('确定清空当前角色的所有手机数据？\n\n此操作不可恢复！')) {
-                storage.clearCurrentData();
-                currentApps = JSON.parse(JSON.stringify(APPS));
-                totalNotifications = 0;
-                updateNotificationBadge(0);
-                if (homeScreen) homeScreen.render();
-                alert('数据已清空！');
-            }
-        });
-        
-       // 更新角色名显示
-updateCharacterName();
-
-// ✅ 立即创建手机界面（如果功能已启用）
-if (settings.enabled) {
-    setTimeout(() => {
-        const content = document.getElementById('phone-panel-content');
-        if (content && !content.querySelector('.phone-in-panel')) {
-            createPhoneInPanel();
+            <div id="phone-panel" class="drawer-content fillRight closedDrawer">
+                <div id="phone-panel-header" class="fa-solid fa-grip drag-grabber"></div>
+                <div id="phone-panel-toolbar" style="padding: 10px; border-bottom: 1px solid #ddd; display: flex; gap: 10px;">
+                    <button id="phone-settings-btn" class="menu_button" title="设置">
+                        <i class="fa-solid fa-gear"></i> 设置
+                    </button>
+                    <button id="phone-clear-btn" class="menu_button" title="清空当前角色数据">
+                        <i class="fa-solid fa-trash"></i> 清空数据
+                    </button>
+                    <div style="flex: 1; text-align: right; font-size: 11px; color: #666; padding-top: 8px;">
+                        角色: <span id="phone-char-name">加载中...</span>
+                    </div>
+                </div>
+                <div id="phone-panel-content" style="padding: 10px; height: calc(100% - 60px); overflow: auto;">
+                    ${!settings.enabled ? '<div style="text-align:center; padding:40px; color:#999;">手机功能已禁用<br><small>点击上方"设置"启用</small></div>' : '<div style="text-align:center; padding:20px; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> 加载中...</div>'}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    topSettingsHolder.insertAdjacentHTML('afterbegin', panelHTML);
+    
+    const drawerIcon = document.getElementById('phoneDrawerIcon');
+    const drawerPanel = document.getElementById('phone-panel');
+    
+    drawerIcon?.addEventListener('click', () => {
+        toggleDrawer(drawerIcon, drawerPanel);
+    });
+    
+    // 设置按钮
+    document.getElementById('phone-settings-btn')?.addEventListener('click', showSettings);
+    
+    // 清空数据按钮
+    document.getElementById('phone-clear-btn')?.addEventListener('click', async () => {
+        if (confirm('确定清空当前角色的所有手机数据？\n\n此操作不可恢复！')) {
+            storage.clearCurrentData();
+            currentApps = JSON.parse(JSON.stringify(APPS));
+            totalNotifications = 0;
+            updateNotificationBadge(0);
+            if (homeScreen) homeScreen.render();
+            alert('数据已清空！');
         }
-    }, 100);
+    });
+    
+    // ✅ 更新角色名显示
+    updateCharacterName();
+    
+    // ✅ 立即创建手机界面（如果功能已启用）
+    if (settings.enabled) {
+        setTimeout(() => {
+            const content = document.getElementById('phone-panel-content');
+            if (content && !content.querySelector('.phone-in-panel')) {
+                createPhoneInPanel();
+            }
+        }, 100);
+    }
+    
+    console.log('✅ 顶部面板已创建');
 }
-
-console.log('✅ 顶部面板已创建');
     
     // 更新角色名显示
     function updateCharacterName() {
