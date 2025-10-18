@@ -5,12 +5,16 @@ export class PhoneShell {
     constructor() {
         this.container = null;
         this.screen = null;
-        this.isVisible = true;
+        this.isVisible = false;
         this.currentApp = null;
+        this.topButton = null;
     }
     
     // 创建手机UI
     create() {
+        // 先创建顶部按钮
+        this.createTopButton();
+        
         this.container = document.createElement('div');
         this.container.id = 'virtual-phone';
         this.container.className = `phone-container ${PHONE_CONFIG.position} ${PHONE_CONFIG.size}`;
@@ -48,15 +52,14 @@ export class PhoneShell {
                     <button class="phone-btn-home" title="返回主页">🏠</button>
                 </div>
             </div>
-            
-            <!-- 折叠/展开按钮 -->
-            <button class="phone-toggle" id="phone-toggle">
-                <span class="toggle-icon">📱</span>
-            </button>
         `;
         
         document.body.appendChild(this.container);
         this.screen = document.getElementById('phone-screen');
+        
+        // 初始状态为隐藏
+        this.container.classList.add('hidden');
+        this.isVisible = false;
         
         this.bindEvents();
         this.startClock();
@@ -64,12 +67,56 @@ export class PhoneShell {
         return this.container;
     }
     
+    // 创建顶部按钮
+    createTopButton() {
+        // 移除旧按钮
+        const oldBtn = document.getElementById('phone-top-button');
+        if (oldBtn) oldBtn.remove();
+        
+        const topButton = document.createElement('button');
+        topButton.id = 'phone-top-button';
+        topButton.innerHTML = `
+            📱
+            <span class="notification-dot" id="phone-notification-dot" style="display:none;">0</span>
+        `;
+        topButton.title = '虚拟手机';
+        
+        topButton.addEventListener('click', () => {
+            this.togglePhone();
+        });
+        
+        document.body.appendChild(topButton);
+        this.topButton = topButton;
+    }
+    
+    // 切换手机显示/隐藏
+    togglePhone() {
+        if (this.container.classList.contains('hidden')) {
+            this.container.classList.remove('hidden');
+            this.container.classList.add('visible');
+            this.isVisible = true;
+        } else {
+            this.container.classList.add('hidden');
+            this.container.classList.remove('visible');
+            this.isVisible = false;
+        }
+    }
+    
+    // 更新顶部按钮红点
+    updateNotificationBadge(count) {
+        const dot = document.getElementById('phone-notification-dot');
+        if (!dot) return;
+        
+        if (count > 0) {
+            dot.style.display = 'flex';
+            dot.textContent = count > 99 ? '99+' : count;
+        } else {
+            dot.style.display = 'none';
+        }
+    }
+    
     // 绑定事件
     bindEvents() {
-        // 折叠/展开
-        const toggle = document.getElementById('phone-toggle');
-        toggle?.addEventListener('click', () => this.toggle());
-        
         // 返回主页
         const homeBtn = this.container.querySelector('.phone-btn-home');
         homeBtn?.addEventListener('click', () => this.goHome());
@@ -95,12 +142,6 @@ export class PhoneShell {
                 timeEl.textContent = this.getCurrentTime();
             }
         }, 1000);
-    }
-    
-    // 折叠/展开手机
-    toggle() {
-        this.isVisible = !this.isVisible;
-        this.container.classList.toggle('collapsed', !this.isVisible);
     }
     
     // 返回主页
