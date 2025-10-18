@@ -23,12 +23,309 @@ export class WechatApp {
     
     loadStyles() {
     if (!document.getElementById('wechat-styles')) {
-        const link = document.createElement('link');
-        link.id = 'wechat-styles';
-        link.rel = 'stylesheet';
-        link.href = '/scripts/extensions/third-party/虚拟手机/apps/wechat/wechat.css';
-        document.head.appendChild(link);
-        console.log('✅ 微信样式已加载');
+        const style = document.createElement('style');
+        style.id = 'wechat-styles';
+        style.textContent = `
+/* 微信APP完整样式 */
+.wechat-app {
+    width: 100%;
+    height: 100%;
+    background: #ededed;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, sans-serif;
+}
+
+.wechat-header {
+    background: #ededed;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    border-bottom: 0.5px solid #d8d8d8;
+    flex-shrink: 0;
+}
+
+.wechat-header-left {
+    width: 60px;
+}
+
+.wechat-back-btn {
+    background: none;
+    border: none;
+    color: #576b95;
+    font-size: 16px;
+    padding: 8px;
+    cursor: pointer;
+}
+
+.wechat-header-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #000;
+    flex: 1;
+    text-align: center;
+}
+
+.header-badge {
+    color: #576b95;
+    font-size: 14px;
+}
+
+.wechat-header-right {
+    width: 60px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.wechat-header-btn {
+    background: none;
+    border: none;
+    color: #000;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.wechat-content {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.wechat-tabbar {
+    height: 50px;
+    background: #f7f7f7;
+    border-top: 0.5px solid #d8d8d8;
+    display: flex;
+    flex-shrink: 0;
+}
+
+.wechat-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    color: #999;
+    font-size: 10px;
+}
+
+.wechat-tab.active {
+    color: #07c160;
+}
+
+.wechat-tab i {
+    font-size: 22px;
+    margin-bottom: 2px;
+}
+
+.tab-badge {
+    position: absolute;
+    top: 3px;
+    right: calc(50% - 20px);
+    background: #ff3b30;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.wechat-chat-list {
+    background: #fff;
+}
+
+.chat-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 0.5px solid #e5e5e5;
+    cursor: pointer;
+    background: #fff;
+}
+
+.chat-item:active {
+    background: #ececec;
+}
+
+.chat-avatar-wrapper {
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.chat-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+}
+
+.chat-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-name {
+    font-size: 17px;
+    color: #000;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.group-count {
+    font-size: 13px;
+    color: #999;
+}
+
+.chat-last-msg {
+    font-size: 14px;
+    color: #999;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.chat-time {
+    font-size: 12px;
+    color: #b2b2b2;
+    margin-bottom: 5px;
+}
+
+.chat-badge {
+    background: #ff3b30;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+}
+
+.wechat-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 20px;
+    color: #b2b2b2;
+}
+
+.wechat-empty i {
+    font-size: 64px;
+    color: #ddd;
+    margin-bottom: 15px;
+}
+
+.wechat-discover,
+.wechat-profile {
+    background: #fff;
+}
+
+.discover-item,
+.profile-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+    background: #fff;
+    border-bottom: 0.5px solid #e5e5e5;
+}
+
+.discover-item:active,
+.profile-item:active {
+    background: #ececec;
+}
+
+.discover-icon,
+.profile-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.discover-name,
+.profile-name {
+    flex: 1;
+    font-size: 16px;
+    color: #000;
+}
+
+.discover-arrow,
+.profile-arrow {
+    color: #c7c7cc;
+    font-size: 14px;
+}
+
+.discover-divider,
+.profile-divider {
+    height: 8px;
+    background: #ededed;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    padding: 20px 15px;
+}
+
+.profile-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-size: 32px;
+}
+
+.profile-info {
+    flex: 1;
+}
+
+.profile-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.profile-id {
+    font-size: 14px;
+    color: #999;
+}
+
+.profile-qr {
+    font-size: 18px;
+    color: #999;
+}
+
+.profile-icon {
+    font-size: 20px;
+    margin-right: 12px;
+    width: 24px;
+}
+        `;
+        document.head.appendChild(style);
+        console.log('✅ 微信样式已内联加载');
     }
 }
     
