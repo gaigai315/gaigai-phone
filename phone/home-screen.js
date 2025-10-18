@@ -65,6 +65,10 @@ export class HomeScreen {
                 this.openApp(appId);
             });
         });
+         // ✅ 监听壁纸更新
+    window.addEventListener('phone:updateWallpaper', (e) => {
+        this.render(); // 重新渲染主屏幕
+    });
     }
     
     openApp(appId) {
