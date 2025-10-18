@@ -7,10 +7,20 @@ export class HomeScreen {
         this.apps = apps || APPS;
     }
     
-    render() {
-        const html = `
-            <div class="home-screen">
-                <div class="wallpaper"></div>
+   render() {
+    // ✅ 获取自定义壁纸
+    const imageManager = new (window.ImageUploadManager || class {
+        getWallpaper() { return null; }
+    })(window.VirtualPhone?.storage);
+    
+    const customWallpaper = imageManager.getWallpaper();
+    const wallpaperStyle = customWallpaper 
+        ? `background-image: url('${customWallpaper}'); background-size: cover; background-position: center;`
+        : `background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);`;
+    
+    const html = `
+        <div class="home-screen">
+            <div class="wallpaper" style="${wallpaperStyle}"></div>
                 
                 <div class="home-time">
                     <div class="time-large">${this.getCurrentTime()}</div>
