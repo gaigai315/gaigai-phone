@@ -1,13 +1,12 @@
 {
-  "name": "Virtual Phone - 虚拟手机互动系统",
-  "version": "1.0.0",
-  "description": "在酒馆聊天中显示可交互的手机模拟器",
-  "author": "Gaigai",
-  "main": "index.js",
-  "type": "module",
-  "keywords": ["SillyTavern", "Phone", "Interactive", "UI"],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/gaigai315/gaigai-phone"
-  }
+    "display_name": "虚拟手机",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "phone.css",
+    "author": "gaigai315",
+    "version": "1.0.0",
+    "homePage": "https://github.com/gaigai315/gaigai-phone",
+    "auto_update": true
 }
