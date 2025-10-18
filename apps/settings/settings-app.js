@@ -207,27 +207,38 @@ export class SettingsApp {
         this.bindEvents();
     }
     
-    // 渲染APP图标上传
-    renderAppIconUpload() {
-        const apps = window.VirtualPhone?.home?.apps || [];
-        return apps.map(app => {
-            const customIcon = this.imageManager.getAppIcon(app.id);
-            return `
-                <div class="upload-app-icon-item" data-app="${app.id}" style="text-align: center;">
-                    <label for="upload-icon-${app.id}" style="cursor: pointer;">
-                        <div style="width: 50px; height: 50px; border-radius: 12px; background: ${app.color}; 
-                                    display: flex; align-items: center; justify-content: center; margin: 0 auto;
-                                    background-image: url('${customIcon || ''}'); 
-                                    background-size: cover; background-position: center;">
-                            ${customIcon ? '' : app.icon}
-                        </div>
-                        <div style="font-size: 10px; margin-top: 4px;">${app.name}</div>
-                    </label>
-                    <input type="file" id="upload-icon-${app.id}" accept="image/*" style="display: none;" class="app-icon-upload">
-                </div>
-            `;
-        }).join('');
-    }
+   // 渲染APP图标上传
+renderAppIconUpload() {
+    // 从APPS配置中获取，而不是从window.VirtualPhone
+    const APPS = [
+        { id: 'wechat', name: '微信', icon: '💬', color: '#07c160' },
+        { id: 'browser', name: '浏览器', icon: '🌐', color: '#1890ff' },
+        { id: 'photos', name: '相册', icon: '📷', color: '#ff4d4f' },
+        { id: 'games', name: '游戏', icon: '🎮', color: '#722ed1' },
+        { id: 'music', name: '音乐', icon: '🎵', color: '#eb2f96' },
+        { id: 'notes', name: '备忘录', icon: '📝', color: '#faad14' },
+        { id: 'calendar', name: '日历', icon: '📅', color: '#52c41a' },
+        { id: 'settings', name: '设置', icon: '⚙️', color: '#8c8c8c' }
+    ];
+    
+    return APPS.map(app => {
+        const customIcon = this.imageManager.getAppIcon(app.id);
+        return `
+            <div class="upload-app-icon-item" data-app="${app.id}" style="text-align: center;">
+                <label for="upload-icon-${app.id}" style="cursor: pointer; display: block;">
+                    <div style="width: 50px; height: 50px; border-radius: 12px; background: ${app.color}; 
+                                display: flex; align-items: center; justify-content: center; margin: 0 auto;
+                                ${customIcon ? `background-image: url('${customIcon}'); background-size: cover; background-position: center;` : ''}
+                                font-size: 26px;">
+                        ${customIcon ? '' : app.icon}
+                    </div>
+                    <div style="font-size: 10px; margin-top: 4px; color: #666;">${app.name}</div>
+                </label>
+                <input type="file" id="upload-icon-${app.id}" accept="image/*" style="display: none;" class="app-icon-upload" data-app-id="${app.id}">
+            </div>
+        `;
+    }).join('');
+}
     
     // 获取默认提示词模板
     getDefaultPrompt() {
