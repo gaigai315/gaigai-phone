@@ -68,6 +68,13 @@ export class HomeScreen {
     }
     
     getCurrentTime() {
+        // 优先使用剧情时间
+        const storyTime = this.getStoryTime();
+        if (storyTime) {
+            return storyTime;
+        }
+        
+        // 没有剧情时间则用真实时间
         const now = new Date();
         return now.toLocaleTimeString('zh-CN', { 
             hour: '2-digit', 
@@ -76,11 +83,70 @@ export class HomeScreen {
     }
     
     getCurrentDate() {
+        // 优先使用剧情日期
+        const storyDate = this.getStoryDate();
+        if (storyDate) {
+            return storyDate;
+        }
+        
+        // 没有剧情日期则用真实日期
         const now = new Date();
         const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
         const month = now.getMonth() + 1;
         const day = now.getDate();
         const weekday = weekdays[now.getDay()];
         return `${month}月${day}日 ${weekday}`;
+    }
+    
+    // 从记忆表格获取剧情时间
+    getStoryTime() {
+        try {
+            // 尝试从Gaigai记忆表格获取
+            if (window.Gaigai && window.Gaigai.m) {
+                const mainStory = window.Gaigai.m.get(0); // 主线剧情表
+                if (mainStory && mainStory.r.length > 0) {
+                    const lastRow = mainStory.r[mainStory.r.length - 1];
+                    // 优先用完结时间，没有则用开始时间
+                    const timeStr = lastRow[2] || lastRow[1]; // 列2是完结时间，列1是开始时间
+                    if (timeStr) {
+                        // 提取时间，例如 "上午(08:30)" -> "08:30"
+                        const match = timeStr.match(/(\d{1,2}:\d{2})/);
+                        if (match) return match[1];
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('获取剧情时间失败:', e);
+        }
+        return null;
+    }
+    
+    // 从记忆表格获取剧情日期
+    getStoryDate() {
+        try {
+            if (window.Gaigai && window.Gaigai.m) {
+                const mainStory = window.Gaigai.m.get(0);
+                if (mainStory && mainStory.r.length > 0) {
+                    const lastRow = mainStory.r[mainStory.r.length - 1];
+                    const dateStr = lastRow[0]; // 列0是日期
+                    if (dateStr) {
+                        // 提取日期，例如 "2024年3月15日" -> "3月15日 星期五"
+                        const match = dateStr.match(/(\d+)年(\d+)月(\d+)日/);
+                        if (match) {
+                            const year = parseInt(match[1]);
+                            const month = parseInt(match[2]);
+                            const day = parseInt(match[3]);
+                            const date = new Date(year, month - 1, day);
+                            const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                            const weekday = weekdays[date.getDay()];
+                            return `${month}月${day}日 ${weekday}`;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('获取剧情日期失败:', e);
+        }
+        return null;
     }
 }
