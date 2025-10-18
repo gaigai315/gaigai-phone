@@ -1,122 +1,82 @@
-// 手机外壳
-import { PHONE_CONFIG } from '../config/apps.js';
+// 主屏幕
+import { APPS } from '../config/apps.js';
 
-export class PhoneShell {
-    constructor() {
-        this.container = null;
-        this.screen = null;
-        this.isVisible = false;
-        this.currentApp = null;
+export class HomeScreen {
+    constructor(phoneShell, apps) {
+        this.phoneShell = phoneShell;
+        this.apps = apps || APPS;
     }
     
-    // 在面板中创建
-    createInPanel(panelContainer) {
-        if (!panelContainer) {
-            console.error('❌ 面板容器不存在');
-            return;
-        }
-        
-        this.container = document.createElement('div');
-        this.container.className = 'phone-in-panel';
-        
-        this.container.innerHTML = `
-            <div class="phone-body-panel">
-                <div class="phone-notch"></div>
+    render() {
+        const html = `
+            <div class="home-screen">
+                <div class="wallpaper"></div>
                 
-                <div class="phone-statusbar">
-                    <div class="statusbar-left">
-                        <span class="time">${this.getCurrentTime()}</span>
-                    </div>
-                    <div class="statusbar-right">
-                        <span class="signal">📶</span>
-                        <span class="wifi">📡</span>
-                        <span class="battery">🔋 85%</span>
-                    </div>
+                <div class="home-time">
+                    <div class="time-large">${this.getCurrentTime()}</div>
+                    <div class="date">${this.getCurrentDate()}</div>
                 </div>
                 
-                <div class="phone-screen" id="phone-screen"></div>
+                <div class="app-grid">
+                    ${this.apps.map(app => this.renderAppIcon(app)).join('')}
+                </div>
                 
-                <div class="phone-home-indicator"></div>
-                
-                <div class="phone-panel-buttons">
-                    <button class="phone-panel-btn" id="phone-panel-home" title="返回主页">🏠 主页</button>
-                    <button class="phone-panel-btn" id="phone-panel-power" title="锁屏">🔒 锁屏</button>
+                <div class="dock">
+                    <div class="dock-app" data-app="wechat">💬</div>
+                    <div class="dock-app" data-app="browser">🌐</div>
+                    <div class="dock-app" data-app="photos">📷</div>
+                    <div class="dock-app" data-app="games">🎮</div>
                 </div>
             </div>
         `;
         
-        panelContainer.appendChild(this.container);
-        this.screen = document.getElementById('phone-screen');
-        
-        this.bindPanelEvents();
-        this.startClock();
-        
-        console.log('✅ 手机已渲染到面板');
-        
-        return this.container;
+        this.phoneShell.setContent(html);
+        this.bindEvents();
     }
     
-    bindPanelEvents() {
-        document.getElementById('phone-panel-home')?.addEventListener('click', () => {
-            this.goHome();
+    renderAppIcon(app) {
+        const badge = app.badge > 0 ? `<span class="app-badge">${app.badge}</span>` : '';
+        return `
+            <div class="app-icon" data-app="${app.id}" style="--app-color: ${app.color}">
+                <div class="app-icon-bg">
+                    <span class="app-icon-emoji">${app.icon}</span>
+                </div>
+                ${badge}
+                <div class="app-name">${app.name}</div>
+            </div>
+        `;
+    }
+    
+    bindEvents() {
+        const icons = this.phoneShell.screen.querySelectorAll('.app-icon, .dock-app');
+        icons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                const appId = icon.dataset.app;
+                this.openApp(appId);
+            });
         });
-        
-        document.getElementById('phone-panel-power')?.addEventListener('click', () => {
-            this.toggleScreen();
-        });
+    }
+    
+    openApp(appId) {
+        window.dispatchEvent(new CustomEvent('phone:openApp', { 
+            detail: { appId } 
+        }));
     }
     
     getCurrentTime() {
         const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        return `${hours}:${minutes}`;
+        return now.toLocaleTimeString('zh-CN', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
     }
     
-    startClock() {
-        setInterval(() => {
-            const timeEl = this.container?.querySelector('.statusbar-left .time');
-            if (timeEl) {
-                timeEl.textContent = this.getCurrentTime();
-            }
-        }, 1000);
-    }
-    
-    goHome() {
-        this.currentApp = null;
-        window.dispatchEvent(new CustomEvent('phone:goHome'));
-    }
-    
-    toggleScreen() {
-        if (this.container) {
-            this.container.classList.toggle('screen-off');
-        }
-    }
-    
-    setContent(html) {
-        if (this.screen) {
-            this.screen.innerHTML = html;
-        }
-    }
-    
-    showNotification(title, message, icon = '📱') {
-        if (!this.container) return;
-        
-        const notification = document.createElement('div');
-        notification.className = 'phone-notification';
-        notification.innerHTML = `
-            <div class="notification-icon">${icon}</div>
-            <div class="notification-content">
-                <div class="notification-title">${title}</div>
-                <div class="notification-message">${message}</div>
-            </div>
-        `;
-        
-        this.container.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.classList.add('fade-out');
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
+    getCurrentDate() {
+        const now = new Date();
+        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+        const weekday = weekdays[now.getDay()];
+        return `${month}月${day}日 ${weekday}`;
     }
 }
