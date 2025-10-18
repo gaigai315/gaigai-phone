@@ -225,6 +225,30 @@ function toggleDrawer(icon, panel) {
         updateNotificationBadge(totalNotifications);
     }
 }
+
+    // ✅ 处理微信消息（支持新的微信APP）
+function handleWechatMessage(data) {
+    // 如果微信APP正在运行，直接发送到APP
+    if (window.currentWechatApp) {
+        window.currentWechatApp.receiveMessage(data);
+    } else {
+        // 否则用通知方式
+        handleWechatCommand('receiveMessage', data);
+    }
+}
+
+// 监听从微信发送到聊天的消息
+window.addEventListener('phone:sendToChat', (e) => {
+    const { message, chatId, chatName } = e.detail;
+    
+    // 发送到酒馆聊天框
+    const context = getContext();
+    if (context && context.sendMessage) {
+        context.sendMessage(message);
+    } else {
+        console.warn('无法发送消息到聊天框');
+    }
+});
     
     function handleBrowserCommand(action, data) {
         if (action === 'open') {
@@ -360,12 +384,18 @@ function toggleDrawer(icon, panel) {
                 
                 // 打开对应的APP
                 if (appId === 'settings') {
-                    const settingsApp = new SettingsApp(phoneShell, storage, settings);
-                    settingsApp.render();
-                } else {
-                    phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
-                }
-            });
+                const settingsApp = new SettingsApp(phoneShell, storage, settings);
+                settingsApp.render();
+                } else if (appId === 'wechat') {
+               // ✅ 打开微信APP
+        import('./apps/wechat/wechat-app.js').then(module => {
+        const wechatApp = new module.WechatApp(phoneShell, storage);
+        window.currentWechatApp = wechatApp; // 保存实例用于接收消息
+        wechatApp.render();
+    });
+} else {
+    phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
+});
             
             // 监听清空数据
             window.addEventListener('phone:clearCurrentData', () => {
