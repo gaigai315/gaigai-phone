@@ -4,48 +4,50 @@
    ======================================== */
 
 /* ========================================
-   强制覆盖酒馆抽屉背景遮罩
+   超强覆盖 - 移除所有背景遮罩
    ======================================== */
 
-/* 移除酒馆抽屉的所有背景和遮罩 */
-#phone-panel.drawer-content,
-#phone-panel.drawer-content::before,
-#phone-panel.drawer-content::after {
+/* 移除酒馆所有drawer相关的背景 */
+.drawer-content,
+[class*="drawer"],
+#phone-panel,
+#phone-panel *:not(.phone-body-panel):not(.phone-body-panel *) {
     background: none !important;
     background-color: transparent !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
 
-/* 面板容器 - 无背景无遮罩 */
-#phone-panel.drawer-content {
+/* 针对phone-panel的特殊处理 */
+#phone-panel {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     right: auto !important;
     bottom: auto !important;
-    width: auto !important;
-    height: auto !important;
-    max-width: none !important;
-    max-height: none !important;
+    width: 0 !important;
+    height: 0 !important;
     background: none !important;
     backdrop-filter: none !important;
     padding: 0 !important;
     margin: 0 !important;
-    transform: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
     z-index: 99999 !important;
     pointer-events: none !important;
-    box-shadow: none !important;
-    border: none !important;
 }
 
-/* 移除可能的遮罩层 */
-#phone-panel.drawer-content > .drawer-backdrop,
-#phone-panel.drawer-content ~ .drawer-backdrop,
-.drawer-backdrop {
+/* 移除所有可能的遮罩层 */
+.drawer-backdrop,
+#phone-panel::before,
+#phone-panel::after,
+#phone-panel-content::before,
+#phone-panel-content::after {
     display: none !important;
+    content: none !important;
+    background: none !important;
     opacity: 0 !important;
-    pointer-events: none !important;
 }
 
 /* 隐藏拖拽手柄 */
@@ -53,24 +55,25 @@
     display: none !important;
 }
 
-/* 面板内容 - 完全透明 */
+/* 面板内容 */
 #phone-panel-content {
     width: auto !important;
     height: auto !important;
     padding: 0 !important;
     margin: 0 !important;
-    background: transparent !important;
+    background: none !important;
     overflow: visible !important;
     pointer-events: none !important;
 }
 
-/* 手机容器 - 恢复点击 */
+/* 手机容器 */
 .phone-in-panel {
     width: auto !important;
     height: auto !important;
     padding: 0 !important;
-    background: transparent !important;
+    background: none !important;
     pointer-events: auto !important;
+    position: relative !important;
 }
 
 /* ========================================
@@ -497,4 +500,270 @@
 }
 
 .setting-section {
-    background: #
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.setting-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.setting-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.setting-item:last-child {
+    border-bottom: none;
+}
+
+.setting-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.setting-label {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+.setting-desc {
+    font-size: 11px;
+    color: #999;
+    margin-top: 3px;
+}
+
+.setting-value {
+    font-size: 13px;
+    color: #666;
+}
+
+.setting-info {
+    font-size: 11px;
+    color: #999;
+    line-height: 1.6;
+    margin-top: 8px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 6px;
+}
+
+/* 开关按钮 */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 28px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 28px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .toggle-slider {
+    background-color: #667eea;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+/* 设置按钮 */
+.setting-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.setting-btn-warning {
+    background: #ff9800;
+    color: #fff;
+}
+
+.setting-btn-warning:hover {
+    background: #fb8c00;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+.setting-btn-danger {
+    background: #f44336;
+    color: #fff;
+}
+
+.setting-btn-danger:hover {
+    background: #e53935;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+/* ========================================
+   动画
+   ======================================== */
+
+@keyframes slideDown {
+    from {
+        transform: translateX(-50%) translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+/* ========================================
+   响应式 - 根据屏幕高度自适应
+   ======================================== */
+
+@media (max-height: 800px) {
+    .phone-body-panel {
+        width: 280px !important;
+        height: 600px !important;
+    }
+}
+
+@media (max-height: 700px) {
+    .phone-body-panel {
+        width: 260px !important;
+        height: 550px !important;
+    }
+    
+    .home-time {
+        padding: 25px 15px 10px;
+    }
+    
+    .time-large {
+        font-size: 34px;
+    }
+    
+    .app-grid {
+        gap: 12px;
+        padding: 12px;
+    }
+    
+    .app-icon-bg {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .app-icon-emoji {
+        font-size: 24px;
+    }
+    
+    .dock-app {
+        width: 44px;
+        height: 44px;
+        font-size: 24px;
+    }
+}
+
+@media (max-height: 600px) {
+    .phone-body-panel {
+        width: 240px !important;
+        height: 500px !important;
+    }
+    
+    .home-time {
+        padding: 20px 15px 8px;
+    }
+    
+    .time-large {
+        font-size: 30px;
+    }
+    
+    .date {
+        font-size: 11px;
+    }
+    
+    .app-grid {
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    .app-icon-bg {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .app-icon-emoji {
+        font-size: 22px;
+    }
+    
+    .app-name {
+        font-size: 9px;
+    }
+    
+    .dock-app {
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+    }
+}
+
+/* 超小屏幕 */
+@media (max-height: 500px) {
+    .phone-body-panel {
+        width: 220px !important;
+        height: 450px !important;
+    }
+}
