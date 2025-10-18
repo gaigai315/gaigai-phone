@@ -4,10 +4,20 @@
    ======================================== */
 
 /* ========================================
-   面板样式 - 无背景遮罩版本
+   强制覆盖酒馆抽屉背景遮罩
    ======================================== */
 
-/* 面板容器 - 完全透明，不遮挡页面 */
+/* 移除酒馆抽屉的所有背景和遮罩 */
+#phone-panel.drawer-content,
+#phone-panel.drawer-content::before,
+#phone-panel.drawer-content::after {
+    background: none !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* 面板容器 - 无背景无遮罩 */
 #phone-panel.drawer-content {
     position: fixed !important;
     top: 0 !important;
@@ -16,12 +26,25 @@
     bottom: auto !important;
     width: auto !important;
     height: auto !important;
-    background: transparent !important;
+    max-width: none !important;
+    max-height: none !important;
+    background: none !important;
     backdrop-filter: none !important;
     padding: 0 !important;
     margin: 0 !important;
     transform: none !important;
     z-index: 99999 !important;
+    pointer-events: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* 移除可能的遮罩层 */
+#phone-panel.drawer-content > .drawer-backdrop,
+#phone-panel.drawer-content ~ .drawer-backdrop,
+.drawer-backdrop {
+    display: none !important;
+    opacity: 0 !important;
     pointer-events: none !important;
 }
 
@@ -41,7 +64,7 @@
     pointer-events: none !important;
 }
 
-/* 手机容器 - 完全透明 */
+/* 手机容器 - 恢复点击 */
 .phone-in-panel {
     width: auto !important;
     height: auto !important;
@@ -474,45 +497,4 @@
 }
 
 .setting-section {
-    background: #fff;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.setting-section-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #eee;
-}
-
-.setting-item {
-    padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.setting-item:last-child {
-    border-bottom: none;
-}
-
-.setting-toggle {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.setting-label {
-    font-size: 14px;
-    color: #333;
-    font-weight: 500;
-}
-
-.setting-desc {
-    font-size: 11px;
-    color: #999;
-    margin-top: 3px;
-}
+    background: #
