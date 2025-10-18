@@ -8,6 +8,7 @@ import { HomeScreen } from './phone/home-screen.js';
 import { APPS } from './config/apps.js';
 import { PhoneStorage } from './config/storage.js';
 import { SettingsApp } from './apps/settings/settings-app.js';
+import { ImageUploadManager } from './apps/settings/image-upload.js';
 
 (function() {
     'use strict';
@@ -387,20 +388,15 @@ import { SettingsApp } from './apps/settings/settings-app.js';
     
     setTimeout(init, 1000);
     
-   // ✅ 导入图片管理器
-import { ImageUploadManager } from './apps/settings/image-upload.js';
-
-// ... 文件底部
-window.VirtualPhone = {
-    phone: phoneShell,
-    home: homeScreen,
-    storage: storage,
-    settings: settings,
-    imageManager: new ImageUploadManager(storage), // ✅ 新增
-    version: '1.0.0'
-};
-
-// ✅ 暴露到全局
-window.ImageUploadManager = ImageUploadManager;
+    window.VirtualPhone = {
+        phone: phoneShell,
+        home: homeScreen,
+        storage: storage,
+        settings: settings,
+        imageManager: new ImageUploadManager(storage),
+        version: '1.0.0'
+    };
+    
+    window.ImageUploadManager = ImageUploadManager;
     
 })();
