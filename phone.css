@@ -29,28 +29,35 @@
 
 /* 面板内容区域 - 完整居中显示 */
 #phone-panel-content {
+    width: 100% !important;
+    height: 100% !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    min-height: 100% !important;
-    padding: 20px !important;
-    background: #2c2c2c !important;  /* 深灰色实色背景 */
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    background: transparent !important;  /* 去掉背景 */
 }
 
 /* 手机在面板中的容器 */
 .phone-in-panel {
     width: 100%;
-    max-width: 340px;
-    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    box-sizing: border-box;
 }
 
 /* 手机外壳 - 面板版 */
 .phone-body-panel {
-    width: 100%;
-    max-width: 320px;
-    height: 680px;
+    width: 320px;
+    height: 90vh;  /* 使用视口高度 */
+    max-height: 680px;  /* 最大高度限制 */
     margin: 0 auto;
-    background: #1a1a1a;  /* 实色深灰 */
+    background: #1a1a1a;
     border-radius: 38px;
     box-shadow: 
         0 10px 40px rgba(0, 0, 0, 0.8),
@@ -59,6 +66,7 @@
     padding: 10px;
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;  /* 防止被压缩 */
 }
 
 /* 刘海 */
@@ -406,28 +414,6 @@
     20%, 40%, 60%, 80% { transform: translateX(4px); }
 }
 
-/* 响应式 */
-@media (max-height: 900px) {
-    .phone-body-panel {
-        height: 600px;
-        transform: scale(0.95);
-    }
-}
-
-@media (max-height: 800px) {
-    .phone-body-panel {
-        height: 550px;
-        transform: scale(0.9);
-    }
-}
-
-@media (max-height: 700px) {
-    .phone-body-panel {
-        height: 500px;
-        transform: scale(0.85);
-    }
-}
-
 /* ========================================
    设置APP样式
    ======================================== */
@@ -619,4 +605,82 @@ input:checked + .toggle-slider:before {
     background: #e53935;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+/* ========================================
+   响应式优化 - 根据面板高度自适应
+   ======================================== */
+
+/* 自动计算合适的手机高度 */
+@media (max-height: 850px) {
+    .phone-body-panel {
+        height: 85vh;
+        max-height: 600px;
+    }
+}
+
+@media (max-height: 750px) {
+    .phone-body-panel {
+        height: 85vh;
+        max-height: 550px;
+        width: 280px;
+    }
+    
+    .phone-panel-buttons {
+        margin-top: 8px;
+    }
+    
+    .phone-panel-btn {
+        padding: 8px;
+        font-size: 11px;
+    }
+}
+
+@media (max-height: 650px) {
+    .phone-body-panel {
+        height: 85vh;
+        max-height: 500px;
+        width: 260px;
+    }
+    
+    .app-grid {
+        gap: 12px;
+        padding: 12px;
+    }
+    
+    .app-icon-bg {
+        width: 42px;
+        height: 42px;
+    }
+    
+    .app-icon-emoji {
+        font-size: 22px;
+    }
+    
+    .dock-app {
+        width: 42px;
+        height: 42px;
+        font-size: 22px;
+    }
+}
+
+/* 小屏幕：确保手机完整显示 */
+@media (max-height: 550px) {
+    .phone-body-panel {
+        height: 80vh;
+        max-height: 450px;
+        width: 240px;
+    }
+    
+    .home-time {
+        padding: 20px 15px 10px;
+    }
+    
+    .time-large {
+        font-size: 32px;
+    }
+    
+    .date {
+        font-size: 11px;
+    }
 }
