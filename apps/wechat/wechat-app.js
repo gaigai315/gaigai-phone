@@ -23,11 +23,93 @@ export class WechatApp {
     
     loadStyles() {
     if (!document.getElementById('wechat-styles')) {
-        const link = document.createElement('link');
-        link.id = 'wechat-styles';
-        link.rel = 'stylesheet';
-        link.href = '/scripts/extensions/third-party/虚拟手机/apps/wechat/wechat.css';  // ✅ 小写
-        document.head.appendChild(link);
+        const style = document.createElement('style');
+        style.id = 'wechat-styles';
+        style.textContent = `
+            .wechat-app {
+                width: 100%;
+                height: 100%;
+                background: #ededed;
+                display: flex;
+                flex-direction: column;
+            }
+            .wechat-header {
+                background: #ededed;
+                height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 10px;
+                border-bottom: 1px solid #ddd;
+            }
+            .wechat-content {
+                flex: 1;
+                overflow-y: auto;
+                background: #fff;
+            }
+            .wechat-tabbar {
+                height: 50px;
+                background: #f7f7f7;
+                border-top: 1px solid #ddd;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+            }
+            .wechat-tab {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                cursor: pointer;
+                color: #999;
+                font-size: 10px;
+            }
+            .wechat-tab.active {
+                color: #07c160;
+            }
+            .wechat-tab i {
+                font-size: 20px;
+                margin-bottom: 2px;
+            }
+            .chat-item {
+                display: flex;
+                padding: 12px;
+                border-bottom: 1px solid #f0f0f0;
+                cursor: pointer;
+                background: #fff;
+            }
+            .chat-avatar {
+                width: 48px;
+                height: 48px;
+                border-radius: 4px;
+                background: #f0f0f0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                margin-right: 12px;
+            }
+            .chat-info {
+                flex: 1;
+            }
+            .chat-name {
+                font-size: 16px;
+                color: #000;
+                margin-bottom: 4px;
+            }
+            .chat-last-msg {
+                font-size: 13px;
+                color: #999;
+            }
+            .wechat-empty {
+                text-align: center;
+                padding: 50px;
+                color: #999;
+            }
+        `;
+        document.head.appendChild(style);
     }
 }
     
