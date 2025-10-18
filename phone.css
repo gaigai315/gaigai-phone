@@ -1,0 +1,432 @@
+/* ========================================
+   虚拟手机 - 完整样式
+   ======================================== */
+
+/* 手机容器 */
+#virtual-phone {
+    position: fixed;
+    top: 20px;
+    z-index: 99999;
+    transition: all 0.3s ease;
+}
+
+#virtual-phone.right {
+    right: 20px;
+}
+
+#virtual-phone.left {
+    left: 20px;
+}
+
+/* 手机尺寸 */
+#virtual-phone.small .phone-body {
+    width: 280px;
+    height: 580px;
+    transform: scale(0.85);
+}
+
+#virtual-phone.medium .phone-body {
+    width: 320px;
+    height: 680px;
+}
+
+#virtual-phone.large .phone-body {
+    width: 360px;
+    height: 780px;
+}
+
+/* 折叠状态 */
+#virtual-phone.collapsed .phone-body {
+    transform: translateX(400px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#virtual-phone.collapsed.left .phone-body {
+    transform: translateX(-400px);
+}
+
+/* 手机外壳 */
+.phone-body {
+    width: 320px;
+    height: 680px;
+    background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
+    border-radius: 45px;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 0 8px #0a0a0a,
+        0 0 0 10px #1f1f1f,
+        inset 0 0 20px rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* 刘海 */
+.phone-notch {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 140px;
+    height: 28px;
+    background: #0a0a0a;
+    border-radius: 0 0 18px 18px;
+    z-index: 10;
+    box-shadow: 
+        inset 0 -2px 5px rgba(0, 0, 0, 0.5),
+        0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.phone-notch::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    background: #1a1a2e;
+    border-radius: 50%;
+    box-shadow: 
+        -15px 0 0 #1a1a2e,
+        15px 0 0 #1a1a2e;
+}
+
+/* 状态栏 */
+.phone-statusbar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    height: 44px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 9;
+}
+
+.statusbar-left,
+.statusbar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 屏幕 */
+.phone-screen {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, #000000, #1a1a1a);
+    border-radius: 35px;
+    overflow: hidden;
+    position: relative;
+    margin-top: 44px;
+}
+
+#virtual-phone.screen-off .phone-screen {
+    background: #000;
+    opacity: 0.1;
+}
+
+/* Home指示器 */
+.phone-home-indicator {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    z-index: 10;
+}
+
+/* 按钮 */
+.phone-btn-power,
+.phone-btn-volume,
+.phone-btn-home {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+}
+
+.phone-btn-power:hover,
+.phone-btn-volume:hover,
+.phone-btn-home:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.phone-btn-power {
+    top: 100px;
+    right: -40px;
+}
+
+.phone-btn-volume {
+    top: 150px;
+    left: -40px;
+}
+
+.phone-btn-home {
+    bottom: 100px;
+    right: -40px;
+}
+
+/* 折叠按钮 */
+.phone-toggle {
+    position: absolute;
+    top: 10px;
+    right: -50px;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(145deg, #ff69b4, #ff1493);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 
+        0 4px 15px rgba(255, 105, 180, 0.4),
+        inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s;
+    z-index: 10000;
+}
+
+.phone-toggle:hover {
+    transform: scale(1.1) rotate(10deg);
+}
+
+#virtual-phone.left .phone-toggle {
+    right: auto;
+    left: -50px;
+}
+
+/* 通知 */
+.phone-notification {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    animation: slideDown 0.3s ease;
+    z-index: 1000;
+}
+
+.phone-notification.fade-out {
+    animation: fadeOut 0.3s ease forwards;
+}
+
+.notification-icon {
+    font-size: 24px;
+}
+
+.notification-content {
+    flex: 1;
+    color: #fff;
+}
+
+.notification-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.notification-message {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* 主屏幕 */
+.home-screen {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow-y: auto;
+}
+
+.wallpaper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    z-index: 0;
+}
+
+.home-time {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 40px 20px 20px;
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.time-large {
+    font-size: 48px;
+    font-weight: 300;
+}
+
+.date {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-top: 5px;
+}
+
+/* APP网格 */
+.app-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    padding: 20px;
+}
+
+.app-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.app-icon:active {
+    transform: scale(0.9);
+}
+
+.app-icon-bg {
+    width: 56px;
+    height: 56px;
+    background: var(--app-color, #666);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+        0 4px 15px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.app-icon:hover .app-icon-bg {
+    transform: scale(1.1);
+}
+
+.app-icon-emoji {
+    font-size: 32px;
+}
+
+.app-name {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.app-badge {
+    position: absolute;
+    top: -4px;
+    right: 8px;
+    background: #ff3b30;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+/* Dock */
+.dock {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(30px);
+    padding: 12px 20px;
+    border-radius: 24px;
+    z-index: 2;
+}
+
+.dock-app {
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dock-app:hover {
+    transform: translateY(-5px) scale(1.1);
+}
+
+/* 动画 */
+@keyframes slideDown {
+    from {
+        transform: translateX(-50%) translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    #virtual-phone {
+        top: 10px;
+        right: 10px !important;
+    }
+    
+    #virtual-phone.medium .phone-body {
+        width: 240px;
+        height: 500px;
+        transform: scale(0.9);
+    }
+}
