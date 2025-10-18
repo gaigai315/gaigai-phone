@@ -17,14 +17,19 @@
     -webkit-backdrop-filter: none !important;
 }
 
-/* 手机面板居中显示 */
+/* 手机面板居中显示 - 修复版 */
 #phone-panel.drawer-content {
     position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    width: auto !important;
-    height: auto !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    transform: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
     max-width: none !important;
     max-height: none !important;
     padding: 0 !important;
