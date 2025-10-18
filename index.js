@@ -10,7 +10,6 @@ import { APPS, PHONE_CONFIG } from './config/apps.js';
 (function() {
     'use strict';
     
-    // 防止重复加载
     if (window.VirtualPhoneLoaded) {
         console.warn('⚠️ 虚拟手机已加载，跳过重复初始化');
         return;
@@ -19,24 +18,122 @@ import { APPS, PHONE_CONFIG } from './config/apps.js';
     
     console.log('📱 虚拟手机系统 v1.0.0 启动');
     
-    // 全局变量
     let phoneShell = null;
     let homeScreen = null;
     let currentApp = null;
+    let totalNotifications = 0;
     
-    // AI指令的正则表达式
     const PHONE_TAG_REGEX = /<Phone>([\s\S]*?)<\/Phone>/gi;
     
     // ========================================
-    // 解析AI发送的手机指令
+    // 创建顶部面板按钮（集成到酒馆）
+    // ========================================
+    function createTopPanel() {
+        const topSettingsHolder = document.getElementById('top-settings-holder');
+        if (!topSettingsHolder) {
+            console.error('❌ 找不到 top-settings-holder');
+            return;
+        }
+        
+        // 移除旧的面板
+        const oldPanel = document.getElementById('phone-panel-holder');
+        if (oldPanel) oldPanel.remove();
+        
+        // 创建面板HTML
+        const panelHTML = `
+            <div id="phone-panel-holder" class="drawer">
+                <div class="drawer-toggle drawer-header">
+                    <div id="phoneDrawerIcon" class="drawer-icon fa-solid fa-mobile-screen-button fa-fw closedIcon interactable" 
+                         title="虚拟手机" 
+                         data-i18n="[title]Virtual Phone" 
+                         tabindex="0" 
+                         role="button">
+                        <span id="phone-badge" class="badge-notification" style="display:none;">0</span>
+                    </div>
+                </div>
+                <div id="phone-panel" class="drawer-content fillRight closedDrawer">
+                    <div id="phone-panel-header" class="fa-solid fa-grip drag-grabber"></div>
+                    <div id="phone-panel-content" style="padding: 10px; height: 100%; overflow: auto;">
+                        <!-- 手机界面会在这里显示 -->
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // 插入到第一个位置
+        topSettingsHolder.insertAdjacentHTML('afterbegin', panelHTML);
+        
+        // 绑定点击事件
+        const drawerIcon = document.getElementById('phoneDrawerIcon');
+        const drawerPanel = document.getElementById('phone-panel');
+        
+        drawerIcon?.addEventListener('click', () => {
+            toggleDrawer(drawerIcon, drawerPanel);
+        });
+        
+        console.log('✅ 顶部面板已创建');
+    }
+    
+    // 切换抽屉
+    function toggleDrawer(icon, panel) {
+        const isOpen = panel.classList.contains('openDrawer');
+        
+        if (isOpen) {
+            // 关闭
+            panel.classList.remove('openDrawer');
+            panel.classList.add('closedDrawer');
+            icon.classList.remove('openIcon');
+            icon.classList.add('closedIcon');
+        } else {
+            // 打开
+            panel.classList.add('openDrawer');
+            panel.classList.remove('closedDrawer');
+            icon.classList.add('openIcon');
+            icon.classList.remove('closedIcon');
+            
+            // 打开时创建手机界面
+            if (!phoneShell) {
+                createPhoneInPanel();
+            }
+        }
+    }
+    
+    // 在面板中创建手机
+    function createPhoneInPanel() {
+        const container = document.getElementById('phone-panel-content');
+        if (!container) return;
+        
+        phoneShell = new PhoneShell();
+        phoneShell.createInPanel(container);
+        
+        homeScreen = new HomeScreen(phoneShell);
+        homeScreen.render();
+        
+        console.log('✅ 手机界面已创建');
+    }
+    
+    // 更新通知红点
+    function updateNotificationBadge(count) {
+        totalNotifications = count;
+        const badge = document.getElementById('phone-badge');
+        if (!badge) return;
+        
+        if (count > 0) {
+            badge.style.display = 'block';
+            badge.textContent = count > 99 ? '99+' : count;
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    
+    // ========================================
+    // 解析和执行指令
     // ========================================
     function parsePhoneCommands(text) {
         if (!text) return [];
-        
         const commands = [];
         let match;
-        
-        PHONE_TAG_REGEX.lastIndex = 0; // 重置正则
+        PHONE_TAG_REGEX.lastIndex = 0;
         
         while ((match = PHONE_TAG_REGEX.exec(text)) !== null) {
             try {
@@ -48,16 +145,11 @@ import { APPS, PHONE_CONFIG } from './config/apps.js';
                 console.error('❌ 手机指令解析失败:', e);
             }
         }
-        
         return commands;
     }
     
-    // ========================================
-    // 执行手机指令
-    // ========================================
     function executePhoneCommand(command) {
         const { app, action, data } = command;
-        
         console.log(`📱 执行指令: ${app}.${action}`, data);
         
         switch (app) {
@@ -73,64 +165,41 @@ import { APPS, PHONE_CONFIG } from './config/apps.js';
             case 'system':
                 handleSystemCommand(action, data);
                 break;
-            default:
-                console.warn('⚠️ 未知的APP:', app);
         }
     }
     
-    // 微信指令
     function handleWechatCommand(action, data) {
-        switch (action) {
-            case 'newMessage':
-                phoneShell?.showNotification(
-                    data.from || '新消息',
-                    data.message || '',
-                    '💬'
-                );
-                updateAppBadge('wechat', 1);
-                break;
+        if (action === 'newMessage') {
+            phoneShell?.showNotification(data.from || '新消息', data.message || '', '💬');
+            updateAppBadge('wechat', 1);
+            totalNotifications++;
+            updateNotificationBadge(totalNotifications);
         }
     }
     
-    // 浏览器指令
     function handleBrowserCommand(action, data) {
         if (action === 'open') {
             phoneShell?.showNotification('浏览器', `访问: ${data.url}`, '🌐');
         }
     }
     
-    // 通知
     function handleNotification(action, data) {
         if (action === 'show') {
-            phoneShell?.showNotification(
-                data.title || '通知',
-                data.message || '',
-                data.icon || '📱'
-            );
+            phoneShell?.showNotification(data.title || '通知', data.message || '', data.icon || '📱');
         }
     }
     
-    // 系统指令
     function handleSystemCommand(action, data) {
         switch (action) {
             case 'vibrate':
                 if (phoneShell?.container) {
                     phoneShell.container.style.animation = 'shake 0.5s';
-                    setTimeout(() => {
-                        phoneShell.container.style.animation = '';
-                    }, 500);
+                    setTimeout(() => { phoneShell.container.style.animation = ''; }, 500);
                 }
-                break;
-            case 'screenOn':
-                phoneShell?.container?.classList.remove('screen-off');
-                break;
-            case 'screenOff':
-                phoneShell?.container?.classList.add('screen-off');
                 break;
         }
     }
     
-    // 更新APP角标
     function updateAppBadge(appId, increment = 1) {
         const app = APPS.find(a => a.id === appId);
         if (app) {
@@ -162,13 +231,11 @@ import { APPS, PHONE_CONFIG } from './config/apps.js';
             if (commands.length > 0) {
                 setTimeout(hidePhoneTags, 100);
             }
-            
         } catch (e) {
             console.error('❌ 消息处理失败:', e);
         }
     }
     
-    // 隐藏聊天中的<Phone>标签
     function hidePhoneTags() {
         $('.mes_text').each(function() {
             const $this = $(this);
@@ -179,7 +246,6 @@ import { APPS, PHONE_CONFIG } from './config/apps.js';
         });
     }
     
-    // 获取酒馆上下文
     function getContext() {
         return (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) 
             ? SillyTavern.getContext() 
@@ -205,30 +271,25 @@ import { APPS, PHONE_CONFIG } from './config/apps.js';
         console.log('✅ 依赖加载完成，开始初始化');
         
         try {
-            // 创建手机外壳
-            phoneShell = new PhoneShell();
-            phoneShell.create();
-            console.log('✅ 手机外壳创建完成');
-            
-            // 创建主屏幕
-            homeScreen = new HomeScreen(phoneShell);
-            homeScreen.render();
-            console.log('✅ 主屏幕渲染完成');
+            // 创建顶部面板
+            createTopPanel();
             
             // 监听事件
             window.addEventListener('phone:goHome', () => {
                 currentApp = null;
-                homeScreen.render();
+                if (homeScreen) homeScreen.render();
             });
             
             window.addEventListener('phone:openApp', (e) => {
                 const { appId } = e.detail;
                 console.log('📱 打开APP:', appId);
-                
                 const app = APPS.find(a => a.id === appId);
-                if (app) app.badge = 0;
-                
-                phoneShell.showNotification('APP', `${appId} 功能开发中...`, '🚧');
+                if (app) {
+                    app.badge = 0;
+                    totalNotifications = APPS.reduce((sum, a) => sum + (a.badge || 0), 0);
+                    updateNotificationBadge(totalNotifications);
+                }
+                phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
             });
             
             // 连接到酒馆
@@ -243,20 +304,13 @@ import { APPS, PHONE_CONFIG } from './config/apps.js';
             
             console.log('🎉 虚拟手机初始化完成！');
             
-            // 欢迎通知
-            setTimeout(() => {
-                phoneShell.showNotification('虚拟手机', '已成功启动！', '✅');
-            }, 500);
-            
         } catch (e) {
             console.error('❌ 虚拟手机初始化失败:', e);
         }
     }
     
-    // 启动
     setTimeout(init, 1000);
     
-    // 导出全局接口
     window.VirtualPhone = {
         phone: phoneShell,
         home: homeScreen,
@@ -266,5 +320,3 @@ import { APPS, PHONE_CONFIG } from './config/apps.js';
     };
     
 })();
-
-console.log('📱 虚拟手机系统已加载，等待初始化...');
