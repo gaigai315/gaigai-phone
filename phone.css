@@ -34,7 +34,7 @@
     justify-content: center !important;
     min-height: 100% !important;
     padding: 20px !important;
-    background: #f0f0f0 !important;
+    background: #2c2c2c !important;  /* 深灰色实色背景 */
 }
 
 /* 手机在面板中的容器 */
@@ -50,12 +50,12 @@
     max-width: 320px;
     height: 680px;
     margin: 0 auto;
-    background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
+    background: #1a1a1a;  /* 实色深灰 */
     border-radius: 38px;
     box-shadow: 
-        0 10px 40px rgba(0, 0, 0, 0.4),
+        0 10px 40px rgba(0, 0, 0, 0.8),
         0 0 0 6px #0a0a0a,
-        inset 0 0 20px rgba(255, 255, 255, 0.05);
+        0 0 0 8px #1f1f1f;
     padding: 10px;
     position: relative;
     overflow: hidden;
@@ -124,7 +124,7 @@
 .phone-screen {
     width: 100%;
     height: 100%;
-    background: linear-gradient(to bottom, #000000, #1a1a1a);
+    background: #000000;  /* 纯黑色实色背景 */
     border-radius: 30px;
     overflow: hidden;
     position: relative;
@@ -239,6 +239,8 @@
     width: 100%;
     height: 100%;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-size: cover;
+    background-position: center;
     z-index: 0;
 }
 
