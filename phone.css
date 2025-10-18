@@ -1,106 +1,80 @@
 /* ========================================
-   虚拟手机 - 完整样式
+   虚拟手机 - 完整样式 v2.0
+   作者: gaigai315
    ======================================== */
 
-/* ✅ 去除抽屉和面板的所有背景 */
+/* ========================================
+   强制覆盖酒馆抽屉样式
+   ======================================== */
+
+/* 面板全屏遮罩效果 */
 #phone-panel.drawer-content {
-    background: transparent !important;
-    background-color: transparent !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(8px) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transform: none !important;
+    z-index: 99999 !important;
 }
 
+/* 隐藏拖拽手柄 */
 #phone-panel-header {
-    background: transparent !important;
+    display: none !important;
 }
 
+/* 面板内容 - 完全透明居中 */
 #phone-panel-content {
     width: 100% !important;
     height: 100% !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 0 !important;
+    padding: 20px !important;
     margin: 0 !important;
-    overflow: hidden !important;
     background: transparent !important;
-    background-color: transparent !important;
+    overflow: auto !important;
 }
 
+/* 手机容器 - 完全透明 */
 .phone-in-panel {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    box-sizing: border-box;
-    background: transparent !important;
-}
-
-/* 通知红点 */
-.badge-notification {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    min-width: 16px;
-    height: 16px;
-    background: #ff3b30;
-    border: 2px solid #fff;
-    border-radius: 10px;
-    color: #fff;
-    font-size: 9px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 4px;
-    box-shadow: 0 2px 8px rgba(255, 59, 48, 0.5);
-    z-index: 10;
-}
-
-#phoneDrawerIcon {
-    position: relative;
-}
-
-/* 面板内容区域 - 完整居中显示 */
-#phone-panel-content {
     width: 100% !important;
     height: 100% !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     padding: 0 !important;
-    margin: 0 !important;
-    overflow: hidden !important;
-    background: transparent !important;  /* 去掉背景 */
+    background: transparent !important;
 }
 
-/* 手机在面板中的容器 */
-.phone-in-panel {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    box-sizing: border-box;
-}
+/* ========================================
+   手机外壳
+   ======================================== */
 
-/* 手机外壳 - 面板版 */
 .phone-body-panel {
-    width: 320px;
-    height: 90vh;  /* 使用视口高度 */
-    max-height: 680px;  /* 最大高度限制 */
-    margin: 0 auto;
-    background: #1a1a1a;
-    border-radius: 38px;
+    width: 320px !important;
+    height: 680px !important;
+    max-height: 85vh !important;
+    margin: 0 auto !important;
+    background: #1a1a1a !important;
+    border-radius: 38px !important;
     box-shadow: 
-        0 10px 40px rgba(0, 0, 0, 0.8),
+        0 30px 80px rgba(0, 0, 0, 0.9),
         0 0 0 6px #0a0a0a,
-        0 0 0 8px #1f1f1f;
-    padding: 10px;
-    position: relative;
-    overflow: hidden;
-    flex-shrink: 0;  /* 防止被压缩 */
+        0 0 0 8px #1f1f1f !important;
+    padding: 10px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
 }
 
 /* 刘海 */
@@ -165,8 +139,8 @@
 /* 屏幕 */
 .phone-screen {
     width: 100%;
-    height: 100%;
-    background: #000000;  /* 纯黑色实色背景 */
+    height: calc(100% - 90px);
+    background: #000000;
     border-radius: 30px;
     overflow: hidden;
     position: relative;
@@ -196,7 +170,7 @@
     display: flex;
     gap: 10px;
     justify-content: center;
-    margin-top: 15px;
+    margin-top: 12px;
 }
 
 .phone-panel-btn {
@@ -219,6 +193,35 @@
 
 .phone-panel-btn:active {
     transform: translateY(0);
+}
+
+/* ========================================
+   通知系统
+   ======================================== */
+
+/* 顶部图标红点 */
+.badge-notification {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 16px;
+    height: 16px;
+    background: #ff3b30;
+    border: 2px solid #fff;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 9px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    box-shadow: 0 2px 8px rgba(255, 59, 48, 0.5);
+    z-index: 10;
+}
+
+#phoneDrawerIcon {
+    position: relative;
 }
 
 /* 通知弹窗 */
@@ -265,7 +268,10 @@
     margin-top: 2px;
 }
 
-/* 主屏幕 */
+/* ========================================
+   主屏幕
+   ======================================== */
+
 .home-screen {
     width: 100%;
     height: 100%;
@@ -367,6 +373,7 @@
     white-space: nowrap;
 }
 
+/* APP角标 */
 .app-badge {
     position: absolute;
     top: -3px;
@@ -421,31 +428,6 @@
 
 .dock-app:active {
     transform: translateY(-2px) scale(1.05);
-}
-
-/* 动画 */
-@keyframes slideDown {
-    from {
-        transform: translateX(-50%) translateY(-100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(-50%) translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeOut {
-    to {
-        opacity: 0;
-        transform: translateX(-50%) translateY(-20px);
-    }
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-    20%, 40%, 60%, 80% { transform: translateX(4px); }
 }
 
 /* ========================================
@@ -603,7 +585,7 @@ input:checked + .toggle-slider:before {
     transform: translateX(20px);
 }
 
-/* 按钮 */
+/* 设置按钮 */
 .setting-btn {
     width: 100%;
     padding: 12px;
@@ -642,39 +624,56 @@ input:checked + .toggle-slider:before {
 }
 
 /* ========================================
-   响应式优化 - 根据面板高度自适应
+   动画
    ======================================== */
 
-/* 自动计算合适的手机高度 */
-@media (max-height: 850px) {
-    .phone-body-panel {
-        height: 85vh;
-        max-height: 600px;
+@keyframes slideDown {
+    from {
+        transform: translateX(-50%) translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
     }
 }
 
-@media (max-height: 750px) {
-    .phone-body-panel {
-        height: 85vh;
-        max-height: 550px;
-        width: 280px;
-    }
-    
-    .phone-panel-buttons {
-        margin-top: 8px;
-    }
-    
-    .phone-panel-btn {
-        padding: 8px;
-        font-size: 11px;
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
     }
 }
 
-@media (max-height: 650px) {
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+/* ========================================
+   响应式 - 根据屏幕高度自适应
+   ======================================== */
+
+@media (max-height: 800px) {
     .phone-body-panel {
-        height: 85vh;
-        max-height: 500px;
-        width: 260px;
+        width: 280px !important;
+        height: 600px !important;
+    }
+}
+
+@media (max-height: 700px) {
+    .phone-body-panel {
+        width: 260px !important;
+        height: 550px !important;
+    }
+    
+    .home-time {
+        padding: 25px 15px 10px;
+    }
+    
+    .time-large {
+        font-size: 34px;
     }
     
     .app-grid {
@@ -683,38 +682,68 @@ input:checked + .toggle-slider:before {
     }
     
     .app-icon-bg {
-        width: 42px;
-        height: 42px;
+        width: 44px;
+        height: 44px;
+    }
+    
+    .app-icon-emoji {
+        font-size: 24px;
+    }
+    
+    .dock-app {
+        width: 44px;
+        height: 44px;
+        font-size: 24px;
+    }
+}
+
+@media (max-height: 600px) {
+    .phone-body-panel {
+        width: 240px !important;
+        height: 500px !important;
+    }
+    
+    .home-time {
+        padding: 20px 15px 8px;
+    }
+    
+    .time-large {
+        font-size: 30px;
+    }
+    
+    .date {
+        font-size: 11px;
+    }
+    
+    .app-grid {
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    .app-icon-bg {
+        width: 40px;
+        height: 40px;
     }
     
     .app-icon-emoji {
         font-size: 22px;
     }
     
+    .app-name {
+        font-size: 9px;
+    }
+    
     .dock-app {
-        width: 42px;
-        height: 42px;
+        width: 40px;
+        height: 40px;
         font-size: 22px;
     }
 }
 
-/* 小屏幕：确保手机完整显示 */
-@media (max-height: 550px) {
+/* 超小屏幕 */
+@media (max-height: 500px) {
     .phone-body-panel {
-        height: 80vh;
-        max-height: 450px;
-        width: 240px;
-    }
-    
-    .home-time {
-        padding: 20px 15px 10px;
-    }
-    
-    .time-large {
-        font-size: 32px;
-    }
-    
-    .date {
-        font-size: 11px;
+        width: 220px !important;
+        height: 450px !important;
     }
 }
