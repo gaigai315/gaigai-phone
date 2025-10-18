@@ -37,21 +37,62 @@ export class SettingsApp {
                     <div class="setting-section">
                         <div class="setting-section-title">🎨 个性化</div>
                         
+                        <!-- 壁纸设置 -->
                         <div class="setting-item">
                             <div class="setting-label">手机壁纸</div>
                             <div class="setting-desc">支持jpg/png，最大2MB</div>
                             <div style="margin-top: 10px; display: flex; gap: 10px;">
-                                <label for="upload-wallpaper" class="setting-btn" style="flex: 1; background: #667eea; cursor: pointer;">
+                                <label for="upload-wallpaper" class="setting-btn" style="flex: 1; background: #667eea; cursor: pointer; color: #fff;">
                                     <i class="fa-solid fa-upload"></i> 选择壁纸
                                 </label>
                                 <input type="file" id="upload-wallpaper" accept="image/*" style="display: none;">
-                                <button id="delete-wallpaper" class="setting-btn" style="flex: 1; background: #f44336;">
+                                <button id="delete-wallpaper" class="setting-btn" style="flex: 1; background: #f44336; color: #fff;">
                                     <i class="fa-solid fa-trash"></i> 删除
                                 </button>
                             </div>
                             <div id="wallpaper-preview" style="margin-top: 10px; max-height: 100px; overflow: hidden; border-radius: 8px; ${wallpaper ? '' : 'display: none;'}">
                                 <img src="${wallpaper || ''}" style="width: 100%; height: auto; display: ${wallpaper ? 'block' : 'none'};">
                             </div>
+                        </div>
+                        
+                        <!-- APP图标设置 -->
+                        <div class="setting-item">
+                            <div class="setting-label">自定义APP图标</div>
+                            <div class="setting-desc">点击APP选择图片替换图标</div>
+                            <div class="app-icon-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;">
+                                ${this.renderAppIconUpload()}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 互动模式 -->
+                    <div class="setting-section">
+                        <div class="setting-section-title">📡 互动模式</div>
+                        
+                        <div class="setting-item setting-toggle">
+                            <div>
+                                <div class="setting-label">在线模式</div>
+                                <div class="setting-desc">启用后可通过手机与AI互动（需要设置提示词）</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="setting-online-mode" ${this.settings.onlineMode ? 'checked' : ''}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <button class="setting-btn" id="open-prompt-editor" style="background: #667eea; color: #fff; width: 100%;">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                编辑提示词模板
+                            </button>
+                        </div>
+                        
+                        <div class="setting-info">
+                            <strong>使用说明：</strong><br>
+                            1. 点击"编辑提示词"，将模板添加到角色卡<br>
+                            2. 开启"在线模式"<br>
+                            3. 在手机APP中发送消息，AI会自动回复到手机界面<br>
+                            4. 古代背景建议关闭"手机功能"
                         </div>
                     </div>
                     
@@ -126,10 +167,108 @@ export class SettingsApp {
                     </div>
                 </div>
             </div>
+            
+            <!-- 提示词编辑器弹窗 -->
+            <div id="prompt-editor-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+                 background: rgba(0,0,0,0.8); z-index: 10000; overflow-y: auto;">
+                <div style="max-width: 600px; margin: 20px auto; background: #fff; border-radius: 12px; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">📝 手机互动提示词模板</h3>
+                        <button id="close-prompt-editor" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">提示词内容：</label>
+                        <textarea id="prompt-template" style="width: 100%; height: 300px; padding: 10px; 
+                                 border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px;">${this.getDefaultPrompt()}</textarea>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button id="copy-prompt" class="setting-btn" style="flex: 1; background: #667eea; color: #fff;">
+                            <i class="fa-solid fa-copy"></i> 复制到剪贴板
+                        </button>
+                        <button id="save-prompt" class="setting-btn" style="flex: 1; background: #52c41a; color: #fff;">
+                            <i class="fa-solid fa-save"></i> 保存模板
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 10px; background: #f0f9ff; border-radius: 6px; font-size: 12px;">
+                        <strong>📌 使用步骤：</strong><br>
+                        1. 点击"复制到剪贴板"<br>
+                        2. 打开角色卡编辑器<br>
+                        3. 粘贴到"角色描述"或"场景"中<br>
+                        4. 保存角色卡
+                    </div>
+                </div>
+            </div>
         `;
         
         this.phoneShell.setContent(html);
         this.bindEvents();
+    }
+    
+    // 渲染APP图标上传
+    renderAppIconUpload() {
+        const apps = window.VirtualPhone?.home?.apps || [];
+        return apps.map(app => {
+            const customIcon = this.imageManager.getAppIcon(app.id);
+            return `
+                <div class="upload-app-icon-item" data-app="${app.id}" style="text-align: center;">
+                    <label for="upload-icon-${app.id}" style="cursor: pointer;">
+                        <div style="width: 50px; height: 50px; border-radius: 12px; background: ${app.color}; 
+                                    display: flex; align-items: center; justify-content: center; margin: 0 auto;
+                                    background-image: url('${customIcon || ''}'); 
+                                    background-size: cover; background-position: center;">
+                            ${customIcon ? '' : app.icon}
+                        </div>
+                        <div style="font-size: 10px; margin-top: 4px;">${app.name}</div>
+                    </label>
+                    <input type="file" id="upload-icon-${app.id}" accept="image/*" style="display: none;" class="app-icon-upload">
+                </div>
+            `;
+        }).join('');
+    }
+    
+    // 获取默认提示词模板
+    getDefaultPrompt() {
+        return this.settings.promptTemplate || `# 虚拟手机互动系统
+
+当{{user}}使用手机发送消息时（消息以 [📱手机] 开头），你需要用以下格式回复：
+
+<Phone>
+{
+  "app": "wechat",
+  "action": "receiveMessage",
+  "data": {
+    "from": "{{char}}",
+    "message": "你的回复内容（正常对话即可）",
+    "avatar": "😊",
+    "timestamp": "刚刚"
+  }
+}
+</Phone>
+
+## 示例
+
+用户发送：[📱手机] 在吗？
+你的回复：
+<Phone>
+{
+  "app": "wechat",
+  "action": "receiveMessage",
+  "data": {
+    "from": "{{char}}",
+    "message": "在呢！有什么事吗？",
+    "avatar": "😊",
+    "timestamp": "刚刚"
+  }
+}
+</Phone>
+
+## 注意
+- 只在消息有 [📱手机] 前缀时使用此格式
+- 消息内容用自然语气，符合角色性格
+- 可以发送表情、贴图等`;
     }
     
     bindEvents() {
@@ -183,6 +322,64 @@ export class SettingsApp {
             }));
             
             alert('✅ 壁纸已删除！');
+        });
+        
+        // APP图标上传
+        document.querySelectorAll('.app-icon-upload').forEach(input => {
+            input.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const appId = e.target.id.replace('upload-icon-', '');
+                
+                try {
+                    await this.imageManager.uploadAppIcon(appId, file);
+                    alert('✅ 图标上传成功！');
+                    this.render(); // 重新渲染设置页面
+                    
+                    // 通知主屏幕更新
+                    if (window.VirtualPhone?.home) {
+                        window.VirtualPhone.home.render();
+                    }
+                } catch (err) {
+                    alert('❌ 上传失败：' + err.message);
+                }
+                
+                e.target.value = '';
+            });
+        });
+        
+        // 在线模式切换
+        document.getElementById('setting-online-mode')?.addEventListener('change', (e) => {
+            this.settings.onlineMode = e.target.checked;
+            this.storage.saveSettings(this.settings);
+            console.log('✅ 在线模式:', this.settings.onlineMode ? '已开启' : '已关闭');
+        });
+        
+        // 打开提示词编辑器
+        document.getElementById('open-prompt-editor')?.addEventListener('click', () => {
+            document.getElementById('prompt-editor-modal').style.display = 'block';
+        });
+        
+        // 关闭编辑器
+        document.getElementById('close-prompt-editor')?.addEventListener('click', () => {
+            document.getElementById('prompt-editor-modal').style.display = 'none';
+        });
+        
+        // 复制提示词
+        document.getElementById('copy-prompt')?.addEventListener('click', () => {
+            const textarea = document.getElementById('prompt-template');
+            textarea.select();
+            document.execCommand('copy');
+            alert('✅ 已复制到剪贴板！\n\n请粘贴到角色卡的"角色描述"或"场景"中');
+        });
+        
+        // 保存提示词模板
+        document.getElementById('save-prompt')?.addEventListener('click', () => {
+            const content = document.getElementById('prompt-template').value;
+            this.settings.promptTemplate = content;
+            this.storage.saveSettings(this.settings);
+            alert('✅ 模板已保存！');
         });
         
         // 功能开关（自动保存）
