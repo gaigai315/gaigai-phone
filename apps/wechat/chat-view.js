@@ -176,6 +176,7 @@ export class ChatView {
         '[吐]': '🤮'
     };
     
+    // ✅ 正确的正则表达式
     return text.replace(/```math
 ([^```]+)```/g, (match) => {
         return emojiMap[match] || match;
