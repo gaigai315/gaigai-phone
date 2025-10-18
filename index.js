@@ -74,42 +74,36 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             toggleDrawer(drawerIcon, drawerPanel);
         });
         
-        // 立即创建手机界面
-        if (settings.enabled) {
-            setTimeout(() => {
-                const content = document.getElementById('phone-panel-content');
-                if (content && !content.querySelector('.phone-in-panel')) {
-                    createPhoneInPanel();
-                }
-            }, 100);
-        }
-        
-        console.log('✅ 顶部面板已创建');
+        // ✅ 默认不创建，点击时才创建
+         console.log('✅ 顶部面板已创建（默认收起）');
     }
     
     // 切换抽屉
-    function toggleDrawer(icon, panel) {
-        const isOpen = panel.classList.contains('openDrawer');
+function toggleDrawer(icon, panel) {
+    const isOpen = panel.classList.contains('openDrawer');
+    
+    if (isOpen) {
+        // 关闭
+        panel.classList.remove('openDrawer');
+        panel.classList.add('closedDrawer');
+        icon.classList.remove('openIcon');
+        icon.classList.add('closedIcon');
+    } else {
+        // 打开
+        panel.classList.add('openDrawer');
+        panel.classList.remove('closedDrawer');
+        icon.classList.add('openIcon');
+        icon.classList.remove('closedIcon');
         
-        if (isOpen) {
-            panel.classList.remove('openDrawer');
-            panel.classList.add('closedDrawer');
-            icon.classList.remove('openIcon');
-            icon.classList.add('closedIcon');
-        } else {
-            panel.classList.add('openDrawer');
-            panel.classList.remove('closedDrawer');
-            icon.classList.add('openIcon');
-            icon.classList.remove('closedIcon');
-            
-            if (settings.enabled) {
-                const content = document.getElementById('phone-panel-content');
-                if (content && !content.querySelector('.phone-in-panel')) {
-                    createPhoneInPanel();
-                }
+        // ✅ 只在第一次打开时创建手机界面
+        if (settings.enabled) {
+            const content = document.getElementById('phone-panel-content');
+            if (content && !content.querySelector('.phone-in-panel')) {
+                createPhoneInPanel();
             }
         }
     }
+}
     
     // 在面板中创建手机
     function createPhoneInPanel() {
