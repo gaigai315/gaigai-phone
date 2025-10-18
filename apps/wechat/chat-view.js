@@ -151,8 +151,7 @@ export class ChatView {
         `;
     }
     
-    parseEmoji(text) {
-    // 将[表情]转换为emoji
+  parseEmoji(text) {
     const emojiMap = {
         '[微笑]': '😊',
         '[撇嘴]': '😥',
@@ -176,7 +175,12 @@ export class ChatView {
         '[吐]': '🤮'
     };
     
-          return text.replace(/```math([^```]+)```/g, function(match) { return emojiMap[match] || match; });
+    // 简单替换每个表情
+    let result = text;
+    for (let emoji in emojiMap) {
+        result = result.split(emoji).join(emojiMap[emoji]);
+    }
+    return result;
 }
     
     bindEvents() {
