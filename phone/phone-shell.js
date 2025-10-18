@@ -59,8 +59,12 @@ export class PhoneShell {
         });
         
         document.getElementById('phone-panel-power')?.addEventListener('click', () => {
-            this.toggleScreen();
-        });
+    // ✅ 点击锁屏时关闭抽屉
+    const drawerIcon = document.getElementById('phoneDrawerIcon');
+    if (drawerIcon) {
+        drawerIcon.click();  // 触发图标点击，关闭抽屉
+    }
+});
     }
     
     getCurrentTime() {
