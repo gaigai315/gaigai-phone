@@ -3,9 +3,9 @@ import { APPS } from '../config/apps.js';
 
 export class HomeScreen {
     constructor(phoneShell, apps) {
-    this.phoneShell = phoneShell;
-    this.apps = apps || APPS;
-}
+        this.phoneShell = phoneShell;
+        this.apps = apps || APPS;  // ✅ 支持传入自定义apps
+    }
     
     render() {
         const html = `
