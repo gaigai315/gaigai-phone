@@ -86,9 +86,11 @@ export class PhoneStorage {
             console.warn('加载设置失败:', e);
         }
         return {
-            enabled: true,  // 默认启用
+            enabled: true,
             soundEnabled: true,
-            vibrationEnabled: true
+            vibrationEnabled: true,
+            onlineMode: false,
+            promptTemplate: null
         };
     }
     
