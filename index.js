@@ -184,13 +184,47 @@ function toggleDrawer(icon, panel) {
     }
     
     function handleWechatCommand(action, data) {
-        if (action === 'newMessage') {
-            phoneShell?.showNotification(data.from || '新消息', data.message || '', '💬');
+    if (action === 'receiveMessage') {
+        // ✅ 支持单条消息
+        if (data.message) {
+            phoneShell?.showNotification(
+                data.from || '新消息', 
+                data.message, 
+                '💬'
+            );
             updateAppBadge('wechat', 1);
             totalNotifications++;
             updateNotificationBadge(totalNotifications);
         }
+        
+        // ✅ 支持多条消息
+        if (data.messages && Array.isArray(data.messages)) {
+            data.messages.forEach((msg, index) => {
+                setTimeout(() => {
+                    phoneShell?.showNotification(
+                        data.from || '新消息', 
+                        msg.text || msg.message, 
+                        '💬'
+                    );
+                }, index * 1500); // 每条消息间隔1.5秒
+            });
+            
+            updateAppBadge('wechat', data.messages.length);
+            totalNotifications += data.messages.length;
+            updateNotificationBadge(totalNotifications);
+        }
+        
+        console.log('📱 收到微信消息:', data);
     }
+    
+    // ✅ 兼容旧的 newMessage action
+    if (action === 'newMessage') {
+        phoneShell?.showNotification(data.from || '新消息', data.message || '', '💬');
+        updateAppBadge('wechat', 1);
+        totalNotifications++;
+        updateNotificationBadge(totalNotifications);
+    }
+}
     
     function handleBrowserCommand(action, data) {
         if (action === 'open') {
