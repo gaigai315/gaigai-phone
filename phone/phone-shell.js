@@ -53,31 +53,44 @@ export class PhoneShell {
         return this.container;
     }
     
-  bindPanelEvents() {
+ bindPanelEvents() {
     const homeBtn = document.getElementById('phone-panel-home');
     const powerBtn = document.getElementById('phone-panel-power');
     
-    // 返回主页按钮
+    // 返回主页
     if (homeBtn) {
         homeBtn.addEventListener('click', () => {
             this.goHome();
         });
     }
     
-    // 锁屏按钮 - 直接关闭抽屉
+    // 锁屏 - 模拟点击顶部图标
     if (powerBtn) {
-        powerBtn.addEventListener('click', () => {
-            const panel = document.getElementById('phone-panel');
-            const icon = document.getElementById('phoneDrawerIcon');
+        powerBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             
-            if (panel && icon) {
-                // 移除打开状态
+            // 方案1：直接触发图标点击
+            const icon = document.getElementById('phoneDrawerIcon');
+            if (icon) {
+                console.log('🔒 触发图标点击关闭');
+                icon.click();
+                return;
+            }
+            
+            // 方案2：手动操作DOM
+            const panel = document.getElementById('phone-panel');
+            if (panel && panel.classList.contains('openDrawer')) {
                 panel.classList.remove('openDrawer');
                 panel.classList.add('closedDrawer');
-                icon.classList.remove('openIcon');
-                icon.classList.add('closedIcon');
                 
-                console.log('🔒 手机已锁定');
+                const drawerIcon = document.getElementById('phoneDrawerIcon');
+                if (drawerIcon) {
+                    drawerIcon.classList.remove('openIcon');
+                    drawerIcon.classList.add('closedIcon');
+                }
+                
+                console.log('🔒 手动关闭抽屉');
             }
         });
     }
