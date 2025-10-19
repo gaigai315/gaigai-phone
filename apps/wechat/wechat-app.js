@@ -1541,9 +1541,9 @@ document.getElementById('edit-avatar-btn')?.addEventListener('click', () => {
 
 // 🔧 智能加载联系人
 document.getElementById('smart-load-contacts')?.addEventListener('click', async () => {
-    if (!confirm('🤖 将使用AI分析当前角色卡和聊天记录，智能生成联系人。\n\n⚠️ 这会向AI发送一条系统消息（不会显示在聊天窗口）\n\n确定继续吗？')) {
-        return;
-    }
+document.getElementById('smart-load-contacts')?.addEventListener('click', () => {
+    this.showLoadContactsConfirm();
+});
     
     this.phoneShell.showNotification('AI分析中', '请稍候，正在生成联系人...', '⏳');
     
@@ -1902,6 +1902,89 @@ showSettings() {
             this.data.saveData();
             this.phoneShell.showNotification('已清空', '微信数据已重置', '✅');
             setTimeout(() => this.render(), 1000);
+        }
+    });
+}
+
+    // 📋 显示智能加载联系人确认界面
+showLoadContactsConfirm() {
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-load">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">智能加载联系人</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                <div style="background: #fff; border-radius: 12px; padding: 30px; text-align: center;">
+                    <i class="fa-solid fa-robot" style="font-size: 48px; color: #667eea; margin-bottom: 20px;"></i>
+                    <div style="font-size: 18px; font-weight: 600; color: #000; margin-bottom: 10px;">使用AI生成联系人</div>
+                    <div style="font-size: 14px; color: #999; margin-bottom: 30px; line-height: 1.6;">
+                        将使用AI分析当前角色卡和聊天记录，智能生成联系人。<br><br>
+                        ⚠️ 这会向AI发送一条系统消息（不会显示在聊天窗口）
+                    </div>
+                    
+                    <button id="confirm-load" style="
+                        width: 100%;
+                        padding: 14px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: #fff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin-bottom: 10px;
+                    ">开始生成</button>
+                    
+                    <button id="cancel-load" style="
+                        width: 100%;
+                        padding: 14px;
+                        background: #f0f0f0;
+                        color: #666;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        cursor: pointer;
+                    ">取消</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.phoneShell.setContent(html);
+    
+    document.getElementById('back-from-load')?.addEventListener('click', () => {
+        this.render();
+    });
+    
+    document.getElementById('cancel-load')?.addEventListener('click', () => {
+        this.render();
+    });
+    
+    document.getElementById('confirm-load')?.addEventListener('click', async () => {
+        this.phoneShell.showNotification('AI分析中', '请稍候，正在生成联系人...', '⏳');
+        
+        try {
+            const result = await this.data.loadContactsFromCharacter();
+            
+            if (result.success) {
+                this.phoneShell.showNotification('✅ 生成成功', result.message, '✅');
+                this.currentView = 'contacts';
+                setTimeout(() => this.render(), 1000);
+            } else {
+                this.phoneShell.showNotification('❌ 生成失败', result.message, '❌');
+                setTimeout(() => this.render(), 2000);
+            }
+        } catch (error) {
+            console.error('加载联系人失败:', error);
+            this.phoneShell.showNotification('❌ 错误', error.message || '未知错误', '❌');
+            setTimeout(() => this.render(), 2000);
         }
     });
 }
