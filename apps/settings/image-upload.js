@@ -1,14 +1,15 @@
-// 图片上传管理
+// 图片上传管理 - 支持服务器同步
 export class ImageUploadManager {
     constructor(storage) {
         this.storage = storage;
         this.storageKey = 'phone_images';
     }
     
-    // 加载所有图片
+    // 🎨 修改：使用服务器存储加载图片
     loadImages() {
         try {
-            const saved = localStorage.getItem(this.storageKey);
+            // ✅ 优先从服务器加载
+            const saved = this.storage.get(this.storageKey, false);  // false = 非全局，跟随角色
             if (saved) {
                 return JSON.parse(saved);
             }
@@ -22,11 +23,11 @@ export class ImageUploadManager {
         };
     }
     
-    // 保存图片
-    saveImages(images) {
+    // 🎨 修改：使用服务器存储保存图片
+    async saveImages(images) {
         try {
-            localStorage.setItem(this.storageKey, JSON.stringify(images));
-            console.log('✅ 图片已保存');
+            await this.storage.set(this.storageKey, JSON.stringify(images), false);  // ✅ 保存到服务器
+            console.log('✅ 图片已保存到服务器（支持同步）');
         } catch (e) {
             console.error('❌ 图片保存失败:', e);
             if (e.name === 'QuotaExceededError') {
@@ -37,30 +38,30 @@ export class ImageUploadManager {
     
     // 上传壁纸
     async uploadWallpaper(file) {
-        return this.processImage(file, (base64) => {
+        return this.processImage(file, async (base64) => {
             const images = this.loadImages();
             images.wallpaper = base64;
-            this.saveImages(images);
+            await this.saveImages(images);  // ← 改成 await
             return base64;
         });
     }
     
     // 上传APP图标
     async uploadAppIcon(appId, file) {
-        return this.processImage(file, (base64) => {
+        return this.processImage(file, async (base64) => {
             const images = this.loadImages();
             images.appIcons[appId] = base64;
-            this.saveImages(images);
+            await this.saveImages(images);  // ← 改成 await
             return base64;
         });
     }
     
     // 上传角色头像
     async uploadAvatar(characterId, file) {
-        return this.processImage(file, (base64) => {
+        return this.processImage(file, async (base64) => {
             const images = this.loadImages();
             images.avatars[characterId] = base64;
-            this.saveImages(images);
+            await this.saveImages(images);  // ← 改成 await
             return base64;
         });
     }
@@ -83,7 +84,7 @@ export class ImageUploadManager {
             
             reader.onload = (e) => {
                 const img = new Image();
-                img.onload = () => {
+                img.onload = async () => {  // ← 改成 async
                     // 压缩图片
                     const canvas = document.createElement('canvas');
                     let width = img.width;
@@ -108,7 +109,7 @@ export class ImageUploadManager {
                     ctx.drawImage(img, 0, 0, width, height);
                     
                     const base64 = canvas.toDataURL('image/jpeg', 0.8);
-                    resolve(callback(base64));
+                    resolve(await callback(base64));  // ← 改成 await
                 };
                 img.src = e.target.result;
             };
@@ -119,24 +120,24 @@ export class ImageUploadManager {
     }
     
     // 删除壁纸
-    deleteWallpaper() {
+    async deleteWallpaper() {
         const images = this.loadImages();
         images.wallpaper = null;
-        this.saveImages(images);
+        await this.saveImages(images);  // ← 改成 await
     }
     
     // 删除APP图标
-    deleteAppIcon(appId) {
+    async deleteAppIcon(appId) {
         const images = this.loadImages();
         delete images.appIcons[appId];
-        this.saveImages(images);
+        await this.saveImages(images);  // ← 改成 await
     }
     
     // 删除头像
-    deleteAvatar(characterId) {
+    async deleteAvatar(characterId) {
         const images = this.loadImages();
         delete images.avatars[characterId];
-        this.saveImages(images);
+        await this.saveImages(images);  // ← 改成 await
     }
     
     // 获取壁纸
