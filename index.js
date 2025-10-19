@@ -347,6 +347,37 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             ? SillyTavern.getContext() 
             : null;
     }
+
+    // 🎨 初始化颜色设置
+function initColors() {
+    const timeColor = storage.get('phone-time-color') || '#ffffff';
+    const appNameColor = storage.get('phone-app-name-color') || '#ffffff';
+    
+    document.documentElement.style.setProperty('--phone-time-color', timeColor);
+    document.documentElement.style.setProperty('--phone-app-name-color', appNameColor);
+    
+    // 根据颜色亮度自动调整阴影
+    const isLight = (color) => {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        return (r * 299 + g * 587 + b * 114) / 1000 > 155;
+    };
+    
+    const timeShadow = isLight(timeColor) 
+        ? '0 2px 8px rgba(255, 255, 255, 0.4), 0 1px 4px rgba(255, 255, 255, 0.2)' 
+        : '0 4px 20px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3)';
+    
+    const appNameShadow = isLight(appNameColor) 
+        ? '0 1px 4px rgba(255, 255, 255, 0.4)' 
+        : '0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5)';
+    
+    document.documentElement.style.setProperty('--phone-time-shadow', timeShadow);
+    document.documentElement.style.setProperty('--phone-app-name-shadow', appNameShadow);
+    
+    console.log('🎨 颜色设置已加载:', { timeColor, appNameColor });
+}
     
     // 初始化
     function init() {
@@ -367,6 +398,11 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
         try {
             loadData();
             createTopPanel();
+
+            // 🎨 新增：加载保存的颜色设置
+        initColors();
+        
+        createTopPanel();
             
             // 监听返回主页
             window.addEventListener('phone:goHome', () => {
