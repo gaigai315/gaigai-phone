@@ -1080,7 +1080,9 @@ input:checked + .toggle-slider:before {
     .phone-body-panel {
         width: 340px !important;
         height: 728px !important;
-        max-width: 95vw !important;
+        min-width: 340px !important;  /* ← 新增：防止变窄 */
+        min-height: 728px !important; /* ← 新增：防止变矮 */
+        max-width: 340px !important;  /* ← 新增：锁定宽度 */
         max-height: 85vh !important;
         aspect-ratio: 9 / 19.5 !important;
         border-radius: 32px;
@@ -1089,11 +1091,28 @@ input:checked + .toggle-slider:before {
         /* 🎨 移动端专用：更轻的阴影 */
         box-shadow: 
             0 0 0 1px rgba(255, 255, 255, 0.08),
-            0 0 0 2px #0d0d0d,              /* 边框更细 */
+            0 0 0 2px #0d0d0d,
             0 0 0 3px #1a1a1a,
-            0 10px 30px rgba(0, 0, 0, 0.5), /* 阴影更小 */
+            0 10px 30px rgba(0, 0, 0, 0.5),
             0 5px 15px rgba(0, 0, 0, 0.3),
             inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+        
+        /* ← 新增：强制固定尺寸 */
+        flex-shrink: 0 !important;
+        flex-grow: 0 !important;
+    }
+    
+    /* ← 新增：防止父容器影响 */
+    .phone-in-panel {
+        width: 340px !important;
+        min-width: 340px !important;
+        max-width: 340px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    #phone-panel-content {
+        width: 100% !important;
+        min-width: 100vw !important; /* ← 新增 */
     }
     
    /* 🎨 通知栏响应式 */
@@ -1107,7 +1126,7 @@ input:checked + .toggle-slider:before {
     }
     
     .notification-icon {
-        font-size: 18px;         /* 移动端图标更小 */
+        font-size: 18px;
     }
     
     .notification-title {
@@ -1356,5 +1375,32 @@ body.phone-input-active {
     .chat-messages {
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
+    }
+}
+
+/* ========================================
+   🔒 强制锁定手机尺寸（防止输入时变形）
+   ======================================== */
+
+@media (max-width: 500px) {
+    /* 输入时锁定视口 */
+    body.phone-input-active {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+    
+    /* 锁定手机容器 */
+    body.phone-input-active .phone-body-panel {
+        width: 340px !important;
+        height: 728px !important;
+        transform: none !important;
+        position: relative !important;
+    }
+    
+    /* 微信输入框样式优化 */
+    .chat-input {
+        font-size: 16px !important; /* ← 防止iOS自动缩放 */
     }
 }
