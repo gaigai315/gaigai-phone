@@ -9,17 +9,33 @@ export class WechatData {
     loadData() {
     try {
         const key = this.getStorageKey();
-        const saved = this.storage.get(key, false);
-            if (saved) {
-                return JSON.parse(saved);
-            }
-        } catch (e) {
-            console.error('加载微信数据失败:', e);
-        }
+        const saved = this.storage.get(key, false);  // 角色独立
         
-        // 根据角色动态生成数据
-        return this.generateDataForCharacter();
+        if (saved) {
+            const data = JSON.parse(saved);
+            console.log('📂 已加载微信数据');
+            return data;
+        }
+    } catch (e) {
+        console.error('加载微信数据失败:', e);
     }
+    
+    // ✅ 新用户：空数据
+    console.log('🆕 新用户，创建空数据');
+    return {
+        userInfo: {
+            name: '我',
+            wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
+            avatar: '😊',
+            signature: '',  // 个性签名
+            coverImage: null
+        },
+        chats: [],        // 空聊天列表
+        contacts: [],     // 空联系人
+        messages: {},
+        moments: []
+    };
+}
     
     getStorageKey() {
         const context = this.storage.getContext();
@@ -606,4 +622,154 @@ export class WechatData {
         this.data.moments.unshift(moment);
         this.saveData();
     }
+}
+
+// ✅ 智能加载联系人（从角色卡生成）
+async loadContactsFromCharacter() {
+    const context = this.storage.getContext();
+    
+    if (!context) {
+        console.warn('⚠️ 无法获取角色卡信息');
+        return { success: false, message: '无法获取角色卡信息' };
+    }
+    
+    const charName = context.name2 || '角色';
+    const charAvatar = context.avatar || '🤖';
+    const charDesc = context.description || '';
+    const scenario = context.scenario || '';
+    
+    // 分析角色信息
+    const info = this.analyzeCharacterInfo(charName, charDesc, scenario);
+    
+    // 生成联系人
+    const newContacts = this.generateContactsFromInfo(info, charAvatar);
+    
+    // 合并到现有数据（不覆盖已有联系人）
+    newContacts.forEach(contact => {
+        const exists = this.data.contacts.find(c => c.id === contact.id);
+        if (!exists) {
+            this.data.contacts.push(contact);
+        }
+    });
+    
+    // 生成初始聊天
+    if (newContacts.length > 0) {
+        const mainContact = newContacts[0];
+        this.data.chats.push({
+            id: mainContact.id,
+            name: mainContact.name,
+            type: 'single',
+            avatar: mainContact.avatar,
+            lastMessage: '你好！',
+            time: '刚刚',
+            unread: 1,
+            contactId: mainContact.id
+        });
+        
+        // 添加欢迎消息
+        this.data.messages[mainContact.id] = [{
+            from: mainContact.name,
+            content: `你好！我是${mainContact.name}`,
+            time: '刚刚',
+            type: 'text',
+            avatar: mainContact.avatar
+        }];
+    }
+    
+    this.saveData();
+    
+    return {
+        success: true,
+        count: newContacts.length,
+        contacts: newContacts
+    };
+}
+
+// 分析角色信息
+analyzeCharacterInfo(name, desc, scenario) {
+    const text = (desc + ' ' + scenario).toLowerCase();
+    
+    const info = {
+        mainCharName: name,
+        type: 'modern',
+        relationships: [],
+        setting: ''
+    };
+    
+    // 判断背景
+    if (text.includes('学校') || text.includes('学生') || text.includes('同学')) {
+        info.type = 'school';
+        info.setting = '学校';
+    } else if (text.includes('公司') || text.includes('同事') || text.includes('职场')) {
+        info.type = 'work';
+        info.setting = '职场';
+    } else if (text.includes('古代') || text.includes('皇') || text.includes('江湖')) {
+        info.type = 'historical';
+        info.setting = '古代';
+    } else if (text.includes('魔法') || text.includes('异世界') || text.includes('精灵')) {
+        info.type = 'fantasy';
+        info.setting = '奇幻';
+    }
+    
+    // 提取关系（简化版）
+    const relationPatterns = {
+        '妹妹': { type: 'sister', avatar: '👧' },
+        '姐姐': { type: 'sister', avatar: '👩' },
+        '哥哥': { type: 'brother', avatar: '👨' },
+        '弟弟': { type: 'brother', avatar: '👦' },
+        '妈妈': { type: 'mother', avatar: '👩‍🦱' },
+        '母亲': { type: 'mother', avatar: '👩‍🦱' },
+        '爸爸': { type: 'father', avatar: '👨‍🦱' },
+        '父亲': { type: 'father', avatar: '👨‍🦱' }
+    };
+    
+    for (const [keyword, rel] of Object.entries(relationPatterns)) {
+        if (text.includes(keyword)) {
+            info.relationships.push({ name: keyword, ...rel });
+        }
+    }
+    
+    return info;
+}
+
+// 从分析结果生成联系人
+generateContactsFromInfo(info, mainAvatar) {
+    const contacts = [];
+    
+    // 主角色
+    contacts.push({
+        id: 'char_main',
+        name: info.mainCharName,
+        avatar: mainAvatar,
+        remark: '',  // 备注
+        letter: this.getFirstLetter(info.mainCharName)
+    });
+    
+    // 添加关系人物
+    info.relationships.forEach((rel, index) => {
+        contacts.push({
+            id: `rel_${index}`,
+            name: rel.name,
+            avatar: rel.avatar,
+            remark: '',
+            letter: this.getFirstLetter(rel.name)
+        });
+    });
+    
+    return contacts;
+}
+
+// 拼音首字母（保留原方法）
+getFirstLetter(name) {
+    const letterMap = {
+        '张': 'Z', '王': 'W', '李': 'L', '赵': 'Z', '刘': 'L',
+        '陈': 'C', '杨': 'Y', '黄': 'H', '周': 'Z', '吴': 'W',
+        // ... 保留原有的映射
+    };
+    
+    const firstChar = name[0];
+    if (/[a-zA-Z]/.test(firstChar)) {
+        return firstChar.toUpperCase();
+    }
+    return letterMap[firstChar] || firstChar.toUpperCase() || '#';
 }
