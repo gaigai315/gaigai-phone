@@ -104,12 +104,12 @@
    ======================================== */
 
 .phone-body-panel {
-    width: 375px !important;
-    height: 812px !important;
-    max-width: 90vw !important;
-    max-height: none !important;
-    min-height: 600px !important;
-    margin: 20px auto !important;
+    width: 320px !important;
+    height: 680px !important;
+    max-width: 85vw !important;
+    max-height: 75vh !important;
+    min-height: 500px !important;
+    margin: 10px auto !important;
     background: #000000 !important;
     border-radius: 40px !important;
     box-shadow: 
@@ -125,24 +125,33 @@
     flex-direction: column !important;
 }
 
-/* 小屏幕优化 - 不使用缩放，改用调整尺寸 */
+/* 小屏幕优化 */
 @media (max-height: 900px) {
     .phone-body-panel {
-        height: 700px !important;
+        height: 600px !important;
+        width: 300px !important;
     }
 }
 
 @media (max-height: 750px) {
     .phone-body-panel {
-        height: 600px !important;
-        width: 320px !important;
+        height: 550px !important;
+        width: 280px !important;
     }
 }
 
 @media (max-height: 650px) {
     .phone-body-panel {
-        height: 550px !important;
-        width: 300px !important;
+        height: 500px !important;
+        width: 260px !important;
+    }
+}
+
+/* 大屏幕也适度缩小 */
+@media (min-height: 1080px) {
+    .phone-body-panel {
+        height: 700px !important;
+        width: 340px !important;
     }
 }
 
