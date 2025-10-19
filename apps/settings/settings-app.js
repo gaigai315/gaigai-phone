@@ -468,7 +468,7 @@ getDefaultPrompt() {
 - 看到 ((PHONE_CHAT_MODE)) → 只输出JSON
 - 没有标记 → 正常回复（需要时可加JSON）
 
-开始智能互动吧！🎉
+开始智能互动吧！🎉`;
 }
     
     bindEvents() {
