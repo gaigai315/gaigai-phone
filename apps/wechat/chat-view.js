@@ -402,71 +402,116 @@ ${historyText}
 `;
 }
 
-// 🔧 发送给AI并隐藏消息
+    // 🔧 发送给AI并隐藏消息（静默API调用）
 async sendToAIHidden(prompt) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const context = window.SillyTavern?.getContext?.();
+            if (!context) {
+                throw new Error('无法获取酒馆上下文');
+            }
+
+            // 🚀 直接调用酒馆API，不通过界面
+            const response = await fetch('/api/chats/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_input: prompt,
+                    // 添加静默标记
+                    quiet_mode: true,
+                    // 阻止界面更新
+                    prevent_display: true
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            // 提取AI回复（兼容不同接口格式）
+            const aiReply = data.response || 
+                           data.message || 
+                           data.output || 
+                           (data.choices?.[0]?.message?.content) || 
+                           '';
+
+            if (!aiReply) {
+                throw new Error('AI返回空消息');
+            }
+
+            console.log('✅ 静默API调用成功');
+            resolve(aiReply);
+
+        } catch (error) {
+            console.error('❌ 静默API调用失败:', error);
+            
+            // 🔄 降级方案：使用原方法但增强隐藏
+            this.fallbackSend(prompt)
+                .then(resolve)
+                .catch(reject);
+        }
+    });
+}
+
+// 🔄 降级方案（当API调用失败时）
+async fallbackSend(prompt) {
     return new Promise((resolve, reject) => {
         const textarea = document.querySelector('#send_textarea');
         if (!textarea) {
             reject(new Error('找不到聊天输入框'));
             return;
         }
-        
+
         const originalValue = textarea.value;
-        
         textarea.value = prompt;
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        
+
         const context = window.SillyTavern?.getContext?.();
         let responded = false;
-        
+
         const handler = (messageId) => {
             if (responded) return;
             responded = true;
-            
+
             try {
                 const chat = context.chat;
                 const lastMsg = chat[chat.length - 1];
-                
+
                 if (lastMsg && !lastMsg.is_user) {
                     const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
-                    
-                    // 🔥 隐藏用户消息
-                    setTimeout(() => {
-                        const allMessages = document.querySelectorAll('.mes');
-                        if (allMessages.length >= 2) {
-                            const userMsg = allMessages[allMessages.length - 2];
-                            if (userMsg) userMsg.style.display = 'none';
+
+                    // 🔥 立即隐藏用户消息和AI消息
+                    requestAnimationFrame(() => {
+                        const msgs = document.querySelectorAll('.mes');
+                        if (msgs.length >= 2) {
+                            msgs[msgs.length - 2].style.display = 'none'; // 用户消息
+                            msgs[msgs.length - 1].style.display = 'none'; // AI消息
                         }
-                    }, 500);
-                    
-                    // 🔥 隐藏AI消息
-                    setTimeout(() => {
-                        const allMessages = document.querySelectorAll('.mes');
-                        if (allMessages.length >= 1) {
-                            const aiMsg = allMessages[allMessages.length - 1];
-                            if (aiMsg) aiMsg.style.display = 'none';
-                        }
-                    }, 800);
-                    
+                    });
+
                     textarea.value = originalValue;
-                    
+
                     context.eventSource.removeListener(
                         context.event_types.CHARACTER_MESSAGE_RENDERED,
                         handler
                     );
-                    
+
                     resolve(aiText);
                 }
             } catch (e) {
                 reject(e);
             }
         };
-        
+
         context.eventSource.on(
             context.event_types.CHARACTER_MESSAGE_RENDERED,
             handler
         );
-        
+
         setTimeout(() => {
             const sendBtn = document.querySelector('#send_but');
             if (sendBtn) {
@@ -475,7 +520,7 @@ async sendToAIHidden(prompt) {
                 reject(new Error('找不到发送按钮'));
             }
         }, 100);
-        
+
         setTimeout(() => {
             if (!responded) {
                 responded = true;
