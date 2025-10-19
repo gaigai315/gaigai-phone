@@ -83,7 +83,6 @@
     max-width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
-    background: transparent !important;
     overflow: visible !important;
     pointer-events: none !important;
     display: flex !important;
@@ -115,8 +114,8 @@
    ======================================== */
 
 .phone-body-panel {
-    width: 340px;
-    height: 720px;
+    width: 320px;
+    height: 680px;
     max-width: 95vw;
     max-height: 85vh;
     margin: 0 auto;
@@ -132,7 +131,7 @@
         0 15px 40px rgba(0, 0, 0, 0.7),
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
         inset 0 -1px 0 rgba(0, 0, 0, 0.5);
-    padding: 12px;
+    padding: 8px;
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
@@ -187,8 +186,8 @@
     top: 12px;
     left: 50%;
     transform: translateX(-50%);
-    width: 120px;
-    height: 26px;
+    width: 90px;
+    height: 24px;
     background: #000000;
     border-radius: 0 0 14px 14px;
     z-index: 15;
@@ -464,8 +463,8 @@
 }
 
 .app-icon-bg {
-    width: 56px;
-    height: 56px;
+    width: 50px;
+    height: 50px;
     background: var(--app-color, #666);
     border-radius: 14px;
     display: flex;
@@ -520,7 +519,7 @@
 }
 
 .app-icon-emoji {
-    font-size: 32px;
+    font-size: 28px;
     position: relative;
     z-index: 1;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
@@ -598,15 +597,15 @@
 }
 
 .dock-app {
-    width: 56px;
-    height: 56px;
+    width: 50px;
+    height: 50px;
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(20px);
     border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 28px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 
