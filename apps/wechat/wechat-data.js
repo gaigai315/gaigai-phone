@@ -185,20 +185,20 @@ export class WechatData {
             }
             
             let addedCount = 0;
-            generatedData.contacts.forEach(contact => {
-                const exists = this.data.contacts.find(c => c.name === contact.name);
-                if (!exists) {
-                    this.data.contacts.push({
-                        id: `contact_${Date.now()}_${Math.random()}`,
-                        name: contact.name,
-                        avatar: contact.avatar || '👤',
-                        remark: contact.remark || '',
-                        letter: this.getFirstLetter(contact.name),
-                        relation: contact.relation || ''
-                    });
-                    addedCount++;
-                }
-            });
+generatedData.contacts.forEach(contact => {
+    const exists = this.data.contacts.find(c => c.name === contact.name);
+    if (!exists) {
+        this.data.contacts.push({
+            id: `contact_${Date.now()}_${Math.random()}`,
+            name: contact.name,
+            avatar: contact.avatar || '👤',
+            remark: contact.remark || '',
+            letter: this.getFirstLetter(contact.name),
+            relation: contact.relation || ''
+        });
+        addedCount++;
+    }
+});
             
             if (generatedData.groups && generatedData.groups.length > 0) {
                 generatedData.groups.forEach(group => {
