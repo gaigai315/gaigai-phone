@@ -19,30 +19,25 @@ export class PhoneShell {
         this.container.className = 'phone-in-panel';
         
         this.container.innerHTML = `
-            <div class="phone-body-panel">
-                <div class="phone-notch"></div>
-                
-                <div class="phone-statusbar">
-                    <div class="statusbar-left">
-                        <span class="time">${this.getCurrentTime()}</span>
-                    </div>
-                    <div class="statusbar-right">
-                        <span class="signal">📶</span>
-                        <span class="wifi">📡</span>
-                        <span class="battery">🔋 85%</span>
-                    </div>
-                </div>
-                
-                <div class="phone-screen" id="phone-screen"></div>
-                
-                <div class="phone-home-indicator"></div>
-                
-                <div class="phone-panel-buttons">
-                    <button class="phone-panel-btn" id="phone-panel-home" title="返回主页">🏠 主页</button>
-                    <button class="phone-panel-btn" id="phone-panel-power" title="锁屏并关闭">🔒 锁屏</button>
-                </div>
+    <div class="phone-body-panel">
+        <div class="phone-notch"></div>
+        
+        <div class="phone-statusbar">
+            <div class="statusbar-left">
+                <span class="time">${this.getCurrentTime()}</span>
             </div>
-        `;
+            <div class="statusbar-right">
+                <span class="signal">📶</span>
+                <span class="wifi">📡</span>
+                <span class="battery">🔋 85%</span>
+            </div>
+        </div>
+        
+        <div class="phone-screen" id="phone-screen"></div>
+        
+        <div class="phone-home-indicator"></div>
+    </div>
+`;
         
         panelContainer.appendChild(this.container);
         this.screen = document.getElementById('phone-screen');
@@ -53,64 +48,15 @@ export class PhoneShell {
         return this.container;
     }
 
-    bindPanelEvents() {
-    const homeBtn = document.getElementById('phone-panel-home');
-    const powerBtn = document.getElementById('phone-panel-power');
-    
-    // 返回主页
-    if (homeBtn) {
-        homeBtn.addEventListener('click', () => {
+   bindPanelEvents() {
+    // 按钮已移除，功能改为手势操作
+    // 点击Home指示器返回主页
+    const homeIndicator = this.container.querySelector('.phone-home-indicator');
+    if (homeIndicator) {
+        homeIndicator.style.cursor = 'pointer';
+        homeIndicator.addEventListener('click', () => {
+            console.log('🏠 点击Home指示器返回主页');
             this.goHome();
-        });
-    }
-    
-    // 锁屏 - 强制关闭抽屉
-    if (powerBtn) {
-        powerBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            
-            console.log('🔒 锁屏按钮触发');
-            
-            // 方法1：触发点击图标来关闭
-            const icon = document.getElementById('phoneDrawerIcon');
-            if (icon && icon.classList.contains('openIcon')) {
-                icon.click();
-                console.log('✅ 通过点击图标关闭面板');
-                return;
-            }
-            
-            // 方法2：直接操作DOM
-            const panel = document.getElementById('phone-panel');
-            const panelHolder = document.getElementById('phone-panel-holder');
-            
-            if (panel) {
-                panel.classList.remove('openDrawer');
-                panel.classList.add('closedDrawer');
-                
-                // 强制隐藏
-                panel.style.display = 'none';
-                setTimeout(() => {
-                    panel.style.display = '';
-                }, 50);
-            }
-            
-            if (icon) {
-                icon.classList.remove('openIcon');
-                icon.classList.add('closedIcon');
-            }
-            
-            // 额外保险：移除整个容器的显示
-            if (panelHolder) {
-                const drawer = panelHolder.querySelector('.drawer-content');
-                if (drawer) {
-                    drawer.classList.remove('openDrawer');
-                    drawer.classList.add('closedDrawer');
-                }
-            }
-            
-            console.log('✅ 已强制关闭手机面板');
         });
     }
 }
