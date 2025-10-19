@@ -201,22 +201,36 @@ generatedData.contacts.forEach(contact => {
 });
             
             if (generatedData.groups && generatedData.groups.length > 0) {
-                generatedData.groups.forEach(group => {
-                    const exists = this.data.chats.find(c => c.name === group.name);
-                    if (!exists) {
-                        this.data.chats.push({
-                            id: `group_${Date.now()}_${Math.random()}`,
-                            name: group.name,
-                            type: 'group',
-                            avatar: group.avatar || '👥',
-                            lastMessage: group.lastMessage || '',
-                            time: '刚刚',
-                            unread: 0,
-                            members: group.members || []
-                        });
-                    }
+    generatedData.groups.forEach(group => {
+        const exists = this.data.chats.find(c => c.name === group.name);
+        if (!exists) {
+            const chatId = `group_${Date.now()}_${Math.random()}`;
+            
+            // 创建群聊
+            this.data.chats.push({
+                id: chatId,
+                name: group.name,
+                type: 'group',
+                avatar: group.avatar || '👥',
+                lastMessage: '',  // ← 先设为空
+                time: '刚刚',
+                unread: 0,
+                members: group.members || []
+            });
+            
+            // 🎯 如果有lastMessage，创建对应的消息
+            if (group.lastMessage) {
+                this.addMessage(chatId, {
+                    from: group.members?.[0] || '群成员',
+                    content: group.lastMessage,
+                    time: '刚刚',
+                    type: 'text',
+                    avatar: '👤'
                 });
             }
+        }
+    });
+}
             
             await this.saveData();
             
