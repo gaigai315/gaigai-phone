@@ -742,6 +742,340 @@ export class WechatApp {
 }
 
 /* ========================================
+   个人页样式优化 - 高端设计
+   ======================================== */
+
+.wechat-profile {
+    background: linear-gradient(to bottom, #ededed 0%, #f5f5f5 100%);
+    min-height: 100%;
+    padding-bottom: 20px;
+}
+
+/* 个人信息卡片 */
+.profile-card {
+    background: #fff;
+    padding: 30px 20px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+}
+
+.profile-avatar-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.profile-avatar-large:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.profile-avatar-large:active {
+    transform: scale(0.95);
+}
+
+/* 头像编辑提示 */
+.avatar-edit-hint {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 14px;
+    padding: 4px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.profile-avatar-large:hover .avatar-edit-hint {
+    opacity: 1;
+}
+
+.profile-avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+.profile-user-info {
+    flex: 1;
+}
+
+.profile-username {
+    font-size: 22px;
+    font-weight: 600;
+    color: #000;
+    margin-bottom: 8px;
+}
+
+.profile-signature {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.profile-wxid {
+    font-size: 13px;
+    color: #b2b2b2;
+}
+
+/* 分隔线 */
+.profile-divider {
+    height: 10px;
+    background: transparent;
+}
+
+/* 功能列表 */
+.profile-functions {
+    background: #fff;
+}
+
+.profile-function-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 0.5px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.profile-function-item:last-child {
+    border-bottom: none;
+}
+
+.profile-function-item:active {
+    background: #f8f8f8;
+}
+
+.function-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 22px;
+    flex-shrink: 0;
+    margin-right: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.function-content {
+    flex: 1;
+}
+
+.function-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #000;
+    margin-bottom: 3px;
+}
+
+.function-desc {
+    font-size: 12px;
+    color: #999;
+}
+
+.function-arrow {
+    color: #c8c8c8;
+    font-size: 14px;
+    margin-left: 10px;
+}
+
+/* 数据统计 */
+.profile-stats {
+    background: #fff;
+    display: flex;
+    padding: 20px 0;
+}
+
+.stat-item {
+    flex: 1;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 24px;
+    font-weight: 600;
+    color: #07c160;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #888;
+}
+
+/* 编辑资料弹窗优化 */
+.profile-edit-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.profile-edit-content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 25px;
+    width: 90%;
+    max-width: 320px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.profile-edit-title {
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+    color: #000;
+}
+
+.profile-edit-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 45px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    transition: transform 0.2s;
+}
+
+.profile-edit-avatar:hover {
+    transform: scale(1.05);
+}
+
+.profile-edit-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-edit-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 8px;
+    font-size: 15px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+.profile-edit-input:focus {
+    outline: none;
+    border-color: #07c160;
+}
+
+.profile-edit-upload-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 15px;
+    transition: transform 0.2s, box-shadow 0.3s;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.profile-edit-upload-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.profile-edit-upload-btn:active {
+    transform: translateY(0);
+}
+
+.profile-edit-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.profile-save-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    background: #07c160;
+    color: #fff;
+    transition: background 0.2s;
+}
+
+.profile-save-btn:hover {
+    background: #06a752;
+}
+
+.profile-cancel-btn {
+    flex: 1;
+    padding: 12px;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    background: #fff;
+    color: #666;
+    transition: background 0.2s;
+}
+
+.profile-cancel-btn:hover {
+    background: #f8f8f8;
+}
+
+/* ========================================
    其他组件样式保持原样
    ======================================== */
 
@@ -935,114 +1269,87 @@ export class WechatApp {
     }
     
     renderProfile() {
-        const userInfo = this.data.getUserInfo();
-        return `
-            <div class="wechat-profile">
-                <div class="profile-header">
-                    <div class="profile-avatar">
-                        ${userInfo.avatar || '😊'}
-                    </div>
-                    <div class="profile-info">
-                        <div class="profile-name">${userInfo.name || '用户'}</div>
-                        <div class="profile-id">微信号：${userInfo.wxid || 'wx_user001'}</div>
-                    </div>
-                    <div class="profile-qr">
-                        <i class="fa-solid fa-qrcode"></i>
+    const userInfo = this.data.getUserInfo();
+    return `
+        <div class="wechat-profile">
+            <!-- 🎨 个人信息卡片 -->
+            <div class="profile-card">
+                <div class="profile-avatar-large" id="edit-avatar-btn">
+                    ${userInfo.avatar || '😊'}
+                    <div class="avatar-edit-hint">
+                        <i class="fa-solid fa-camera"></i>
                     </div>
                 </div>
-                
-                <div class="profile-divider"></div>
-                
-                <div class="profile-item">
-                    <div class="profile-icon" style="color: #f39c12;">
-                        <i class="fa-solid fa-wallet"></i>
+                <div class="profile-user-info">
+                    <div class="profile-username">${userInfo.name || '用户'}</div>
+                    <div class="profile-signature">${userInfo.signature || '设置个性签名'}</div>
+                    <div class="profile-wxid">微信号：${userInfo.wxid || 'wx_user001'}</div>
+                </div>
+            </div>
+            
+            <div class="profile-divider"></div>
+            
+            <!-- 🔧 功能区 -->
+            <div class="profile-functions">
+                <div class="profile-function-item" id="smart-load-contacts">
+                    <div class="function-icon-wrapper" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fa-solid fa-user-group"></i>
                     </div>
-                    <div class="profile-name">支付</div>
-                    <div class="profile-arrow">
+                    <div class="function-content">
+                        <div class="function-title">智能加载联系人</div>
+                        <div class="function-desc">从角色卡和聊天记录生成</div>
+                    </div>
+                    <div class="function-arrow">
                         <i class="fa-solid fa-chevron-right"></i>
                     </div>
                 </div>
                 
-                <div class="profile-divider"></div>
-                
-                <div class="profile-item">
-                    <div class="profile-icon" style="color: #e74c3c;">
-                        <i class="fa-solid fa-star"></i>
+                <div class="profile-function-item" id="edit-profile-btn">
+                    <div class="function-icon-wrapper" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <i class="fa-solid fa-user-pen"></i>
                     </div>
-                    <div class="profile-name">收藏</div>
-                    <div class="profile-arrow">
-                        <i class="fa-solid fa-chevron-right"></i>
+                    <div class="function-content">
+                        <div class="function-title">编辑个人资料</div>
+                        <div class="function-desc">修改昵称、头像、签名</div>
                     </div>
-                </div>
-
-                <div class="profile-divider"></div>
-
-<div class="profile-item" id="smart-load-contacts">
-    <div class="profile-icon" style="color: #07c160;">
-        <i class="fa-solid fa-download"></i>
-    </div>
-    <div class="profile-name">智能加载联系人</div>
-    <div class="profile-arrow">
-        <i class="fa-solid fa-chevron-right"></i>
-    </div>
-</div>
-
-<div class="profile-item" id="edit-profile">
-    <div class="profile-icon" style="color: #576b95;">
-        <i class="fa-solid fa-user-pen"></i>
-    </div>
-    <div class="profile-name">编辑个人资料</div>
-    <div class="profile-arrow">
-        <i class="fa-solid fa-chevron-right"></i>
-    </div>
-</div>
-
-<div class="profile-divider"></div>
-                
-                <div class="profile-item">
-                    <div class="profile-icon" style="color: #3498db;">
-                        <i class="fa-solid fa-images"></i>
-                    </div>
-                    <div class="profile-name">相册</div>
-                    <div class="profile-arrow">
+                    <div class="function-arrow">
                         <i class="fa-solid fa-chevron-right"></i>
                     </div>
                 </div>
                 
-                <div class="profile-item">
-                    <div class="profile-icon" style="color: #9b59b6;">
-                        <i class="fa-solid fa-credit-card"></i>
-                    </div>
-                    <div class="profile-name">卡包</div>
-                    <div class="profile-arrow">
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </div>
-                </div>
-                
-                <div class="profile-item">
-                    <div class="profile-icon" style="color: #2ecc71;">
-                        <i class="fa-solid fa-face-smile"></i>
-                    </div>
-                    <div class="profile-name">表情</div>
-                    <div class="profile-arrow">
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </div>
-                </div>
-                
-                <div class="profile-divider"></div>
-                
-                <div class="profile-item">
-                    <div class="profile-icon" style="color: #95a5a6;">
+                <div class="profile-function-item" id="wechat-settings-btn">
+                    <div class="function-icon-wrapper" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                         <i class="fa-solid fa-gear"></i>
                     </div>
-                    <div class="profile-name">设置</div>
-                    <div class="profile-arrow">
+                    <div class="function-content">
+                        <div class="function-title">设置</div>
+                        <div class="function-desc">通用、隐私、数据管理</div>
+                    </div>
+                    <div class="function-arrow">
                         <i class="fa-solid fa-chevron-right"></i>
                     </div>
                 </div>
             </div>
-        `;
-    }
+            
+            <!-- 📊 数据统计（可选显示） -->
+            <div class="profile-divider"></div>
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <div class="stat-number">${this.data.getContacts().length}</div>
+                    <div class="stat-label">联系人</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${this.data.getChatList().length}</div>
+                    <div class="stat-label">聊天</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${this.data.getMoments().length}</div>
+                    <div class="stat-label">朋友圈</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
     
     bindEvents() {
         // 返回按钮
@@ -1081,49 +1388,58 @@ export class WechatApp {
             this.chatView.bindEvents();
         }
 
-     // 智能加载联系人
+    // 🎨 头像点击 - 快捷编辑
+document.getElementById('edit-avatar-btn')?.addEventListener('click', () => {
+    this.showEditProfile();
+});
+
+// 🔧 智能加载联系人
 document.getElementById('smart-load-contacts')?.addEventListener('click', async () => {
-    if (!confirm('将使用AI分析当前角色卡和聊天记录，智能生成联系人。\n\n⚠️ 这会发送一条消息给AI，确定吗？')) {
+    if (!confirm('🤖 将使用AI分析当前角色卡和聊天记录，智能生成联系人。\n\n⚠️ 这会向AI发送一条系统消息（不会显示在聊天窗口）\n\n确定继续吗？')) {
         return;
     }
     
-    // 显示加载提示
-    this.phoneShell.showNotification('正在生成', '请稍候，AI正在分析...', '⏳');
+    this.phoneShell.showNotification('AI分析中', '请稍候，正在生成联系人...', '⏳');
     
     try {
         const result = await this.data.loadContactsFromCharacter();
         
         if (result.success) {
             this.phoneShell.showNotification(
-                '生成成功', 
+                                '✅ 生成成功', 
                 result.message, 
                 '✅'
             );
             
-            // 刷新界面
+            // 刷新到通讯录页面
             this.currentView = 'contacts';
             this.render();
         } else {
             this.phoneShell.showNotification(
-                '生成失败', 
+                '❌ 生成失败', 
                 result.message, 
                 '❌'
             );
         }
     } catch (error) {
+        console.error('加载联系人失败:', error);
         this.phoneShell.showNotification(
-            '错误', 
+            '❌ 错误', 
             error.message || '未知错误', 
             '❌'
         );
     }
 });
-        
-        // 编辑个人资料
-        document.getElementById('edit-profile')?.addEventListener('click', () => {
-            this.showEditProfile();
-        });
-    }
+
+// 🔧 编辑个人资料
+document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
+    this.showEditProfile();
+});
+
+// 🔧 设置按钮
+document.getElementById('wechat-settings-btn')?.addEventListener('click', () => {
+    this.showSettings();
+});
     
     openChat(chatId) {
         const chat = this.data.getChat(chatId);
@@ -1189,135 +1505,232 @@ document.getElementById('smart-load-contacts')?.addEventListener('click', async 
         this.data.saveData();
     }
 
-        // ✅ 编辑个人资料
-    showEditProfile() {
-        const userInfo = this.data.getUserInfo();
-        
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        `;
-        
-        modal.innerHTML = `
-            <div style="background: #fff; border-radius: 12px; padding: 20px; width: 90%; max-width: 300px;">
-                <h3 style="margin: 0 0 15px 0; text-align: center;">编辑个人资料</h3>
-                
-                <div id="user-avatar-preview" style="
-                    width: 80px;
-                    height: 80px;
-                    border-radius: 8px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    margin: 0 auto 15px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 40px;
-                    cursor: pointer;
-                ">${userInfo.avatar || '😊'}</div>
-                
-                <input type="file" id="user-avatar-upload" accept="image/*" style="display: none;">
-                
-                <button id="upload-user-avatar-btn" style="
-                    display: block;
-                    width: 100%;
-                    padding: 10px;
-                    background: #f0f0f0;
-                    border: none;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    cursor: pointer;
-                    margin-bottom: 10px;
-                ">上传头像</button>
-                
-                <input type="text" id="user-name-input" placeholder="昵称" value="${userInfo.name || ''}" style="
-                    width: 100%;
-                    padding: 10px;
-                    border: 1px solid #ddd;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    margin-bottom: 10px;
-                    box-sizing: border-box;
-                ">
-                
-                <input type="text" id="user-signature-input" placeholder="个性签名" value="${userInfo.signature || ''}" style="
-                    width: 100%;
-                    padding: 10px;
-                    border: 1px solid #ddd;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    margin-bottom: 15px;
-                    box-sizing: border-box;
-                ">
-                
-                <div style="display: flex; gap: 10px;">
-                    <button id="save-user-profile" style="
-                        flex: 1;
-                        padding: 10px;
-                        border: none;
-                        border-radius: 6px;
-                        font-size: 14px;
-                        cursor: pointer;
-                        background: #07c160;
-                        color: #fff;
-                    ">保存</button>
-                    <button id="cancel-user-profile" style="
-                        flex: 1;
-                        padding: 10px;
-                        border: none;
-                        border-radius: 6px;
-                        font-size: 14px;
-                        cursor: pointer;
-                        background: #f0f0f0;
-                        color: #666;
-                    ">取消</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // 绑定事件
-        document.getElementById('cancel-user-profile').onclick = () => modal.remove();
-        
-        document.getElementById('upload-user-avatar-btn').onclick = () => {
-            document.getElementById('user-avatar-upload').click();
-        };
-        
-        document.getElementById('save-user-profile').onclick = () => {
-            const newName = document.getElementById('user-name-input').value;
-            const newSignature = document.getElementById('user-signature-input').value;
+        // ✅ 编辑个人资料（美化版）
+showEditProfile() {
+    const userInfo = this.data.getUserInfo();
+    
+    const modal = document.createElement('div');
+    modal.className = 'profile-edit-modal';
+    
+    modal.innerHTML = `
+        <div class="profile-edit-content">
+            <h3 class="profile-edit-title">编辑个人资料</h3>
             
-            if (newName) {
-                this.data.updateUserInfo({
-                    name: newName,
-                    signature: newSignature
-                });
-                this.phoneShell.showNotification('保存成功', '个人资料已更新', '✅');
-                this.render();
-            }
+            <div class="profile-edit-avatar" id="user-avatar-preview">
+                ${userInfo.avatar || '😊'}
+            </div>
+            
+            <input type="file" id="user-avatar-upload" accept="image/*" style="display: none;">
+            
+            <button class="profile-edit-upload-btn" id="upload-user-avatar-btn">
+                <i class="fa-solid fa-camera"></i> 更换头像
+            </button>
+            
+            <input type="text" 
+                   class="profile-edit-input" 
+                   id="user-name-input" 
+                   placeholder="输入昵称" 
+                   value="${userInfo.name || ''}"
+                   maxlength="20">
+            
+            <input type="text" 
+                   class="profile-edit-input" 
+                   id="user-signature-input" 
+                   placeholder="输入个性签名" 
+                   value="${userInfo.signature || ''}"
+                   maxlength="50">
+            
+            <div class="profile-edit-buttons">
+                <button class="profile-cancel-btn" id="cancel-user-profile">取消</button>
+                <button class="profile-save-btn" id="save-user-profile">保存</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 点击背景关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
             modal.remove();
-        };
+        }
+    });
+    
+    // 取消按钮
+    document.getElementById('cancel-user-profile').onclick = () => modal.remove();
+    
+    // 上传头像按钮
+    document.getElementById('upload-user-avatar-btn').onclick = () => {
+        document.getElementById('user-avatar-upload').click();
+    };
+    
+    // 保存按钮
+    document.getElementById('save-user-profile').onclick = () => {
+        const newName = document.getElementById('user-name-input').value.trim();
+        const newSignature = document.getElementById('user-signature-input').value.trim();
         
-        document.getElementById('user-avatar-upload').onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const preview = document.getElementById('user-avatar-preview');
-                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
-                    this.data.updateUserInfo({ avatar: e.target.result });
-                };
-                reader.readAsDataURL(file);
+        if (!newName) {
+            alert('请输入昵称');
+            return;
+        }
+        
+        this.data.updateUserInfo({
+            name: newName,
+            signature: newSignature
+        });
+        
+        this.phoneShell.showNotification('保存成功', '个人资料已更新', '✅');
+        this.render();
+        modal.remove();
+    };
+    
+    // 头像上传
+    document.getElementById('user-avatar-upload').onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // 检查文件大小（限制2MB）
+            if (file.size > 2 * 1024 * 1024) {
+                alert('图片太大，请选择小于2MB的图片');
+                return;
             }
-        };
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('user-avatar-preview');
+                preview.innerHTML = `<img src="${e.target.result}">`;
+                this.data.updateUserInfo({ avatar: e.target.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    // 🔧 设置页面
+showSettings() {
+    const modal = document.createElement('div');
+    modal.className = 'profile-edit-modal';
+    
+    modal.innerHTML = `
+        <div class="profile-edit-content" style="max-width: 350px;">
+            <h3 class="profile-edit-title">微信设置</h3>
+            
+            <div style="background: #f8f8f8; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 14px; color: #666;">在线模式</span>
+                    <label style="position: relative; display: inline-block; width: 50px; height: 28px;">
+                        <input type="checkbox" id="online-mode-toggle" 
+                               ${window.VirtualPhone?.settings?.onlineMode ? 'checked' : ''}
+                               style="opacity: 0; width: 0; height: 0;">
+                        <span class="toggle-slider" style="
+                            position: absolute;
+                            cursor: pointer;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background-color: #ccc;
+                            transition: 0.4s;
+                            border-radius: 28px;
+                        "></span>
+                        <span class="toggle-ball" style="
+                            position: absolute;
+                            content: '';
+                            height: 22px;
+                            width: 22px;
+                            left: 3px;
+                            bottom: 3px;
+                            background-color: white;
+                            transition: 0.4s;
+                            border-radius: 50%;
+                        "></span>
+                    </label>
+                </div>
+                <div style="font-size: 12px; color: #999;">开启后，手机消息会发送给AI</div>
+            </div>
+            
+            <div style="background: #fff3cd; border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid #ffc107;">
+                <div style="font-size: 14px; font-weight: 600; color: #856404; margin-bottom: 8px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> 数据管理
+                </div>
+                <button id="clear-wechat-data" style="
+                    width: 100%;
+                    padding: 10px;
+                    background: #fff;
+                    border: 1px solid #ffc107;
+                    border-radius: 8px;
+                    color: #856404;
+                    font-size: 13px;
+                    cursor: pointer;
+                    margin-bottom: 8px;
+                ">清空当前角色微信数据</button>
+                <div style="font-size: 11px; color: #856404;">⚠️ 将删除所有聊天记录和联系人</div>
+            </div>
+            
+            <button class="profile-cancel-btn" id="close-settings" style="width: 100%;">关闭</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 样式调整（开关按钮）
+    const checkbox = document.getElementById('online-mode-toggle');
+    const slider = modal.querySelector('.toggle-slider');
+    const ball = modal.querySelector('.toggle-ball');
+    
+    checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+            slider.style.backgroundColor = '#07c160';
+            ball.style.transform = 'translateX(22px)';
+            
+            if (window.VirtualPhone?.settings) {
+                window.VirtualPhone.settings.onlineMode = true;
+                window.VirtualPhone.storage.saveSettings(window.VirtualPhone.settings);
+            }
+        } else {
+            slider.style.backgroundColor = '#ccc';
+            ball.style.transform = 'translateX(0)';
+            
+            if (window.VirtualPhone?.settings) {
+                window.VirtualPhone.settings.onlineMode = false;
+                window.VirtualPhone.storage.saveSettings(window.VirtualPhone.settings);
+            }
+        }
+    });
+    
+    // 初始状态
+    if (checkbox.checked) {
+        slider.style.backgroundColor = '#07c160';
+        ball.style.transform = 'translateX(22px)';
     }
+    
+    // 清空数据
+    document.getElementById('clear-wechat-data').onclick = () => {
+        if (confirm('⚠️ 确定要清空当前角色的所有微信数据吗？\n\n此操作不可恢复！')) {
+            this.data.data = {
+                userInfo: {
+                    name: '我',
+                    wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
+                    avatar: '😊',
+                    signature: '',
+                    coverImage: null
+                },
+                chats: [],
+                contacts: [],
+                messages: {},
+                moments: []
+            };
+            this.data.saveData();
+            this.phoneShell.showNotification('已清空', '微信数据已重置', '✅');
+            modal.remove();
+            this.render();
+        }
+    };
+    
+    // 关闭按钮
+    document.getElementById('close-settings').onclick = () => modal.remove();
+    
+    // 点击背景关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
 }
