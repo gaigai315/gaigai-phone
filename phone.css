@@ -4,6 +4,21 @@
    ======================================== */
 
 /* ========================================
+   ⭐ 顶部图标样式（必须保留！）
+   ======================================== */
+
+.drawer-icon {
+    font-size: 20px;
+    color: #fff;
+    padding: 10px;
+    cursor: pointer;
+}
+
+#phoneDrawerIcon {
+    position: relative;
+}
+
+/* ========================================
    精准覆盖 - 只针对手机面板
    ======================================== */
 
@@ -76,64 +91,66 @@
 }
 
 /* ========================================
-   手机外壳
+   手机外壳 - 美化版
    ======================================== */
 
 .phone-body-panel {
-    width: 320px !important;
-    height: 680px !important;
+    width: 340px !important;
+    height: 720px !important;
     max-height: 85vh !important;
     margin: 0 !important;
-    background: #1a1a1a !important;
-    border-radius: 38px !important;
+    background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%) !important;
+    border-radius: 42px !important;
     box-shadow: 
-        0 30px 80px rgba(0, 0, 0, 0.9),
-        0 0 0 6px #0a0a0a,
-        0 0 0 8px #1f1f1f !important;
-    padding: 10px !important;
+        0 25px 70px rgba(0, 0, 0, 0.9),
+        0 10px 30px rgba(0, 0, 0, 0.6),
+        0 0 0 6px #0d0d0d,
+        0 0 0 8px #1a1a1a,
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+    padding: 12px !important;
     position: relative !important;
     overflow: hidden !important;
     flex-shrink: 0 !important;
 }
 
-/* 刘海 */
+/* 刘海 - 更精致 */
 .phone-notch {
     position: absolute;
-    top: 10px;
+    top: 12px;
     left: 50%;
     transform: translateX(-50%);
-    width: 100px;
-    height: 22px;
-    background: #0a0a0a;
-    border-radius: 0 0 12px 12px;
+    width: 120px;
+    height: 26px;
+    background: #000000;
+    border-radius: 0 0 14px 14px;
     z-index: 10;
     box-shadow: 
-        inset 0 -2px 5px rgba(0, 0, 0, 0.5),
-        0 2px 10px rgba(0, 0, 0, 0.3);
+        inset 0 -2px 8px rgba(0, 0, 0, 0.8),
+        0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .phone-notch::before {
     content: '';
     position: absolute;
-    top: 6px;
+    top: 7px;
     left: 50%;
     transform: translateX(-50%);
-    width: 5px;
-    height: 5px;
-    background: #1a1a2e;
+    width: 6px;
+    height: 6px;
+    background: #0d1117;
     border-radius: 50%;
     box-shadow: 
-        -12px 0 0 #1a1a2e,
-        12px 0 0 #1a1a2e;
+        -14px 0 0 1px #0d1117,
+        14px 0 0 1px #0d1117;
 }
 
 .phone-notch::after {
     content: '';
     position: absolute;
-    top: 6px;
-    left: 18px;
-    width: 7px;
-    height: 7px;
+    top: 7px;
+    left: 20px;
+    width: 8px;
+    height: 8px;
     background: radial-gradient(circle, #1a3a52 0%, #0a1a2a 100%);
     border-radius: 50%;
 }
@@ -141,25 +158,26 @@
 /* 状态栏 */
 .phone-statusbar {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    right: 10px;
-    height: 38px;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    height: 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 15px;
-    color: #fff;
+    padding: 0 18px;
+    color: #ffffff;
     font-size: 11px;
-    font-weight: 500;
+    font-weight: 600;
     z-index: 9;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
 }
 
 .statusbar-left,
 .statusbar-right {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
 }
 
 .statusbar-right {
@@ -169,12 +187,13 @@
 /* 屏幕 */
 .phone-screen {
     width: 100%;
-    height: calc(100% - 90px);
-    background: #000000;
-    border-radius: 30px;
+    height: calc(100% - 95px);
+    background: #ffffff;
+    border-radius: 32px;
     overflow: hidden;
     position: relative;
-    margin-top: 38px;
+    margin-top: 40px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .screen-off .phone-screen {
@@ -185,40 +204,63 @@
 /* Home指示器 */
 .phone-home-indicator {
     position: absolute;
-    bottom: 6px;
+    bottom: 8px;
     left: 50%;
     transform: translateX(-50%);
-    width: 100px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.3);
+    width: 130px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.4);
     border-radius: 2px;
     z-index: 10;
 }
 
-/* 面板底部按钮 */
+/* 面板底部按钮 - 美化 */
 .phone-panel-buttons {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     justify-content: center;
-    margin-top: 12px;
+    margin-top: 15px;
 }
 
 .phone-panel-btn {
     flex: 1;
-    padding: 10px;
+    padding: 12px 18px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     color: #fff;
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 4px 12px rgba(102, 126, 234, 0.4),
+        0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.phone-panel-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s;
 }
 
 .phone-panel-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    box-shadow: 
+        0 6px 18px rgba(102, 126, 234, 0.5),
+        0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.phone-panel-btn:hover::before {
+    opacity: 1;
 }
 
 .phone-panel-btn:active {
@@ -232,54 +274,56 @@
 /* 顶部图标红点 */
 .badge-notification {
     position: absolute;
-    top: -2px;
-    right: -2px;
-    min-width: 16px;
-    height: 16px;
-    background: #ff3b30;
+    top: -3px;
+    right: -3px;
+    min-width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, #ff3b30 0%, #d32f2f 100%);
     border: 2px solid #fff;
     border-radius: 10px;
     color: #fff;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 4px;
-    box-shadow: 0 2px 8px rgba(255, 59, 48, 0.5);
+    padding: 0 5px;
+    box-shadow: 0 2px 8px rgba(255, 59, 48, 0.6);
     z-index: 10;
-}
-
-#phoneDrawerIcon {
-    position: relative;
 }
 
 /* 通知弹窗 */
 .phone-notification {
     position: absolute;
-    top: 50px;
+    top: 55px;
     left: 50%;
     transform: translateX(-50%);
-    width: 92%;
-    background: rgba(30, 30, 30, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 14px;
-    padding: 10px;
+    width: 90%;
+    max-width: 320px;
+    background: rgba(20, 20, 20, 0.96);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    border-radius: 16px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-    animation: slideDown 0.3s ease;
+    gap: 12px;
+    box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.6),
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
 }
 
 .phone-notification.fade-out {
-    animation: fadeOut 0.3s ease forwards;
+    animation: fadeOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .notification-icon {
-    font-size: 20px;
+    font-size: 24px;
     flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .notification-content {
@@ -288,18 +332,19 @@
 }
 
 .notification-title {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
+    margin-bottom: 3px;
 }
 
 .notification-message {
-    font-size: 11px;
-    opacity: 0.8;
-    margin-top: 2px;
+    font-size: 12px;
+    opacity: 0.85;
+    line-height: 1.4;
 }
 
 /* ========================================
-   主屏幕
+   主屏幕 - 真实iOS风格
    ======================================== */
 
 .home-screen {
@@ -326,21 +371,23 @@
     position: relative;
     z-index: 1;
     text-align: center;
-    padding: 30px 20px 15px;
+    padding: 35px 20px 18px;
     color: #fff;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
 .time-large {
-    font-size: 38px;
-    font-weight: 300;
-    letter-spacing: -0.5px;
+    font-size: 56px;
+    font-weight: 200;
+    letter-spacing: -1px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
 }
 
 .date {
-    font-size: 12px;
-    opacity: 0.9;
-    margin-top: 4px;
+    font-size: 15px;
+    font-weight: 500;
+    opacity: 0.95;
+    margin-top: 6px;
 }
 
 /* APP网格 */
@@ -349,8 +396,8 @@
     z-index: 1;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
-    padding: 15px;
+    gap: 18px;
+    padding: 18px 22px;
 }
 
 .app-icon {
@@ -358,46 +405,61 @@
     flex-direction: column;
     align-items: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
 }
 
 .app-icon:active {
-    transform: scale(0.9);
+    transform: scale(0.92);
 }
 
 .app-icon-bg {
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     background: var(--app-color, #666);
-    border-radius: 12px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 
-        0 3px 12px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        0 4px 16px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
     transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.app-icon-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
 }
 
 .app-icon:hover .app-icon-bg {
-    transform: scale(1.1);
+    transform: scale(1.08);
     box-shadow: 
-        0 5px 18px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        0 6px 24px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .app-icon-emoji {
-    font-size: 26px;
+    font-size: 32px;
+    position: relative;
+    z-index: 1;
 }
 
 .app-name {
-    margin-top: 5px;
-    font-size: 10px;
+    margin-top: 7px;
+    font-size: 11px;
+    font-weight: 500;
     color: #fff;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
     text-align: center;
-    max-width: 60px;
+    max-width: 68px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -406,129 +468,148 @@
 /* APP角标 */
 .app-badge {
     position: absolute;
-    top: -3px;
-    right: 6px;
-    background: #ff3b30;
+    top: -4px;
+    right: 4px;
+    background: linear-gradient(135deg, #ff3b30 0%, #d32f2f 100%);
     color: #fff;
-    font-size: 9px;
-    font-weight: 600;
-    padding: 1px 5px;
-    border-radius: 8px;
-    min-width: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
     text-align: center;
-    box-shadow: 0 2px 6px rgba(255, 59, 48, 0.5);
+    box-shadow: 
+        0 2px 8px rgba(255, 59, 48, 0.6),
+        0 0 0 2px rgba(0, 0, 0, 0.1);
+    border: 1.5px solid #fff;
 }
 
 /* Dock栏 */
 .dock {
     position: absolute;
-    bottom: 15px;
+    bottom: 22px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 15px;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(30px);
-    padding: 10px 16px;
-    border-radius: 20px;
+    gap: 16px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    padding: 12px 18px;
+    border-radius: 24px;
     box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        0 10px 40px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
     z-index: 2;
 }
 
 .dock-app {
-    width: 48px;
-    height: 48px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(20px);
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 26px;
+    font-size: 32px;
     cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .dock-app:hover {
-    transform: translateY(-4px) scale(1.1);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    transform: translateY(-6px) scale(1.1);
+    box-shadow: 
+        0 8px 28px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .dock-app:active {
-    transform: translateY(-2px) scale(1.05);
+    transform: translateY(-4px) scale(1.05);
 }
 
 /* ========================================
-   设置APP样式
+   设置APP
    ======================================== */
 
 .settings-app {
     width: 100%;
     height: 100%;
-    background: #f5f5f5;
+    background: #f2f2f7;
     overflow-y: auto;
 }
 
 .app-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 15px;
+    padding: 16px 18px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 14px;
     position: sticky;
     top: 0;
     z-index: 10;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 .app-back-btn {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
     border: none;
     color: #fff;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 8px 14px;
+    border-radius: 10px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
     transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .app-back-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.app-back-btn:active {
+    transform: scale(0.95);
 }
 
 .app-header h2 {
     margin: 0;
     color: #fff;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: 700;
 }
 
 .app-body {
-    padding: 15px;
+    padding: 18px 16px;
 }
 
 .setting-section {
     background: #fff;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-radius: 14px;
+    padding: 0;
+    margin-bottom: 18px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .setting-section-title {
     font-size: 13px;
     font-weight: 600;
-    color: #333;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #eee;
+    color: #8e8e93;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 16px 16px 8px;
+    background: #f2f2f7;
 }
 
 .setting-item {
-    padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
+    padding: 14px 16px;
+    border-bottom: 0.5px solid #e5e5ea;
 }
 
 .setting-item:last-child {
@@ -542,38 +623,39 @@
 }
 
 .setting-label {
-    font-size: 14px;
-    color: #333;
+    font-size: 16px;
+    color: #000;
     font-weight: 500;
 }
 
 .setting-desc {
-    font-size: 11px;
-    color: #999;
-    margin-top: 3px;
+    font-size: 12px;
+    color: #8e8e93;
+    margin-top: 4px;
+    line-height: 1.4;
 }
 
 .setting-value {
-    font-size: 13px;
-    color: #666;
+    font-size: 15px;
+    color: #8e8e93;
 }
 
 .setting-info {
-    font-size: 11px;
-    color: #999;
+    font-size: 12px;
+    color: #8e8e93;
     line-height: 1.6;
     margin-top: 8px;
-    padding: 10px;
+    padding: 12px;
     background: #f9f9f9;
-    border-radius: 6px;
+    border-radius: 8px;
 }
 
-/* 开关按钮 */
+/* 开关按钮 - iOS风格 */
 .toggle-switch {
     position: relative;
     display: inline-block;
-    width: 48px;
-    height: 28px;
+    width: 51px;
+    height: 31px;
 }
 
 .toggle-switch input {
@@ -589,18 +671,18 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
+    background-color: #e5e5ea;
     transition: 0.3s;
-    border-radius: 28px;
+    border-radius: 31px;
 }
 
 .toggle-slider:before {
     position: absolute;
     content: "";
-    height: 22px;
-    width: 22px;
-    left: 3px;
-    bottom: 3px;
+    height: 27px;
+    width: 27px;
+    left: 2px;
+    bottom: 2px;
     background-color: white;
     transition: 0.3s;
     border-radius: 50%;
@@ -608,7 +690,7 @@
 }
 
 input:checked + .toggle-slider {
-    background-color: #667eea;
+    background-color: #34c759;
 }
 
 input:checked + .toggle-slider:before {
@@ -618,11 +700,11 @@ input:checked + .toggle-slider:before {
 /* 设置按钮 */
 .setting-btn {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
@@ -632,25 +714,35 @@ input:checked + .toggle-slider:before {
 }
 
 .setting-btn-warning {
-    background: #ff9800;
+    background: #ff9500;
     color: #fff;
+    box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
 }
 
 .setting-btn-warning:hover {
-    background: #fb8c00;
+    background: #ff8c00;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 149, 0, 0.4);
+}
+
+.setting-btn-warning:active {
+    transform: translateY(0);
 }
 
 .setting-btn-danger {
-    background: #f44336;
+    background: #ff3b30;
     color: #fff;
+    box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3);
 }
 
 .setting-btn-danger:hover {
-    background: #e53935;
+    background: #ff2d55;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4);
+}
+
+.setting-btn-danger:active {
+    transform: translateY(0);
 }
 
 /* ========================================
@@ -659,7 +751,7 @@ input:checked + .toggle-slider:before {
 
 @keyframes slideDown {
     from {
-        transform: translateX(-50%) translateY(-100%);
+        transform: translateX(-50%) translateY(-120%);
         opacity: 0;
     }
     to {
@@ -671,109 +763,44 @@ input:checked + .toggle-slider:before {
 @keyframes fadeOut {
     to {
         opacity: 0;
-        transform: translateX(-50%) translateY(-20px);
+        transform: translateX(-50%) translateY(-30px);
     }
 }
 
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-    20%, 40%, 60%, 80% { transform: translateX(4px); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
 /* ========================================
-   响应式 - 根据屏幕高度自适应
+   响应式
    ======================================== */
 
 @media (max-height: 800px) {
     .phone-body-panel {
-        width: 280px !important;
-        height: 600px !important;
+        width: 300px !important;
+        height: 640px !important;
     }
 }
 
 @media (max-height: 700px) {
     .phone-body-panel {
-        width: 260px !important;
-        height: 550px !important;
-    }
-    
-    .home-time {
-        padding: 25px 15px 10px;
-    }
-    
-    .time-large {
-        font-size: 34px;
-    }
-    
-    .app-grid {
-        gap: 12px;
-        padding: 12px;
-    }
-    
-    .app-icon-bg {
-        width: 44px;
-        height: 44px;
-    }
-    
-    .app-icon-emoji {
-        font-size: 24px;
-    }
-    
-    .dock-app {
-        width: 44px;
-        height: 44px;
-        font-size: 24px;
+        width: 280px !important;
+        height: 590px !important;
     }
 }
 
 @media (max-height: 600px) {
     .phone-body-panel {
-        width: 240px !important;
-        height: 500px !important;
-    }
-    
-    .home-time {
-        padding: 20px 15px 8px;
-    }
-    
-    .time-large {
-        font-size: 30px;
-    }
-    
-    .date {
-        font-size: 11px;
-    }
-    
-    .app-grid {
-        gap: 10px;
-        padding: 10px;
-    }
-    
-    .app-icon-bg {
-        width: 40px;
-        height: 40px;
-    }
-    
-    .app-icon-emoji {
-        font-size: 22px;
-    }
-    
-    .app-name {
-        font-size: 9px;
-    }
-    
-    .dock-app {
-        width: 40px;
-        height: 40px;
-        font-size: 22px;
+        width: 260px !important;
+        height: 540px !important;
     }
 }
 
-/* 超小屏幕 */
 @media (max-height: 500px) {
     .phone-body-panel {
-        width: 220px !important;
-        height: 450px !important;
+        width: 240px !important;
+        height: 480px !important;
     }
 }
