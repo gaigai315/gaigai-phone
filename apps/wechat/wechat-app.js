@@ -1600,10 +1600,12 @@ showEditProfile() {
                 preview.innerHTML = `<img src="${e.target.result}">`;
                 this.data.updateUserInfo({ avatar: e.target.result });
             };
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
         }
     };
-    // 🔧 设置页面
+}
+
+// 🔧 设置页面（这是独立的方法）
 showSettings() {
     const modal = document.createElement('div');
     modal.className = 'profile-edit-modal';
