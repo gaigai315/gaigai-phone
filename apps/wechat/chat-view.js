@@ -12,7 +12,7 @@ export class ChatView {
         const userInfo = this.app.data.getUserInfo();
         
         return `
-            <div class="chat-room">
+    <div class="chat-room" style="background: ${chat.background || '#ededed'};">
                 <!-- 消息列表 -->
                 <div class="chat-messages" id="chat-messages">
                     ${messages.map(msg => this.renderMessage(msg, userInfo)).join('')}
