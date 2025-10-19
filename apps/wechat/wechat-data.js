@@ -239,79 +239,78 @@ export class WechatData {
         }
     }
     
-    // 🔧 构建AI提示词
-    buildContactPrompt(context) {
-        const charName = context.name2 || context.name || '角色';
-        const userName = context.name1 || '用户';
+// 🔧 构建AI提示词（完整版）
+buildContactPrompt(context) {
+    const charName = context.name2 || context.name || '角色';
+    const userName = context.name1 || '用户';
+    
+    // ✅ 从世界书获取人物关系
+    let worldInfoText = '';
+    if (context.worldInfoData && Array.isArray(context.worldInfoData)) {
+        const relevantEntries = context.worldInfoData
+            .filter(entry => entry.content && entry.content.length > 0)
+            .slice(0, 10); // 只取前10条
         
-        // 从聊天记录提取
-        const chatHistory = [];
-        if (context.chat && Array.isArray(context.chat)) {
-            const recentChats = context.chat.slice(-30);
-            recentChats.forEach(msg => {
-                if (msg.mes && msg.mes.trim()) {
-                    chatHistory.push({
-                        speaker: msg.is_user ? userName : charName,
-                        message: msg.mes.substring(0, 300)
-                    });
-                }
-            });
-        }
-        
-        const chatText = chatHistory.length > 0 
-            ? chatHistory.map(c => `${c.speaker}: ${c.message}`).join('\n')
-            : '（暂无聊天记录）';
-        
-        // 尝试从 worldInfo 获取
-        let worldInfoText = '';
-        if (context.worldInfoData && Array.isArray(context.worldInfoData)) {
-            worldInfoText = context.worldInfoData
-                .map(w => w.content || '')
+        if (relevantEntries.length > 0) {
+            worldInfoText = relevantEntries
+                .map(entry => entry.content)
                 .join('\n')
-                .substring(0, 1000);
+                .substring(0, 2000); // 限制长度
         }
-        
-        return `你是一个智能助手，根据提供的信息生成微信联系人列表。
+    }
+    
+    // ✅ 从聊天记录提取
+    const chatHistory = [];
+    if (context.chat && Array.isArray(context.chat)) {
+        const recentChats = context.chat.slice(-20); // 改为20条
+        recentChats.forEach(msg => {
+            if (msg.mes && msg.mes.trim()) {
+                const speaker = msg.is_user ? userName : charName;
+                const content = msg.mes
+                    .replace(/<[^>]*>/g, '') // 移除HTML标签
+                    .substring(0, 200);
+                
+                if (content.trim()) {
+                    chatHistory.push(`${speaker}: ${content}`);
+                }
+            }
+        });
+    }
+    
+    const chatText = chatHistory.length > 0 
+        ? chatHistory.join('\n')
+        : '（暂无聊天记录）';
+    
+    // ✅ 构建简洁的提示词
+    return `请根据以下信息，生成微信联系人列表（JSON格式）。
 
-## 📋 当前角色
-**角色名：** ${charName}
-**用户名：** ${userName}
+**角色：** ${charName}
+**用户：** ${userName}
 
-## 💬 聊天记录（最近30条）
+**聊天记录：**
 ${chatText}
 
-${worldInfoText ? `## 🌍 世界设定\n${worldInfoText}\n` : ''}
+${worldInfoText ? `**世界设定：**\n${worldInfoText}\n` : ''}
 
 ---
 
-## ✅ 任务要求
-1. **深度分析** 聊天记录中提到的人物关系（家人、朋友、同事等）
-2. 生成 **5-10个** 合理的联系人
-3. 如果有群体场景，生成 **1-3个** 群聊
-4. **严格按JSON格式返回**，不要任何解释
+**任务：** 分析上述信息，生成5-10个联系人。
 
-## 📤 返回格式（必须严格遵守）
+**严格按此格式返回（不要任何解释）：**
 {
   "contacts": [
-    {"name": "李明", "avatar": "👨", "relation": "同事"},
-    {"name": "小红", "avatar": "👩", "relation": "朋友"}
+    {"name": "张三", "avatar": "👨", "relation": "朋友"},
+    {"name": "李四", "avatar": "👩", "relation": "同事"}
   ],
   "groups": [
-    {"name": "家庭群", "avatar": "👨‍👩‍👧", "members": ["妈妈", "爸爸"], "lastMessage": "今晚回家吃饭吗？"}
+    {"name": "家庭群", "avatar": "👨‍👩‍👧", "members": ["妈妈", "爸爸"]}
   ]
 }
 
-**注意：**
-- 只返回JSON对象
-- 不要用markdown代码块包裹
-- name必须是真实的人名
-- avatar使用emoji
-- relation描述具体关系
-
-开始生成：`;
-    }
+只返回JSON，不要其他内容。`;
+}
     
-     // 📤 发送给AI（隐藏消息）
+// 📤 发送给AI（延长超时到180秒）
 async sendToAI(prompt) {
     return new Promise((resolve, reject) => {
         const context = this.storage.getContext();
@@ -321,11 +320,16 @@ async sendToAI(prompt) {
             return;
         }
         
-        // ✅ 直接调用生成API，不通过输入框
+        console.log('🚀 开始发送给AI...');
+        
         let responded = false;
+        let startTime = Date.now();
         
         const handler = (messageId) => {
             if (responded) return;
+            
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`⏱️ AI响应时间: ${elapsed}秒`);
             
             try {
                 const chat = context.chat;
@@ -339,23 +343,22 @@ async sendToAI(prompt) {
                     
                     const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
                     
-                    // ✅ 删除用户消息和AI消息
+                    console.log('✅ AI返回成功，长度:', aiText.length);
+                    
+                    // 删除消息
                     setTimeout(() => {
-                        // 删除最后两条消息（用户+AI）
                         if (chat.length >= 2) {
+                            // 从聊天记录中删除最后两条
                             chat.splice(chat.length - 2, 2);
                             
-                            // 刷新聊天显示
-                            if (typeof context.saveChat === 'function') {
-                                context.saveChat();
+                            // 从DOM中删除
+                            const messages = document.querySelectorAll('.mes');
+                            if (messages.length >= 2) {
+                                messages[messages.length - 2].remove();
+                                messages[messages.length - 1].remove();
                             }
                             
-                            // 隐藏DOM元素
-                            const allMessages = document.querySelectorAll('.mes');
-                            if (allMessages.length >= 2) {
-                                allMessages[allMessages.length - 2].remove();
-                                allMessages[allMessages.length - 1].remove();
-                            }
+                            console.log('🗑️ 已删除提示词消息');
                         }
                     }, 1000);
                     
@@ -367,7 +370,12 @@ async sendToAI(prompt) {
                     resolve(aiText);
                 }
             } catch (e) {
-                console.error('处理AI回复失败:', e);
+                console.error('❌ 处理AI回复失败:', e);
+                responded = true;
+                context.eventSource.removeListener(
+                    context.event_types.CHARACTER_MESSAGE_RENDERED,
+                    handler
+                );
                 reject(e);
             }
         };
@@ -378,46 +386,33 @@ async sendToAI(prompt) {
             handler
         );
         
-        // ✅ 手动构建请求，绕过输入框
-        setTimeout(async () => {
-            try {
-                // 手动添加用户消息到聊天记录
-                const userMsg = {
-                    name: context.name1 || 'You',
-                    is_user: true,
-                    is_system: false,
-                    send_date: new Date().toISOString(),
-                    mes: prompt,
-                    extra: {}
-                };
-                
-                context.chat.push(userMsg);
-                
-                // 触发生成
-                if (typeof context.generate === 'function') {
-                    await context.generate();
-                } else if (typeof Generate === 'function') {
-                    await Generate();
-                } else {
-                    // 最后手段：点击发送按钮
-                    const sendBtn = document.querySelector('#send_but');
-                    if (sendBtn) {
-                        const textarea = document.querySelector('#send_textarea');
-                        if (textarea) {
-                            textarea.value = prompt;
-                            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                            setTimeout(() => sendBtn.click(), 100);
-                        }
-                    }
-                }
-                
-            } catch (e) {
-                console.error('发送失败:', e);
-                reject(e);
+        // 发送消息
+        setTimeout(() => {
+            const textarea = document.querySelector('#send_textarea');
+            const sendBtn = document.querySelector('#send_but');
+            
+            if (!textarea || !sendBtn) {
+                responded = true;
+                reject(new Error('找不到输入框或发送按钮'));
+                return;
             }
+            
+            const oldValue = textarea.value;
+            textarea.value = prompt;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            setTimeout(() => {
+                sendBtn.click();
+                console.log('📤 已点击发送按钮');
+                
+                // 恢复输入框
+                setTimeout(() => {
+                    textarea.value = oldValue;
+                }, 200);
+            }, 100);
         }, 100);
         
-        // 60秒超时
+        // ✅ 延长超时到180秒（3分钟）
         setTimeout(() => {
             if (!responded) {
                 responded = true;
@@ -425,54 +420,66 @@ async sendToAI(prompt) {
                     context.event_types.CHARACTER_MESSAGE_RENDERED,
                     handler
                 );
-                reject(new Error('AI响应超时（60秒）'));
+                
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                console.error(`❌ AI响应超时（${elapsed}秒）`);
+                reject(new Error(`AI响应超时（${elapsed}秒）`));
             }
-        }, 60000);
+        }, 180000); // 180秒
     });
 }
     
-    // 📥 解析AI返回
-    parseAIResponse(text) {
-        try {
-            console.log('🔍 AI原始返回:', text);
-            
-            let jsonText = text;
-            
-            // 移除markdown代码块
-            const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-            if (codeBlockMatch) {
-                jsonText = codeBlockMatch[1];
-            }
-            
-            // 提取花括号内容
-            const braceMatch = jsonText.match(/\{[\s\S]*\}/);
-            if (braceMatch) {
-                jsonText = braceMatch[0];
-            }
-            
-            // 清理干扰字符
-            jsonText = jsonText
-                .replace(/^[^{]*/, '')
-                .replace(/[^}]*$/, '')
-                .trim();
-            
-            console.log('🔍 提取的JSON:', jsonText);
-            
-            const data = JSON.parse(jsonText);
-            
-            if (!data.contacts || !Array.isArray(data.contacts)) {
-                throw new Error('缺少contacts字段');
-            }
-            
-            console.log('✅ 成功解析，联系人数量:', data.contacts.length);
-            return data;
-            
-        } catch (e) {
-            console.error('❌ JSON解析失败:', e);
-            console.log('尝试容错解析...');
-            return this.fallbackParse(text);
+// 📥 解析AI返回（增强版）
+parseAIResponse(text) {
+    try {
+        console.log('🔍 AI原始返回（前500字符）:', text.substring(0, 500));
+        
+        let jsonText = text;
+        
+        // 1. 移除markdown代码块
+        const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) {
+            jsonText = codeBlockMatch[1];
+            console.log('✅ 提取到markdown代码块');
         }
+        
+        // 2. 提取花括号内容
+        const braceMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (braceMatch) {
+            jsonText = braceMatch[0];
+            console.log('✅ 提取到JSON对象');
+        }
+        
+        // 3. 清理干扰字符
+        jsonText = jsonText
+            .replace(/^[^{]*/, '')
+            .replace(/[^}]*$/, '')
+            .trim();
+        
+        console.log('🔍 清理后的JSON:', jsonText.substring(0, 200));
+        
+        // 4. 解析JSON
+        const data = JSON.parse(jsonText);
+        
+        // 5. 验证数据结构
+        if (!data.contacts || !Array.isArray(data.contacts)) {
+            console.warn('⚠️ 缺少contacts字段，使用空数组');
+            data.contacts = [];
+        }
+        
+        if (!data.groups || !Array.isArray(data.groups)) {
+            data.groups = [];
+        }
+        
+        console.log(`✅ 成功解析，联系人:${data.contacts.length}个，群聊:${data.groups.length}个`);
+        return data;
+        
+    } catch (e) {
+        console.error('❌ JSON解析失败:', e.message);
+        console.log('尝试容错解析...');
+        return this.fallbackParse(text);
     }
+}
     
     // 🔧 容错解析
     fallbackParse(text) {
