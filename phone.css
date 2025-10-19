@@ -1070,10 +1070,10 @@ input:checked + .toggle-slider:before {
 /* 小屏设备（手机竖屏） */
 @media (max-width: 500px) {
     .phone-body-panel {
-        width: 280px !important;
-        height: 600px !important;
-        max-width: 88vw !important;
-        max-height: 78vh !important;
+        width: 340px !important;
+        height: 728px !important;
+        max-width: 95vw !important;
+        max-height: 85vh !important;
         aspect-ratio: 9 / 19.5 !important;
         border-radius: 32px;
         padding: 7px;
@@ -1123,41 +1123,41 @@ input:checked + .toggle-slider:before {
     }
     
     .time-large {
-        font-size: 40px;
+        font-size: 50px;
     }
     
     .date {
-        font-size: 13px;
+        font-size: 15px;
     }
     
     .app-grid {
-        gap: 12px;
-        padding: 12px 16px;
+        gap: 16px;
+        padding: 16px 20px;
     }
     
     .app-icon-bg {
-        width: 40px;
-        height: 40px;
+        width: 50px;
+        height: 50px;
     }
     
     .app-icon-emoji {
-        font-size: 23px;
+        font-size: 28px;
     }
     
     .app-name {
-        font-size: 9.5px;
+        font-size: 11px;
     }
     
     .dock {
-        gap: 11px;
-        padding: 8px 13px;
-        bottom: 15px;
+        gap: 14px;
+        padding: 10px 16px;
+        bottom: 18px;
     }
     
     .dock-app {
-        width: 40px;
-        height: 40px;
-        font-size: 23px;
+        width: 50px;
+        height: 50px;
+        font-size: 28px;
     }
     
     .phone-panel-buttons {
