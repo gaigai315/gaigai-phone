@@ -673,19 +673,19 @@ getDefaultPrompt() {
 
         // 🎨 颜色设置事件
         
-        // 时间颜色选择器
-        document.getElementById('time-color-picker')?.addEventListener('input', (e) => {
-            const color = e.target.value;
-            this.storage.set('phone-time-color', color);
-            this.applyColors();
-        });
-        
-        // 图标文字颜色选择器
-        document.getElementById('app-name-color-picker')?.addEventListener('input', (e) => {
-            const color = e.target.value;
-            this.storage.set('phone-app-name-color', color);
-            this.applyColors();
-        });
+        /// 时间颜色选择器
+document.getElementById('time-color-picker')?.addEventListener('input', async (e) => {
+    const color = e.target.value;
+    await this.storage.set('phone-time-color', color, true);  // ← 确保是 true
+    this.applyColors();
+});
+
+// 图标文字颜色选择器
+document.getElementById('app-name-color-picker')?.addEventListener('input', async (e) => {
+    const color = e.target.value;
+    await this.storage.set('phone-app-name-color', color, true);  // ← 确保是 true
+    this.applyColors();
+});
         
         // 预设按钮
         document.querySelectorAll('.preset-color-btn').forEach(btn => {
