@@ -1,5 +1,5 @@
 // ========================================
-// 虚拟手机互动系统 v1.0.0
+// 虚拟手机互动系统 v1.0.1 (修复版)
 // SillyTavern 扩展插件
 // ========================================
 
@@ -19,7 +19,7 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
     }
     window.VirtualPhoneLoaded = true;
     
-    console.log('📱 虚拟手机系统 v1.0.0 启动');
+    console.log('📱 虚拟手机系统 v1.0.1 启动');
     
     let phoneShell = null;
     let homeScreen = null;
@@ -28,23 +28,42 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
     let currentApps = JSON.parse(JSON.stringify(APPS));
     let storage = new PhoneStorage();
     let settings = storage.loadSettings();
+    let panelCreated = false;
     
     const PHONE_TAG_REGEX = /<Phone>([\s\S]*?)<\/Phone>/gi;
     
-    // 创建顶部面板按钮
-    function createTopPanel() {
-        console.log('🔨 开始创建顶部面板...');
+    // 创建顶部面板按钮（加强版 - 持续重试）
+    function createTopPanel(retryCount = 0) {
+        console.log(`🔨 尝试创建顶部面板... (第${retryCount + 1}次)`);
         
-        const topSettingsHolder = document.getElementById('top-settings-holder');
-        if (!topSettingsHolder) {
-            console.error('❌ 找不到 top-settings-holder，将在500ms后重试');
-            setTimeout(createTopPanel, 500);
-            return;
+        if (panelCreated) {
+            console.log('✅ 面板已存在，跳过创建');
+            return true;
         }
         
+        const topSettingsHolder = document.getElementById('top-settings-holder');
+        
+        if (!topSettingsHolder) {
+            console.warn(`⚠️ 找不到 top-settings-holder (尝试 ${retryCount + 1}/20)`);
+            
+            if (retryCount < 20) {
+                setTimeout(() => createTopPanel(retryCount + 1), 500);
+            } else {
+                console.error('❌ 20次重试后仍未找到容器，放弃创建');
+                console.log('🔍 当前页面上所有ID包含"settings"的元素:');
+                document.querySelectorAll('[id*="settings"]').forEach(el => {
+                    console.log('  - ID:', el.id, '元素:', el);
+                });
+            }
+            return false;
+        }
+        
+        console.log('✅ 找到容器:', topSettingsHolder);
+        
+        // 移除旧面板
         const oldPanel = document.getElementById('phone-panel-holder');
         if (oldPanel) {
-            console.log('🗑️ 移除旧的面板');
+            console.log('🗑️ 移除旧面板');
             oldPanel.remove();
         }
         
@@ -52,18 +71,18 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
         const statusText = settings.enabled ? '已启用' : '已禁用';
         
         const panelHTML = `
-            <div id="phone-panel-holder" class="drawer" style="display: flex;">
+            <div id="phone-panel-holder" class="drawer" style="display: flex !important;">
                 <div class="drawer-toggle drawer-header">
                     <div id="phoneDrawerIcon" 
                          class="drawer-icon fa-solid fa-mobile-screen-button fa-fw closedIcon interactable" 
                          title="虚拟手机 (${statusText})" 
-                         style="cursor: pointer; font-size: 20px; padding: 10px; ${iconStyle}"
+                         style="cursor: pointer !important; font-size: 20px !important; padding: 10px !important; color: #ffffff !important; ${iconStyle}"
                          tabindex="0" 
                          role="button">
                         <span id="phone-badge" class="badge-notification" style="display:none;">0</span>
                     </div>
                 </div>
-                <div id="phone-panel" class="drawer-content fillRight closedDrawer">
+                <div id="phone-panel" class="drawer-content fillRight closedDrawer" style="display: none;">
                     <div id="phone-panel-header" class="fa-solid fa-grip drag-grabber"></div>
                     <div id="phone-panel-content">
                         ${!settings.enabled ? '<div style="text-align:center; padding:40px; color:#999;">手机功能已禁用<br><small>在手机"设置"APP中启用</small></div>' : ''}
@@ -72,39 +91,52 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             </div>
         `;
         
-        topSettingsHolder.insertAdjacentHTML('afterbegin', panelHTML);
+        try {
+            topSettingsHolder.insertAdjacentHTML('afterbegin', panelHTML);
+            console.log('✅ HTML已插入');
+        } catch (e) {
+            console.error('❌ 插入HTML失败:', e);
+            return false;
+        }
         
         const drawerIcon = document.getElementById('phoneDrawerIcon');
         const drawerPanel = document.getElementById('phone-panel');
         
+        console.log('📍 图标元素:', drawerIcon);
+        console.log('📍 面板元素:', drawerPanel);
+        
         if (!drawerIcon || !drawerPanel) {
-            console.error('❌ 面板创建失败！');
-            return;
+            console.error('❌ 元素创建失败！');
+            return false;
         }
         
         drawerIcon.addEventListener('click', () => {
+            console.log('🖱️ 图标被点击');
             toggleDrawer(drawerIcon, drawerPanel);
         });
         
-        console.log('✅ 顶部面板已创建');
-        console.log('📍 图标元素:', drawerIcon);
-        console.log('📍 面板元素:', drawerPanel);
+        panelCreated = true;
+        console.log('🎉 顶部面板创建成功！');
+        
+        return true;
     }
     
     // 切换抽屉
     function toggleDrawer(icon, panel) {
-        const isOpen = panel.classList.contains('openDrawer');
+        const isOpen = panel.style.display !== 'none' && panel.classList.contains('openDrawer');
         
         console.log('🔄 切换抽屉，当前状态:', isOpen ? '打开' : '关闭');
         
         if (isOpen) {
             // 关闭
+            panel.style.display = 'none';
             panel.classList.remove('openDrawer');
             panel.classList.add('closedDrawer');
             icon.classList.remove('openIcon');
             icon.classList.add('closedIcon');
         } else {
             // 打开
+            panel.style.display = 'block';
             panel.classList.add('openDrawer');
             panel.classList.remove('closedDrawer');
             icon.classList.add('openIcon');
@@ -205,27 +237,17 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
     
     function handleWechatCommand(action, data) {
         if (action === 'receiveMessage') {
-            // 支持单条消息
             if (data.message) {
-                phoneShell?.showNotification(
-                    data.from || '新消息', 
-                    data.message, 
-                    '💬'
-                );
+                phoneShell?.showNotification(data.from || '新消息', data.message, '💬');
                 updateAppBadge('wechat', 1);
                 totalNotifications++;
                 updateNotificationBadge(totalNotifications);
             }
             
-            // 支持多条消息
             if (data.messages && Array.isArray(data.messages)) {
                 data.messages.forEach((msg, index) => {
                     setTimeout(() => {
-                        phoneShell?.showNotification(
-                            data.from || '新消息', 
-                            msg.text || msg.message, 
-                            '💬'
-                        );
+                        phoneShell?.showNotification(data.from || '新消息', msg.text || msg.message, '💬');
                     }, index * 1500);
                 });
                 
@@ -235,31 +257,21 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             }
             
             console.log('📱 收到微信消息:', data);
-            
-            // ✅ 自动传递给微信APP
             handleWechatMessage(data);
         }
         
-        // 兼容旧的 newMessage action
         if (action === 'newMessage') {
             phoneShell?.showNotification(data.from || '新消息', data.message || '', '💬');
             updateAppBadge('wechat', 1);
             totalNotifications++;
             updateNotificationBadge(totalNotifications);
-            
-            // ✅ 自动传递给微信APP
             handleWechatMessage(data);
         }
     }
     
-    // ✅ 处理微信消息（支持新的微信APP）
     function handleWechatMessage(data) {
-        // 如果微信APP正在运行，直接发送到APP
         if (window.currentWechatApp) {
             window.currentWechatApp.receiveMessage(data);
-        } else {
-            // 否则用通知方式
-            handleWechatCommand('receiveMessage', data);
         }
     }
     
@@ -320,15 +332,12 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             const text = message.mes || message.swipes?.[message.swipe_id || 0] || '';
             const commands = parsePhoneCommands(text);
             
-            // 执行手机指令
             commands.forEach(cmd => executePhoneCommand(cmd));
             
-            // 隐藏标签（包括用户发的标记和AI的JSON）
             if (commands.length > 0) {
                 setTimeout(hidePhoneTags, 100);
             }
             
-            // 💡 重要：也要隐藏用户消息中的手机模式标记
             setTimeout(() => {
                 $('.mes_text').each(function() {
                     const $this = $(this);
@@ -361,10 +370,7 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             let html = $this.html();
             if (!html) return;
             
-            // 隐藏 <Phone> 标签及其内容（AI发的手机消息）
             html = html.replace(PHONE_TAG_REGEX, '<span style="display:none!important;" class="phone-hidden-tag">$&</span>');
-            
-            // 隐藏手机模式标记（用户发的）
             html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '<span style="display:none!important;" class="phone-mode-hidden"></span>');
             
             $this.html(html);
@@ -399,23 +405,14 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
         
         try {
             loadData();
+            createTopPanel(0);
             
-            // 确保DOM已加载
-            if (document.readyState === 'loading') {
-                console.log('⏳ 等待DOM加载完成...');
-                document.addEventListener('DOMContentLoaded', createTopPanel);
-            } else {
-                createTopPanel();
-            }
-            
-            // 监听返回主页
             window.addEventListener('phone:goHome', () => {
                 currentApp = null;
                 window.currentWechatApp = null;
                 if (homeScreen) homeScreen.render();
             });
             
-            // 监听打开APP
             window.addEventListener('phone:openApp', (e) => {
                 const { appId } = e.detail;
                 console.log('📱 打开APP:', appId);
@@ -428,7 +425,6 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
                     saveData();
                 }
                 
-                // 打开对应的APP
                 if (appId === 'settings') {
                     const settingsApp = new SettingsApp(phoneShell, storage, settings);
                     settingsApp.render();
@@ -446,17 +442,14 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
                 }
             });
             
-            // ✅ 监听从微信发送到聊天的消息
             window.addEventListener('phone:sendToChat', (e) => {
                 const { message, chatId, chatName } = e.detail;
                 
-                // 发送到酒馆聊天框
                 const textarea = document.querySelector('#send_textarea');
                 if (textarea) {
                     textarea.value = message;
                     textarea.dispatchEvent(new Event('input', { bubbles: true }));
                     
-                    // 可选：自动发送
                     const sendButton = document.querySelector('#send_but');
                     if (sendButton && settings.autoSend) {
                         setTimeout(() => sendButton.click(), 100);
@@ -466,7 +459,6 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
                 }
             });
             
-            // 监听清空数据
             window.addEventListener('phone:clearCurrentData', () => {
                 storage.clearCurrentData();
                 currentApps = JSON.parse(JSON.stringify(APPS));
@@ -489,7 +481,6 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
                 }
             });
             
-            // 连接到酒馆
             const context = getContext();
             if (context && context.eventSource) {
                 context.eventSource.on(
@@ -513,14 +504,7 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
         }
     }
     
-    // 延迟启动，确保DOM加载完成
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(init, 1000);
-        });
-    } else {
-        setTimeout(init, 1000);
-    }
+    setTimeout(init, 2000);
     
     window.VirtualPhone = {
         phone: phoneShell,
@@ -528,7 +512,8 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
         storage: storage,
         settings: settings,
         imageManager: new ImageUploadManager(storage),
-        version: '1.0.0'
+        createPanel: createTopPanel,
+        version: '1.0.1'
     };
     
     window.ImageUploadManager = ImageUploadManager;
