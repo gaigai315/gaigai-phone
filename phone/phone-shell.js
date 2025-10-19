@@ -95,23 +95,30 @@ export class PhoneShell {
     }
     
     showNotification(title, message, icon = '📱') {
-        if (!this.container) return;
-        
-        const notification = document.createElement('div');
-        notification.className = 'phone-notification';
-        notification.innerHTML = `
-            <div class="notification-icon">${icon}</div>
-            <div class="notification-content">
-                <div class="notification-title">${title}</div>
-                <div class="notification-message">${message}</div>
-            </div>
-        `;
-        
+    if (!this.container) return;
+    
+    const notification = document.createElement('div');
+    notification.className = 'phone-notification';
+    notification.innerHTML = `
+        <div class="notification-icon">${icon}</div>
+        <div class="notification-content">
+            <div class="notification-title">${title}</div>
+            <div class="notification-message">${message}</div>
+        </div>
+    `;
+    
+    // ✅ 改为插入到手机屏幕内
+    const phoneBody = this.container.querySelector('.phone-body-panel');
+    if (phoneBody) {
+        phoneBody.appendChild(notification);
+    } else {
+        // 兜底方案
         this.container.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.classList.add('fade-out');
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
     }
+    
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+  }
 }
