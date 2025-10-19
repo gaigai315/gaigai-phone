@@ -7,9 +7,9 @@ export class WechatData {
     }
     
     loadData() {
-        try {
-            const key = this.getStorageKey();
-            const saved = localStorage.getItem(key);
+    try {
+        const key = this.getStorageKey();
+        const saved = this.storage.get(key, false);
             if (saved) {
                 return JSON.parse(saved);
             }
@@ -505,10 +505,10 @@ export class WechatData {
     }
     
     // 保存数据
-    saveData() {
-        try {
-            const key = this.getStorageKey();
-            localStorage.setItem(key, JSON.stringify(this.data));
+    async saveData() {
+    try {
+        const key = this.getStorageKey();
+        await this.storage.set(key, JSON.stringify(this.data), false);
         } catch (e) {
             console.error('保存微信数据失败:', e);
         }
