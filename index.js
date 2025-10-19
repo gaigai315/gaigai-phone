@@ -182,48 +182,54 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
         saveData();
     }
     
-    function handleWechatCommand(action, data) {
-        if (action === 'receiveMessage') {
-            // 支持单条消息
-            if (data.message) {
-                phoneShell?.showNotification(
-                    data.from || '新消息', 
-                    data.message, 
-                    '💬'
-                );
-                updateAppBadge('wechat', 1);
-                totalNotifications++;
-                updateNotificationBadge(totalNotifications);
-            }
-            
-            // 支持多条消息
-            if (data.messages && Array.isArray(data.messages)) {
-                data.messages.forEach((msg, index) => {
-                    setTimeout(() => {
-                        phoneShell?.showNotification(
-                            data.from || '新消息', 
-                            msg.text || msg.message, 
-                            '💬'
-                        );
-                    }, index * 1500);
-                });
-                
-                updateAppBadge('wechat', data.messages.length);
-                totalNotifications += data.messages.length;
-                updateNotificationBadge(totalNotifications);
-            }
-            
-            console.log('📱 收到微信消息:', data);
-        }
-        
-        // 兼容旧的 newMessage action
-        if (action === 'newMessage') {
-            phoneShell?.showNotification(data.from || '新消息', data.message || '', '💬');
+     function handleWechatCommand(action, data) {
+    if (action === 'receiveMessage') {
+        // 支持单条消息
+        if (data.message) {
+            phoneShell?.showNotification(
+                data.from || '新消息', 
+                data.message, 
+                '💬'
+            );
             updateAppBadge('wechat', 1);
             totalNotifications++;
             updateNotificationBadge(totalNotifications);
         }
+        
+        // 支持多条消息
+        if (data.messages && Array.isArray(data.messages)) {
+            data.messages.forEach((msg, index) => {
+                setTimeout(() => {
+                    phoneShell?.showNotification(
+                        data.from || '新消息', 
+                        msg.text || msg.message, 
+                        '💬'
+                    );
+                }, index * 1500);
+            });
+            
+            updateAppBadge('wechat', data.messages.length);
+            totalNotifications += data.messages.length;
+            updateNotificationBadge(totalNotifications);
+        }
+        
+        console.log('📱 收到微信消息:', data);
+        
+        // ✅ 自动传递给微信APP
+        handleWechatMessage(data);
     }
+    
+    // 兼容旧的 newMessage action
+    if (action === 'newMessage') {
+        phoneShell?.showNotification(data.from || '新消息', data.message || '', '💬');
+        updateAppBadge('wechat', 1);
+        totalNotifications++;
+        updateNotificationBadge(totalNotifications);
+        
+        // ✅ 自动传递给微信APP
+        handleWechatMessage(data);
+    }
+}
     
     // ✅ 处理微信消息（支持新的微信APP）
     function handleWechatMessage(data) {
