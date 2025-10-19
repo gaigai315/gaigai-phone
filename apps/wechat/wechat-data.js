@@ -310,123 +310,70 @@ ${worldInfoText ? `**世界设定：**\n${worldInfoText}\n` : ''}
 只返回JSON，不要其他内容。`;
 }
     
-// 📤 发送给AI（延长超时到180秒）
+// 📤 直接调用Chat Completion API（不通过聊天窗口）
 async sendToAI(prompt) {
-    return new Promise((resolve, reject) => {
-        const context = this.storage.getContext();
+    try {
+        console.log('🚀 直接调用API...');
         
+        const context = this.storage.getContext();
         if (!context) {
-            reject(new Error('无法获取上下文'));
-            return;
+            throw new Error('无法获取上下文');
         }
         
-        console.log('🚀 开始发送给AI...');
-        
-        let responded = false;
-        let startTime = Date.now();
-        
-        const handler = (messageId) => {
-            if (responded) return;
-            
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-            console.log(`⏱️ AI响应时间: ${elapsed}秒`);
-            
-            try {
-                const chat = context.chat;
-                if (!chat || chat.length === 0) return;
-                
-                const lastMsg = chat[chat.length - 1];
-                
-                // 只处理AI的回复
-                if (lastMsg && !lastMsg.is_user) {
-                    responded = true;
-                    
-                    const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
-                    
-                    console.log('✅ AI返回成功，长度:', aiText.length);
-                    
-                    // 删除消息
-                    setTimeout(() => {
-                        if (chat.length >= 2) {
-                            // 从聊天记录中删除最后两条
-                            chat.splice(chat.length - 2, 2);
-                            
-                            // 从DOM中删除
-                            const messages = document.querySelectorAll('.mes');
-                            if (messages.length >= 2) {
-                                messages[messages.length - 2].remove();
-                                messages[messages.length - 1].remove();
-                            }
-                            
-                            console.log('🗑️ 已删除提示词消息');
-                        }
-                    }, 1000);
-                    
-                    context.eventSource.removeListener(
-                        context.event_types.CHARACTER_MESSAGE_RENDERED,
-                        handler
-                    );
-                    
-                    resolve(aiText);
-                }
-            } catch (e) {
-                console.error('❌ 处理AI回复失败:', e);
-                responded = true;
-                context.eventSource.removeListener(
-                    context.event_types.CHARACTER_MESSAGE_RENDERED,
-                    handler
-                );
-                reject(e);
+        // ✅ 构建最简单的messages（不包含任何角色扮演提示词）
+        const messages = [
+            {
+                role: 'system',
+                content: '你是一个数据分析助手，只返回JSON格式的数据，不要任何解释文字。'
+            },
+            {
+                role: 'user',
+                content: prompt
             }
-        };
+        ];
         
-        // 监听AI回复
-        context.eventSource.on(
-            context.event_types.CHARACTER_MESSAGE_RENDERED,
-            handler
-        );
+        console.log('📤 发送给API的messages:', messages);
         
-        // 发送消息
-        setTimeout(() => {
-            const textarea = document.querySelector('#send_textarea');
-            const sendBtn = document.querySelector('#send_but');
-            
-            if (!textarea || !sendBtn) {
-                responded = true;
-                reject(new Error('找不到输入框或发送按钮'));
-                return;
-            }
-            
-            const oldValue = textarea.value;
-            textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            
-            setTimeout(() => {
-                sendBtn.click();
-                console.log('📤 已点击发送按钮');
-                
-                // 恢复输入框
-                setTimeout(() => {
-                    textarea.value = oldValue;
-                }, 200);
-            }, 100);
-        }, 100);
+        // ✅ 直接调用酒馆的generateRaw API
+        const response = await fetch('/api/backends/chat-completions/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                messages: messages,
+                model: context.model || 'gpt-4', // 使用当前模型
+                temperature: 0.7,
+                max_tokens: 1000
+            })
+        });
         
-        // ✅ 延长超时到180秒（3分钟）
-        setTimeout(() => {
-            if (!responded) {
-                responded = true;
-                context.eventSource.removeListener(
-                    context.event_types.CHARACTER_MESSAGE_RENDERED,
-                    handler
-                );
-                
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                console.error(`❌ AI响应超时（${elapsed}秒）`);
-                reject(new Error(`AI响应超时（${elapsed}秒）`));
-            }
-        }, 180000); // 180秒
-    });
+        if (!response.ok) {
+            throw new Error(`API调用失败: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📥 API原始返回:', data);
+        
+        // ✅ 提取AI回复
+        let aiText = '';
+        if (data.choices && data.choices.length > 0) {
+            aiText = data.choices[0].message?.content || data.choices[0].text || '';
+        } else if (data.message) {
+            aiText = data.message;
+        } else if (data.content) {
+            aiText = data.content;
+        } else {
+            throw new Error('无法从API返回中提取内容');
+        }
+        
+        console.log('✅ AI返回成功，长度:', aiText.length);
+        return aiText;
+        
+    } catch (error) {
+        console.error('❌ API调用失败:', error);
+        throw error;
+    }
 }
     
 // 📥 解析AI返回（增强版）
