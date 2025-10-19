@@ -61,7 +61,7 @@ export class SettingsApp {
                     <div class="setting-item">
                         <div class="setting-label">自定义APP图标</div>
                         <div class="setting-desc">点击APP选择图片替换图标</div>
-                        <div class="app-icon-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;">
+                        <div class="app-icon-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
                             ${this.renderAppIconUpload()}
                         </div>
                     </div>
@@ -562,10 +562,10 @@ getDefaultPrompt() {
         });
         
         // 删除壁纸
-        document.getElementById('delete-wallpaper')?.addEventListener('click', () => {
-            if (!confirm('确定删除壁纸吗？')) return;
-            
-            this.imageManager.deleteWallpaper();
+        document.getElementById('delete-wallpaper')?.addEventListener('click', async () => {  // ← 加 async
+        if (!confirm('确定删除壁纸吗？')) return;
+    
+        await this.imageManager.deleteWallpaper();  // ← 加 await
             
             const preview = document.getElementById('wallpaper-preview');
             preview.style.display = 'none';
