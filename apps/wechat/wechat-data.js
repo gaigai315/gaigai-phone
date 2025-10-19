@@ -141,121 +141,333 @@ export class WechatData {
         this.saveData();
     }
     
-   async loadContactsFromCharacter() {
-    const context = this.storage.getContext();
-    
-    if (!context) {
-        return { success: false, message: '无法获取上下文信息' };
-    }
-    
-    // ✅ 获取角色卡信息
-    const charName = context.name2 || context.name || '角色';
-    const charDesc = context.description || '';
-    const scenario = context.scenario || '';
-    const personality = context.personality || '';
-    
-    // ✅ 获取用户信息（新增）
-    const userName = context.name1 || '用户';
-    const userPersona = context.user_persona || context.persona_description || '';
-    
-    // ✅ 获取聊天记录
-    const chatHistory = [];
-    // ... 保持原样
-        if (context.chat && Array.isArray(context.chat)) {
-            const recentChats = context.chat.slice(-50);
-            recentChats.forEach(msg => {
-                chatHistory.push({
-                    speaker: msg.is_user ? '用户' : charName,
-                    message: msg.mes || ''
-                });
-            });
+async loadContactsFromCharacter() {
+    try {
+        // 🔍 获取SillyTavern上下文
+        const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
+            ? SillyTavern.getContext() 
+            : null;
+        
+        if (!context) {
+            return { success: false, message: '❌ 无法获取SillyTavern上下文' };
         }
         
-        console.log('📖 准备发送给AI:', {
-            角色名: charName,
-            描述长度: charDesc.length,
-            聊天记录条数: chatHistory.length
+        console.log('📖 开始智能提取联系人...');
+        
+        // ✅ 提取角色卡信息（不依赖固定位置）
+        const charInfo = this.extractCharacterInfo(context);
+        const userInfo = this.extractUserInfo(context);
+        const chatRelations = this.extractChatRelations(context);
+        
+        console.log('📊 提取结果:', {
+            角色信息: charInfo,
+            用户信息: userInfo,
+            聊天中的人物: chatRelations
         });
         
-        const prompt = this.buildAIPrompt(charName, charDesc, scenario, personality, userName, userPersona, chatHistory);
+        // ✅ 合并所有联系人
+        const allContacts = new Map();
         
-        try {
-            const aiResponse = await this.sendToAI(prompt);
-            
-            if (!aiResponse) {
-                throw new Error('AI未返回数据');
-            }
-            
-            const generatedData = this.parseAIResponse(aiResponse);
-            
-            if (!generatedData || !generatedData.contacts) {
-                throw new Error('AI返回的数据格式错误');
-            }
-            
-            let addedCount = 0;
-generatedData.contacts.forEach(contact => {
-    const exists = this.data.contacts.find(c => c.name === contact.name);
-    if (!exists) {
-        this.data.contacts.push({
-            id: `contact_${Date.now()}_${Math.random()}`,
-            name: contact.name,
-            avatar: contact.avatar || '👤',
-            remark: contact.remark || '',
-            letter: this.getFirstLetter(contact.name),
-            relation: contact.relation || ''
+        // 从角色卡提取
+        charInfo.relations.forEach(contact => {
+            allContacts.set(contact.name, contact);
         });
-        addedCount++;
-    }
-});
-            
-            if (generatedData.groups && generatedData.groups.length > 0) {
-    generatedData.groups.forEach(group => {
-        const exists = this.data.chats.find(c => c.name === group.name);
-        if (!exists) {
-            const chatId = `group_${Date.now()}_${Math.random()}`;
-            
-            // 创建群聊
-            this.data.chats.push({
-                id: chatId,
-                name: group.name,
-                type: 'group',
-                avatar: group.avatar || '👥',
-                lastMessage: '',  // ← 先设为空
-                time: '刚刚',
-                unread: 0,
-                members: group.members || []
-            });
-            
-            // 🎯 如果有lastMessage，创建对应的消息
-            if (group.lastMessage) {
-                this.addMessage(chatId, {
-                    from: group.members?.[0] || '群成员',
-                    content: group.lastMessage,
+        
+        // 从用户信息提取
+        userInfo.relations.forEach(contact => {
+            if (!allContacts.has(contact.name)) {
+                allContacts.set(contact.name, contact);
+            }
+        });
+        
+        // 从聊天记录提取
+        chatRelations.forEach(contact => {
+            if (!allContacts.has(contact.name)) {
+                allContacts.set(contact.name, contact);
+            }
+        });
+        
+        // ✅ 添加到通讯录
+        let addedCount = 0;
+        allContacts.forEach(contact => {
+            const exists = this.data.contacts.find(c => c.name === contact.name);
+            if (!exists) {
+                this.data.contacts.push({
+                    id: `contact_${Date.now()}_${Math.random()}`,
+                    name: contact.name,
+                    avatar: contact.avatar || '👤',
+                    remark: contact.remark || '',
+                    letter: this.getFirstLetter(contact.name),
+                    relation: contact.relation || '联系人'
+                });
+                addedCount++;
+            }
+        });
+        
+        // ✅ 生成默认群聊
+        const groups = this.generateDefaultGroups(Array.from(allContacts.values()));
+        groups.forEach(group => {
+            const exists = this.data.chats.find(c => c.name === group.name);
+            if (!exists) {
+                const chatId = `group_${Date.now()}_${Math.random()}`;
+                this.data.chats.push({
+                    id: chatId,
+                    name: group.name,
+                    type: 'group',
+                    avatar: group.avatar || '👥',
+                    lastMessage: '',
                     time: '刚刚',
-                    type: 'text',
-                    avatar: '👤'
+                    unread: 0,
+                    members: group.members || []
                 });
             }
-        }
-    });
+        });
+        
+        await this.saveData();
+        
+        return {
+            success: true,
+            count: addedCount,
+            message: `✅ 成功生成${addedCount}个联系人`
+        };
+        
+    } catch (error) {
+        console.error('❌ 智能加载失败:', error);
+        return {
+            success: false,
+            message: `生成失败: ${error.message}`
+        };
+    }
 }
+
+// 🔍 从角色卡提取信息（搜索关键字段）
+extractCharacterInfo(context) {
+    const info = {
+        name: '',
+        description: '',
+        relations: []
+    };
+    
+    try {
+        // 方法1: 从当前角色对象获取
+        if (context.characters && context.characterId !== undefined) {
+            const char = context.characters[context.characterId];
+            if (char) {
+                info.name = char.name || char.data?.name || '';
+                info.description = char.description || char.data?.description || '';
+            }
+        }
+        
+        // 方法2: 从 name2 获取（AI角色名）
+        if (!info.name && context.name2) {
+            info.name = context.name2;
+        }
+        
+        // 方法3: 从描述字段获取
+        if (!info.description && context.description) {
+            info.description = context.description;
+        }
+        
+        console.log('🔍 角色卡原始信息:', info);
+        
+        // ✅ 解析人物关系（支持多种格式）
+        const text = info.description;
+        
+        // 匹配格式：母亲：李华  或  妈妈: 张芳
+        const relationPatterns = [
+            /(?:母亲|妈妈|爸爸|父亲|哥哥|姐姐|弟弟|妹妹|老公|老婆|男友|女友|闺蜜|朋友|同事|上司|老板|助理|秘书)[:：]\s*([^\n,，。；;]+)/g,
+            /([^\n]+?)\s*[-–—]\s*(母亲|父亲|妈妈|爸爸|哥哥|姐姐|弟弟|妹妹|老公|老婆|男友|女友|闺蜜|朋友|同事)/g
+        ];
+        
+        relationPatterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(text)) !== null) {
+                const name = match[1].trim();
+                const relation = match[2] || this.guessRelation(name);
+                
+                if (name.length > 0 && name.length < 10 && !this.isCommonWord(name)) {
+                    info.relations.push({
+                        name: name,
+                        avatar: this.guessAvatar(name, relation),
+                        relation: relation
+                    });
+                }
+            }
+        });
+        
+    } catch (e) {
+        console.warn('⚠️ 角色卡解析失败:', e);
+    }
+    
+    return info;
+}
+
+// 🔍 从用户信息提取（搜索 User Persona）
+extractUserInfo(context) {
+    const info = {
+        name: '',
+        persona: '',
+        relations: []
+    };
+    
+    try {
+        // 方法1: 从 name1 获取（用户名）
+        if (context.name1) {
+            info.name = context.name1;
+        }
+        
+        // 方法2: 从 persona_description 获取
+        if (context.persona_description) {
+            info.persona = context.persona_description;
+        }
+        
+        // 方法3: 从 user_persona 获取
+        if (!info.persona && context.user_persona) {
+            info.persona = context.user_persona;
+        }
+        
+        console.log('🔍 用户信息:', info);
+        
+        // ✅ 解析人物关系
+        const text = info.persona;
+        
+        const relationPatterns = [
+            /(?:母亲|妈妈|爸爸|父亲|哥哥|姐姐|弟弟|妹妹|老公|老婆|男友|女友|闺蜜|朋友|同事|上司|老板)[:：]\s*([^\n,，。；;]+)/g,
+            /([^\n]+?)\s*[-–—]\s*(母亲|父亲|妈妈|爸爸|哥哥|姐姐|弟弟|妹妹|老公|老婆|男友|女友|闺蜜|朋友|同事)/g
+        ];
+        
+        relationPatterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(text)) !== null) {
+                const name = match[1].trim();
+                const relation = match[2] || this.guessRelation(name);
+                
+                if (name.length > 0 && name.length < 10 && !this.isCommonWord(name)) {
+                    info.relations.push({
+                        name: name,
+                        avatar: this.guessAvatar(name, relation),
+                        relation: relation
+                    });
+                }
+            }
+        });
+        
+    } catch (e) {
+        console.warn('⚠️ 用户信息解析失败:', e);
+    }
+    
+    return info;
+}
+
+// 🔍 从聊天记录提取人物
+extractChatRelations(context) {
+    const relations = [];
+    const mentionedNames = new Set();
+    
+    try {
+        if (!context.chat || !Array.isArray(context.chat)) {
+            return relations;
+        }
+        
+        // 分析最近50条消息
+        const recentChats = context.chat.slice(-50);
+        
+        recentChats.forEach(msg => {
+            const text = msg.mes || '';
             
-            await this.saveData();
+            // 匹配中文名字（2-4个字）
+            const namePattern = /(?:给|找|叫|问|告诉|联系|发给|转给|@)([^\s，。！？、]{2,4})(?:发|说|问|打|转|的)/g;
+            let match;
             
-            return {
-                success: true,
-                count: addedCount,
-                message: `成功生成${addedCount}个联系人`
-            };
-            
-        } catch (error) {
-            console.error('❌ AI生成失败:', error);
-            return {
-                success: false,
-                message: `生成失败: ${error.message}`
-            };
+            while ((match = namePattern.exec(text)) !== null) {
+                const name = match[1];
+                if (!this.isCommonWord(name) && !mentionedNames.has(name)) {
+                    mentionedNames.add(name);
+                    relations.push({
+                        name: name,
+                        avatar: this.guessAvatar(name, ''),
+                        relation: '联系人'
+                    });
+                }
+            }
+        });
+        
+    } catch (e) {
+        console.warn('⚠️ 聊天记录解析失败:', e);
+    }
+    
+    return relations;
+}
+
+// 🎨 猜测关系
+guessRelation(name) {
+    const relationMap = {
+        '妈': '母亲', '母': '母亲', '娘': '母亲',
+        '爸': '父亲', '父': '父亲',
+        '哥': '哥哥', '兄': '哥哥',
+        '姐': '姐姐',
+        '弟': '弟弟',
+        '妹': '妹妹',
+        '夫': '丈夫', '公': '丈夫',
+        '妻': '妻子', '婆': '妻子'
+    };
+    
+    for (const [key, relation] of Object.entries(relationMap)) {
+        if (name.includes(key)) {
+            return relation;
         }
     }
+    
+    return '联系人';
+}
+
+// 🚫 过滤常见词
+isCommonWord(word) {
+    const commonWords = [
+        '我', '你', '他', '她', '它', '我们', '你们', '他们',
+        '这', '那', '哪', '什么', '怎么', '为什么',
+        '是', '不是', '有', '没有', '在', '去', '来',
+        '说', '做', '看', '听', '想', '要', '给',
+        '好', '坏', '大', '小', '多', '少',
+        '上', '下', '左', '右', '前', '后',
+        '东西', '事情', '地方', '时候', '人'
+    ];
+    
+    return commonWords.includes(word);
+}
+
+// 🎨 生成默认群聊
+generateDefaultGroups(contacts) {
+    const groups = [];
+    
+    // 如果有家庭成员，创建家庭群
+    const familyMembers = contacts.filter(c => 
+        ['母亲', '父亲', '妈妈', '爸爸', '哥哥', '姐姐', '弟弟', '妹妹'].includes(c.relation)
+    );
+    
+    if (familyMembers.length >= 2) {
+        groups.push({
+            name: '家庭群',
+            avatar: '👨‍👩‍👧',
+            members: familyMembers.map(m => m.name)
+        });
+    }
+    
+    // 如果有朋友，创建朋友群
+    const friends = contacts.filter(c => 
+        ['朋友', '闺蜜', '好友'].includes(c.relation)
+    );
+    
+    if (friends.length >= 3) {
+        groups.push({
+            name: '好友群',
+            avatar: '👫',
+            members: friends.slice(0, 5).map(m => m.name)
+        });
+    }
+    
+    return groups;
+}
     
 buildAIPrompt(charName, charDesc, scenario, personality, userName, userPersona, chatHistory) {
     const chatText = chatHistory.length > 0 
