@@ -67,29 +67,48 @@ export class PhoneShell {
     // 锁屏 - 强制关闭抽屉
     if (powerBtn) {
         powerBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             console.log('🔒 锁屏按钮触发');
             
-            // 直接查找并操作DOM元素
-            const panel = document.getElementById('phone-panel');
+            // 方法1：触发点击图标来关闭
             const icon = document.getElementById('phoneDrawerIcon');
-            
-            if (!panel || !icon) {
-                console.error('❌ 找不到面板或图标');
+            if (icon && icon.classList.contains('openIcon')) {
+                icon.click();
+                console.log('✅ 通过点击图标关闭面板');
                 return;
             }
             
-            // 强制修改类名
-            panel.classList.remove('openDrawer');
-            panel.classList.add('closedDrawer');
-            icon.classList.remove('openIcon');
-            icon.classList.add('closedIcon');
+            // 方法2：直接操作DOM
+            const panel = document.getElementById('phone-panel');
+            const panelHolder = document.getElementById('phone-panel-holder');
             
-            // 额外保险：修改样式
-            panel.style.display = 'none';
-            setTimeout(() => {
-                panel.style.display = '';
-            }, 100);
+            if (panel) {
+                panel.classList.remove('openDrawer');
+                panel.classList.add('closedDrawer');
+                
+                // 强制隐藏
+                panel.style.display = 'none';
+                setTimeout(() => {
+                    panel.style.display = '';
+                }, 50);
+            }
+            
+            if (icon) {
+                icon.classList.remove('openIcon');
+                icon.classList.add('closedIcon');
+            }
+            
+            // 额外保险：移除整个容器的显示
+            if (panelHolder) {
+                const drawer = panelHolder.querySelector('.drawer-content');
+                if (drawer) {
+                    drawer.classList.remove('openDrawer');
+                    drawer.classList.add('closedDrawer');
+                }
+            }
             
             console.log('✅ 已强制关闭手机面板');
         });
