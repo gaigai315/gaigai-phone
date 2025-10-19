@@ -153,38 +153,19 @@ export class ContactsView {
     if (contact) {
         // 创建或打开聊天
         let chat = this.app.data.getChatByContactId(contactId);
-        let isNewChat = false;
         
         if (!chat) {
             chat = this.app.data.createChat({
                 id: `chat_${contactId}`,
-                contactId: contactId,  // ← 添加 contactId 字段
+                contactId: contactId,  // ← 保留 contactId
                 name: contact.name,
                 type: 'single',
                 avatar: contact.avatar
             });
-            isNewChat = true;
         }
         
-        // 🎉 如果是新聊天，添加欢迎消息
-        if (isNewChat) {
-            const welcomeMessages = [
-                '你好呀！',
-                '嗨~',
-                '在吗？',
-                '最近怎么样？',
-                '好久不见！'
-            ];
-            const randomWelcome = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
-            
-            this.app.data.addMessage(chat.id, {
-                from: contact.name,
-                content: randomWelcome,
-                time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-                type: 'text',
-                avatar: contact.avatar
-            });
-        }
+        // ❌ 删除自动添加欢迎消息的逻辑
+        // 如果没有消息就是空的，有消息就显示已有的
         
         this.app.currentChat = chat;
         this.app.currentView = 'chats';
