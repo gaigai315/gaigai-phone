@@ -1334,3 +1334,53 @@ input:checked + .toggle-slider:before {
 .preset-color-btn:active {
     transform: translateY(0);
 }
+
+/* ========================================
+   📱 移动端输入框防变形优化
+   ======================================== */
+
+/* 防止软键盘弹出导致手机容器变形 */
+@media (max-width: 500px) {
+    .phone-body-panel {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 340px !important;
+        height: 728px !important;
+        max-height: 85vh !important;
+    }
+    
+    /* 防止输入框获取焦点时页面滚动 */
+    .chat-input:focus,
+    .profile-edit-input:focus {
+        position: fixed !important;
+        z-index: 9999 !important;
+    }
+    
+    /* 输入法弹出时保持布局 */
+    .wechat-app {
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    
+    /* 聊天消息区域在输入时不变形 */
+    .chat-messages {
+        max-height: calc(100vh - 300px) !important;
+        overflow-y: auto !important;
+    }
+    
+    /* 输入区固定在底部 */
+    .chat-input-area {
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 10 !important;
+    }
+}
+
+/* 阻止页面整体滚动 */
+body.phone-input-active {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+}
