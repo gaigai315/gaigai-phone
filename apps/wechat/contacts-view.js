@@ -137,12 +137,19 @@ export class ContactsView {
         console.log('搜索:', this.searchText);
     }
     
-    scrollToLetter(letter) {
+   scrollToLetter(letter) {
     // 滚动到指定字母
+    const contactsList = document.querySelector('.contacts-list');
     const groups = document.querySelectorAll('.group-letter');
+    
     for (const group of groups) {
         if (group.textContent.trim() === letter) {
-            group.scrollIntoView({ behavior: 'smooth' });
+            // 计算目标位置（相对于列表容器）
+            const targetTop = group.offsetTop - contactsList.offsetTop;
+            contactsList.scrollTo({
+                top: targetTop,
+                behavior: 'smooth'
+            });
             break;
         }
     }
