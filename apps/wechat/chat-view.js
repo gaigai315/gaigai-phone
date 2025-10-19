@@ -260,56 +260,231 @@ export class ChatView {
         }
     }
     
-    sendMessage() {
-        if (!this.inputText.trim()) return;
-        
-        const userInfo = this.app.data.getUserInfo();
-        
-        // 添加消息到数据
-        this.app.data.addMessage(this.app.currentChat.id, {
-            from: 'me',
-            content: this.inputText,
-            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-            type: 'text',
-            avatar: userInfo.avatar
-        });
-        
-        // 如果开启了在线模式，发送到AI
-        if (window.VirtualPhone?.settings?.onlineMode) {
-            this.sendToAI(this.inputText);
-        }
-        
-        // 清空输入
-        this.inputText = '';
-        this.app.render();
+    async sendMessage() {
+    if (!this.inputText.trim()) return;
+    
+    const userInfo = this.app.data.getUserInfo();
+    
+    // 添加消息到数据
+    this.app.data.addMessage(this.app.currentChat.id, {
+        from: 'me',
+        content: this.inputText,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        type: 'text',
+        avatar: userInfo.avatar
+    });
+    
+    const messageToSend = this.inputText;
+    
+    // 清空输入并刷新界面
+    this.inputText = '';
+    this.app.render();
+    
+    // 如果开启了在线模式，发送到AI
+    if (window.VirtualPhone?.settings?.onlineMode) {
+        await this.sendToAI(messageToSend);
+    }
+}
+    
+   async sendToAI(message) {
+    const settings = window.VirtualPhone?.settings;
+    
+    if (!settings?.onlineMode) {
+        console.log('⚠️ 在线模式未开启，消息不会发送到AI');
+        return;
     }
     
-    sendToAI(message) {
-        const settings = window.VirtualPhone?.settings;
+    // 🔥 显示正在输入状态
+    this.showTypingStatus();
+    
+    try {
+        // 1️⃣ 获取上下文
+        const context = window.SillyTavern?.getContext?.();
+        if (!context) {
+            throw new Error('无法获取酒馆上下文');
+        }
         
-        if (!settings?.onlineMode) {
-            console.log('⚠️ 在线模式未开启，消息不会发送到AI');
+        // 2️⃣ 获取角色信息
+        const charName = context.name2 || context.name || '对方';
+        const charDesc = context.description || '';
+        const personality = context.personality || '';
+        
+        // 3️⃣ 获取完整聊天记录（酒馆历史 + 手机微信记录）
+        const chatHistory = [];
+        
+        // 酒馆聊天记录
+        if (context.chat && Array.isArray(context.chat)) {
+            context.chat.forEach(msg => {
+                chatHistory.push({
+                    speaker: msg.is_user ? '用户' : charName,
+                    message: msg.mes || '',
+                    source: 'tavern'
+                });
+            });
+        }
+        
+        // 当前微信聊天记录
+        const wechatMessages = this.app.data.getMessages(this.app.currentChat.id);
+        wechatMessages.forEach(msg => {
+            chatHistory.push({
+                speaker: msg.from === 'me' ? '用户' : charName,
+                message: msg.content || '',
+                source: 'wechat'
+            });
+        });
+        
+        // 4️⃣ 构建手机聊天专用提示词
+        const phonePrompt = this.buildPhoneChatPrompt(
+            charName, 
+            charDesc, 
+            personality, 
+            this.app.currentChat.name,
+            chatHistory, 
+            message
+        );
+        
+        // 5️⃣ 发送给AI并隐藏消息
+        const aiResponse = await this.sendToAIHidden(phonePrompt);
+        
+        // 6️⃣ 将AI回复添加到微信界面
+        this.app.data.addMessage(this.app.currentChat.id, {
+            from: charName,
+            content: aiResponse,
+            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            type: 'text',
+            avatar: this.app.currentChat.avatar
+        });
+        
+        // 7️⃣ 刷新界面
+        this.app.render();
+        
+        console.log('✅ 手机消息发送成功');
+        
+    } catch (error) {
+        console.error('❌ 发送手机消息失败:', error);
+        this.app.phoneShell?.showNotification('发送失败', error.message, '❌');
+    }
+}
+
+// 🔧 构建手机聊天提示词
+buildPhoneChatPrompt(charName, desc, personality, contactName, chatHistory, userMessage) {
+    const historyText = chatHistory.slice(-30).map(h => 
+        `${h.speaker}: ${h.message}`
+    ).join('\n');
+    
+    return `
+# 场景：微信聊天
+你正在通过微信和用户聊天（不是面对面对话）
+
+## 角色信息
+- 你的名字：${charName}
+- 描述：${desc}
+- 性格：${personality}
+- 微信备注：${contactName}
+
+## 聊天历史（包含酒馆对话和微信记录）
+${historyText}
+
+## 用户刚发来的微信消息
+用户: ${userMessage}
+
+---
+
+## 回复要求
+1. **只返回你的微信回复内容**，不要任何旁白、场景描述
+2. 语气要符合微信聊天的风格（简洁、口语化）
+3. 可以使用emoji表情
+4. 可以发送多条消息（用换行分隔）
+5. 要考虑之前的聊天历史（包括在酒馆和微信的对话）
+6. **不要**输出任何JSON、标签或格式代码
+
+现在回复用户的微信消息：
+`;
+}
+
+// 🔧 发送给AI并隐藏消息
+async sendToAIHidden(prompt) {
+    return new Promise((resolve, reject) => {
+        const textarea = document.querySelector('#send_textarea');
+        if (!textarea) {
+            reject(new Error('找不到聊天输入框'));
             return;
         }
         
-        const phoneMessage = `((PHONE_CHAT_MODE))${message}`;
+        const originalValue = textarea.value;
         
-        const textarea = document.querySelector('#send_textarea');
-        if (textarea) {
-            textarea.value = phoneMessage;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        textarea.value = prompt;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        const context = window.SillyTavern?.getContext?.();
+        let responded = false;
+        
+        const handler = (messageId) => {
+            if (responded) return;
+            responded = true;
             
-            setTimeout(() => {
-                const sendButton = document.querySelector('#send_but');
-                if (sendButton) {
-                    sendButton.click();
-                    console.log('📱 已发送手机消息到AI:', message);
+            try {
+                const chat = context.chat;
+                const lastMsg = chat[chat.length - 1];
+                
+                if (lastMsg && !lastMsg.is_user) {
+                    const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
+                    
+                    // 🔥 隐藏用户消息
+                    setTimeout(() => {
+                        const allMessages = document.querySelectorAll('.mes');
+                        if (allMessages.length >= 2) {
+                            const userMsg = allMessages[allMessages.length - 2];
+                            if (userMsg) userMsg.style.display = 'none';
+                        }
+                    }, 500);
+                    
+                    // 🔥 隐藏AI消息
+                    setTimeout(() => {
+                        const allMessages = document.querySelectorAll('.mes');
+                        if (allMessages.length >= 1) {
+                            const aiMsg = allMessages[allMessages.length - 1];
+                            if (aiMsg) aiMsg.style.display = 'none';
+                        }
+                    }, 800);
+                    
+                    textarea.value = originalValue;
+                    
+                    context.eventSource.removeListener(
+                        context.event_types.CHARACTER_MESSAGE_RENDERED,
+                        handler
+                    );
+                    
+                    resolve(aiText);
                 }
-            }, 100);
-        } else {
-            console.warn('❌ 找不到聊天输入框');
-        }
-    }
+            } catch (e) {
+                reject(e);
+            }
+        };
+        
+        context.eventSource.on(
+            context.event_types.CHARACTER_MESSAGE_RENDERED,
+            handler
+        );
+        
+        setTimeout(() => {
+            const sendBtn = document.querySelector('#send_but');
+            if (sendBtn) {
+                sendBtn.click();
+            } else {
+                reject(new Error('找不到发送按钮'));
+            }
+        }, 100);
+        
+        setTimeout(() => {
+            if (!responded) {
+                responded = true;
+                textarea.value = originalValue;
+                reject(new Error('AI响应超时'));
+            }
+        }, 30000);
+    });
+}
     
     handleMoreAction(action) {
         switch(action) {
@@ -341,18 +516,77 @@ export class ChatView {
     }
     
     showTransferDialog() {
-        const amount = prompt('请输入转账金额：');
-        if (amount && !isNaN(amount)) {
-            this.app.data.addMessage(this.app.currentChat.id, {
-                from: 'me',
-                type: 'transfer',
-                amount: amount,
-                desc: '转账给你',
-                time: '刚刚'
-            });
-            this.app.render();
+    // 🔥 改成手机内部界面
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-transfer">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">转账</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                <div style="background: #fff; border-radius: 10px; padding: 30px; text-align: center;">
+                    <div style="font-size: 14px; color: #999; margin-bottom: 20px;">转账金额</div>
+                    <div style="font-size: 48px; font-weight: bold; margin-bottom: 20px;">
+                        ¥ <input type="number" id="transfer-amount" 
+                                 placeholder="0.00" 
+                                 style="border:none; font-size:48px; width:200px; text-align:center; font-weight:bold;">
+                    </div>
+                    <input type="text" id="transfer-desc" placeholder="添加转账说明" style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 1px solid #e5e5e5;
+                        border-radius: 6px;
+                        box-sizing: border-box;
+                        margin-bottom: 30px;
+                    ">
+                    <button id="confirm-transfer" style="
+                        width: 100%;
+                        padding: 14px;
+                        background: #07c160;
+                        color: #fff;
+                        border: none;
+                        border-radius: 6px;
+                        font-size: 16px;
+                        cursor: pointer;
+                    ">转账</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.app.phoneShell.setContent(html);
+    
+    document.getElementById('back-from-transfer')?.addEventListener('click', () => {
+        this.app.render();
+    });
+    
+    document.getElementById('confirm-transfer')?.addEventListener('click', () => {
+        const amount = document.getElementById('transfer-amount').value;
+        const desc = document.getElementById('transfer-desc').value || '转账给你';
+        
+        if (!amount || isNaN(amount) || amount <= 0) {
+            this.app.phoneShell.showNotification('提示', '请输入正确的金额', '⚠️');
+            return;
         }
-    }
+        
+        this.app.data.addMessage(this.app.currentChat.id, {
+            from: 'me',
+            type: 'transfer',
+            amount: amount,
+            desc: desc,
+            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        });
+        
+        this.app.phoneShell.showNotification('转账成功', `已向${this.app.currentChat.name}转账¥${amount}`, '✅');
+        setTimeout(() => this.app.render(), 1000);
+    });
+}
     
     showRedPacketDialog() {
         this.app.phoneShell.showNotification('红包', '红包功能开发中...', '🧧');
@@ -366,115 +600,112 @@ export class ChatView {
         this.app.phoneShell.showNotification('相册', '打开相册选择...', '📷');
     }
     
-    // ✅ 这些方法现在在类的里面了
-    showAvatarSettings(chat) {
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        `;
-        
-        modal.innerHTML = `
-            <div style="background: #fff; border-radius: 12px; padding: 20px; width: 90%; max-width: 300px;">
-                <h3 style="margin: 0 0 15px 0; text-align: center;">设置备注和头像</h3>
-                <div id="avatar-preview" style="
-                    width: 80px;
-                    height: 80px;
-                    border-radius: 8px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    margin: 0 auto 15px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 40px;
-                    cursor: pointer;
-                ">${chat.avatar || '👤'}</div>
-                <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
-                <button id="upload-avatar-btn" style="
-                    display: block;
-                    width: 100%;
-                    padding: 10px;
-                    background: #f0f0f0;
-                    border: none;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    cursor: pointer;
-                    margin-bottom: 10px;
-                ">上传头像</button>
-                <input type="text" id="remark-input" placeholder="设置备注名" value="${chat.name}" style="
-                    width: 100%;
-                    padding: 10px;
-                    border: 1px solid #ddd;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    margin-bottom: 15px;
-                    box-sizing: border-box;
-                ">
-                <div style="display: flex; gap: 10px;">
-                    <button id="save-avatar" style="
-                        flex: 1;
-                        padding: 10px;
-                        border: none;
-                        border-radius: 6px;
-                        font-size: 14px;
+     showAvatarSettings(chat) {
+    // 🔥 不用弹窗，在手机内部显示设置页面
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-to-chat">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">聊天设置</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: #ededed;">
+                <!-- 头像区域 -->
+                <div style="background: #fff; padding: 20px; margin-bottom: 10px;">
+                    <div style="text-align: center; margin-bottom: 15px; color: #999; font-size: 13px;">
+                        点击头像更换
+                    </div>
+                    <div id="avatar-preview" style="
+                        width: 100px;
+                        height: 100px;
+                        border-radius: 10px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        margin: 0 auto;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 50px;
                         cursor: pointer;
+                        overflow: hidden;
+                    ">${chat.avatar || '👤'}</div>
+                    <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+                </div>
+                
+                <!-- 备注名 -->
+                <div style="background: #fff; padding: 15px 20px; margin-bottom: 10px;">
+                    <div style="color: #999; font-size: 13px; margin-bottom: 8px;">备注名</div>
+                    <input type="text" id="remark-input" value="${chat.name}" 
+                           placeholder="设置备注名" style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 1px solid #e5e5e5;
+                        border-radius: 6px;
+                        font-size: 15px;
+                        box-sizing: border-box;
+                    ">
+                </div>
+                
+                <!-- 保存按钮 -->
+                <div style="padding: 20px;">
+                    <button id="save-chat-settings" style="
+                        width: 100%;
+                        padding: 12px;
                         background: #07c160;
                         color: #fff;
-                    ">保存</button>
-                    <button id="cancel-avatar" style="
-                        flex: 1;
-                        padding: 10px;
                         border: none;
                         border-radius: 6px;
-                        font-size: 14px;
+                        font-size: 16px;
                         cursor: pointer;
-                        background: #f0f0f0;
-                        color: #666;
-                    ">取消</button>
+                    ">保存</button>
                 </div>
             </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // 绑定事件
-        document.getElementById('cancel-avatar').onclick = () => modal.remove();
-        
-        document.getElementById('upload-avatar-btn').onclick = () => {
-            document.getElementById('avatar-upload').click();
-        };
-        
-        document.getElementById('save-avatar').onclick = () => {
-            const remark = document.getElementById('remark-input').value;
-            if (remark) {
-                chat.name = remark;
-                this.app.data.saveData();
-                this.app.render();
+        </div>
+    `;
+    
+    this.app.phoneShell.setContent(html);
+    
+    // 绑定事件
+    document.getElementById('back-to-chat')?.addEventListener('click', () => {
+        this.app.render();
+    });
+    
+    document.getElementById('avatar-preview')?.addEventListener('click', () => {
+        document.getElementById('avatar-upload').click();
+    });
+    
+    document.getElementById('avatar-upload')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                this.app.phoneShell.showNotification('提示', '图片太大，请选择小于2MB的图片', '⚠️');
+                return;
             }
-            modal.remove();
-        };
-        
-        document.getElementById('avatar-upload').onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const preview = document.getElementById('avatar-preview');
-                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
-                    chat.avatar = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-    }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('avatar-preview');
+                preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+                chat.avatar = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    document.getElementById('save-chat-settings')?.addEventListener('click', () => {
+        const remark = document.getElementById('remark-input').value.trim();
+        if (remark) {
+            chat.name = remark;
+            this.app.data.saveData();
+            this.app.phoneShell.showNotification('保存成功', '设置已更新', '✅');
+            setTimeout(() => this.app.render(), 1000);
+        }
+    });
+}
     
     showTypingStatus() {
         const header = document.querySelector('.wechat-header-title');
