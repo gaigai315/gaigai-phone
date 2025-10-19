@@ -926,3 +926,15 @@ body.theme-light #phoneDrawerIcon.closedIcon {
     top: -2px;
     right: -2px;
 }
+
+/* 手机图标样式 */
+.drawer-icon {
+    font-size: 20px;
+    color: #fff;
+    padding: 10px;
+    cursor: pointer;
+}
+
+#phoneDrawerIcon {
+    position: relative;
+}
