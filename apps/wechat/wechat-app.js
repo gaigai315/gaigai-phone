@@ -1512,12 +1512,19 @@ export class WechatApp {
         });
         
         // 底部导航切换
-        document.querySelectorAll('.wechat-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                this.currentView = tab.dataset.view;
-                this.render();
-            });
-        });
+document.querySelectorAll('.wechat-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        this.currentView = tab.dataset.view;
+        this.render();
+        
+        // ← 新增：如果切换到通讯录，绑定事件
+        if (this.currentView === 'contacts') {
+            setTimeout(() => {
+                this.contactsView.bindEvents();
+            }, 100);
+        }
+    });
+});
         
         // 聊天列表点击
         document.querySelectorAll('.chat-item').forEach(item => {
