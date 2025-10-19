@@ -1076,6 +1076,152 @@ export class WechatApp {
 }
 
 /* ========================================
+   📇 通讯录美化
+   ======================================== */
+
+.wechat-contacts {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #f5f5f5;
+}
+
+.contacts-search {
+    padding: 10px 15px;
+    background: #ededed;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 14px;
+    outline: none;
+}
+
+.contacts-functions {
+    background: #fff;
+    padding: 10px 0;
+    margin-bottom: 10px;
+}
+
+.function-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.function-item:active {
+    background: #f0f0f0;
+}
+
+.function-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+    margin-right: 12px;
+}
+
+.function-name {
+    font-size: 15px;
+    color: #000;
+}
+
+.contacts-list {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.contacts-group {
+    position: relative;
+}
+
+.group-letter {
+    position: sticky;
+    top: 0;
+    background: #f5f5f5;
+    padding: 5px 15px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    z-index: 10;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 0.5px solid #e5e5e5;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.contact-item:active {
+    background: #f0f0f0;
+}
+
+.contact-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.contact-name {
+    font-size: 16px;
+    color: #000;
+    font-weight: 500;
+}
+
+.letter-index {
+    position: fixed;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 100;
+}
+
+.letter-item {
+    font-size: 10px;
+    color: #667eea;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 4px;
+    transition: all 0.2s;
+}
+
+.letter-item:active {
+    background: #667eea;
+    color: #fff;
+    border-radius: 50%;
+}
+
+/* 聊天背景支持 */
+.chat-room {
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+/* ========================================
    其他组件样式保持原样
    ======================================== */
 
