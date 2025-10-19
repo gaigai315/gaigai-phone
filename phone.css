@@ -1,25 +1,30 @@
 /* ========================================
-   虚拟手机 - 完整样式 v3.0 (响应式优化)
-   作者: gaigai315
+   虚拟手机 - 保守美化版 v3.1
+   ✅ 完全兼容原版功能
+   ✨ 仅优化视觉效果
    ======================================== */
 
 /* ========================================
    ⭐ 顶部图标样式（必须保留！）
    ======================================== */
 
-/* 只针对手机图标，不影响其他图标 */
 #phoneDrawerIcon {
     position: relative;
     font-size: 20px;
     padding: 10px;
     cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+#phoneDrawerIcon:hover {
+    transform: scale(1.1);
 }
 
 /* ========================================
    精准覆盖 - 只针对手机面板
    ======================================== */
 
-/* 只针对手机面板去除背景 */
 #phone-panel.drawer-content,
 #phone-panel.drawer-content::before,
 #phone-panel.drawer-content::after {
@@ -29,7 +34,6 @@
     -webkit-backdrop-filter: none !important;
 }
 
-/* 手机面板居中显示 - 响应式优化 */
 #phone-panel.drawer-content {
     position: fixed !important;
     top: 0 !important;
@@ -50,7 +54,8 @@
     margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background: none !important;
+    /* 🎨 美化：添加渐变背景 */
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     z-index: 99999 !important;
@@ -62,18 +67,15 @@
     display: none !important;
 }
 
-/* 移除手机面板的遮罩层 */
 #phone-panel ~ .drawer-backdrop,
 #phone-panel .drawer-backdrop {
     display: none !important;
 }
 
-/* 隐藏拖拽手柄 */
 #phone-panel-header {
     display: none !important;
 }
 
-/* 面板内容 */
 #phone-panel-content {
     width: 100% !important;
     height: auto !important;
@@ -91,7 +93,6 @@
     box-sizing: border-box !important;
 }
 
-/* 手机容器 */
 .phone-in-panel {
     width: 100% !important;
     height: auto !important;
@@ -110,7 +111,7 @@
 }
 
 /* ========================================
-   手机外壳 - 响应式设计
+   🎨 手机外壳 - 增强美化
    ======================================== */
 
 .phone-body-panel {
@@ -119,14 +120,18 @@
     max-width: 95vw;
     max-height: 85vh;
     margin: 0 auto;
-    background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+    /* 🎨 优化：更真实的金属渐变 */
+    background: linear-gradient(145deg, #2a2d3a 0%, #1a1d2e 50%, #0f1117 100%);
     border-radius: 42px;
+    /* 🎨 优化：更深的阴影层次 */
     box-shadow: 
-        0 25px 70px rgba(0, 0, 0, 0.9),
-        0 10px 30px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
         0 0 0 6px #0d0d0d,
         0 0 0 8px #1a1a1a,
-        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        0 30px 90px rgba(0, 0, 0, 0.9),
+        0 15px 40px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5);
     padding: 12px;
     position: relative;
     overflow: hidden;
@@ -134,9 +139,49 @@
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
+    /* 🎨 新增：入场动画 */
+    animation: phoneSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 刘海 */
+/* 🎨 新增：金属光泽效果 */
+.phone-body-panel::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.02) 50%,
+        transparent 70%
+    );
+    animation: metalShine 10s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@keyframes phoneSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes metalShine {
+    0% { transform: translate(-100%, -100%) rotate(0deg); }
+    100% { transform: translate(100%, 100%) rotate(360deg); }
+}
+
+/* ========================================
+   📱 刘海优化
+   ======================================== */
+
 .phone-notch {
     position: absolute;
     top: 12px;
@@ -147,9 +192,15 @@
     background: #000000;
     border-radius: 0 0 14px 14px;
     z-index: 15;
+    /* 🎨 优化：更深的阴影 */
     box-shadow: 
-        inset 0 -2px 8px rgba(0, 0, 0, 0.8),
-        0 2px 10px rgba(0, 0, 0, 0.5);
+        inset 0 -3px 10px rgba(0, 0, 0, 0.9),
+        0 3px 12px rgba(0, 0, 0, 0.6);
+    transition: all 0.3s;
+}
+
+.phone-notch:hover {
+    background: #0a0a0a;
 }
 
 .phone-notch::before {
@@ -160,11 +211,13 @@
     transform: translateX(-50%);
     width: 6px;
     height: 6px;
-    background: #0d1117;
+    /* 🎨 优化：摄像头光泽 */
+    background: radial-gradient(circle, #1a4d7a 0%, #0a0a0a 70%);
     border-radius: 50%;
     box-shadow: 
         -14px 0 0 1px #0d1117,
-        14px 0 0 1px #0d1117;
+        14px 0 0 1px #0d1117,
+        0 0 6px rgba(26, 77, 122, 0.5);
 }
 
 .phone-notch::after {
@@ -178,7 +231,10 @@
     border-radius: 50%;
 }
 
-/* 状态栏 */
+/* ========================================
+   📊 状态栏
+   ======================================== */
+
 .phone-statusbar {
     position: absolute;
     top: 12px;
@@ -194,6 +250,8 @@
     font-weight: 600;
     z-index: 10;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    /* 🎨 优化：文字阴影 */
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .statusbar-left,
@@ -207,7 +265,10 @@
     font-size: 10px;
 }
 
-/* 屏幕 */
+/* ========================================
+   🖥️ 屏幕优化
+   ======================================== */
+
 .phone-screen {
     width: 100%;
     height: calc(100% - 95px);
@@ -216,7 +277,27 @@
     overflow: hidden;
     position: relative;
     margin-top: 40px;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    /* 🎨 优化：屏幕光泽 */
+    box-shadow: 
+        inset 0 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 1px 2px rgba(0, 0, 0, 0.05),
+        0 0 20px rgba(102, 126, 234, 0.08);
+    transition: all 0.4s;
+}
+
+/* 🎨 新增：屏幕玻璃效果 */
+.phone-screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        transparent 50%,
+        rgba(0, 0, 0, 0.03) 100%
+    );
+    pointer-events: none;
+    z-index: 100;
 }
 
 .screen-off .phone-screen {
@@ -224,7 +305,10 @@
     opacity: 0.1;
 }
 
-/* Home指示器 - 改为可点击 */
+/* ========================================
+   🔘 Home指示器优化
+   ======================================== */
+
 .phone-home-indicator {
     position: absolute;
     bottom: 8px;
@@ -232,74 +316,338 @@
     transform: translateX(-50%);
     width: 130px;
     height: 5px;
-    background: rgba(255, 255, 255, 0.5);
+    /* 🎨 优化：更亮的指示器 */
+    background: rgba(255, 255, 255, 0.6);
     border-radius: 3px;
     z-index: 10;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .phone-home-indicator:hover {
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.9);
     height: 6px;
+    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.3);
 }
 
-/* 面板底部按钮 */
-.phone-panel-buttons {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    margin-top: 15px;
-    padding: 0 10px;
+/* ========================================
+   🎨 壁纸动态效果
+   ======================================== */
+
+.wallpaper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* 🎨 优化：动态渐变 */
+    background: linear-gradient(
+        135deg, 
+        #667eea 0%, 
+        #764ba2 25%,
+        #f093fb 50%,
+        #4facfe 75%,
+        #00f2fe 100%
+    );
+    background-size: 300% 300%;
+    background-position: 0% 50%;
+    animation: gradientShift 15s ease infinite;
+    z-index: 0;
 }
 
-.phone-panel-btn {
-    flex: 1;
-    padding: 12px 18px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    border-radius: 10px;
+/* 🎨 新增：壁纸光斑效果 */
+.wallpaper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+    animation: lightMove 20s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+@keyframes lightMove {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 0.9; }
+}
+
+/* ========================================
+   🕐 时间显示优化
+   ======================================== */
+
+.home-screen {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.home-time {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 50px 20px 25px;
     color: #fff;
-    font-size: 13px;
-    font-weight: 600;
+    /* 🎨 优化：文字发光 */
+    text-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.time-large {
+    font-size: 68px;
+    font-weight: 100;
+    letter-spacing: -2px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    margin-bottom: 5px;
+    /* 🎨 新增：呼吸光效 */
+    animation: timeGlow 4s ease-in-out infinite;
+}
+
+@keyframes timeGlow {
+    0%, 100% { 
+        text-shadow: 
+            0 4px 20px rgba(0, 0, 0, 0.4),
+            0 2px 8px rgba(0, 0, 0, 0.3),
+            0 0 30px rgba(255, 255, 255, 0.2);
+    }
+    50% { 
+        text-shadow: 
+            0 4px 25px rgba(0, 0, 0, 0.5),
+            0 2px 10px rgba(0, 0, 0, 0.4),
+            0 0 40px rgba(255, 255, 255, 0.3);
+    }
+}
+
+.date {
+    font-size: 17px;
+    font-weight: 400;
+    opacity: 0.95;
+    margin-top: 8px;
+}
+
+/* ========================================
+   📱 APP图标美化
+   ======================================== */
+
+.app-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    padding: 18px 22px;
+}
+
+.app-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.app-icon:hover {
+    transform: translateY(-6px) scale(1.05);
+}
+
+.app-icon:active {
+    transform: translateY(-3px) scale(0.96);
+}
+
+.app-icon-bg {
+    width: 56px;
+    height: 56px;
+    background: var(--app-color, #666);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 🎨 优化：更立体的阴影 */
     box-shadow: 
-        0 4px 12px rgba(102, 126, 234, 0.4),
-        0 2px 4px rgba(0, 0, 0, 0.1);
+        0 6px 20px rgba(0, 0, 0, 0.3),
+        0 3px 10px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    transition: all 0.3s;
     position: relative;
     overflow: hidden;
 }
 
-.phone-panel-btn::before {
+/* 🎨 优化：图标高光 */
+.app-icon-bg::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, transparent 100%);
+}
+
+/* 🎨 新增：悬浮光效 */
+.app-icon-bg::after {
+    content: '';
+    position: absolute;
+    inset: -100%;
+    background: linear-gradient(
+        45deg,
+        transparent 40%,
+        rgba(255, 255, 255, 0.3) 50%,
+        transparent 60%
+    );
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+}
+
+.app-icon:hover .app-icon-bg {
+    transform: scale(1.1);
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.4),
+        0 5px 15px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.app-icon:hover .app-icon-bg::after {
+    transform: translateX(100%);
+}
+
+.app-icon-emoji {
+    font-size: 32px;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.app-name {
+    margin-top: 7px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #fff;
+    text-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.7),
+        0 1px 3px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    max-width: 68px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ========================================
+   🔴 APP角标动画
+   ======================================== */
+
+.app-badge {
+    position: absolute;
+    top: -4px;
+    right: 4px;
+    background: linear-gradient(135deg, #ff3b30 0%, #d32f2f 100%);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 
+        0 3px 10px rgba(255, 59, 48, 0.7),
+        0 0 0 2px rgba(0, 0, 0, 0.1);
+    border: 1.5px solid #fff;
+    /* 🎨 新增：脉冲动画 */
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* ========================================
+   🎯 Dock栏玻璃效果
+   ======================================== */
+
+.dock {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 16px;
+    /* 🎨 优化：超级毛玻璃 */
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    padding: 12px 18px;
+    border-radius: 24px;
+    /* 🎨 优化：更深的阴影 */
+    box-shadow: 
+        0 12px 45px rgba(0, 0, 0, 0.4),
+        0 5px 20px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    z-index: 2;
+}
+
+.dock-app {
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(20px);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 🎨 新增：Dock图标光效 */
+.dock-app::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.3) 0%,
+        transparent 50%
+    );
+    border-radius: 14px;
     opacity: 0;
     transition: opacity 0.3s;
 }
 
-.phone-panel-btn:hover {
-    transform: translateY(-2px);
+.dock-app:hover {
+    transform: translateY(-10px) scale(1.12);
     box-shadow: 
-        0 6px 18px rgba(102, 126, 234, 0.5),
-        0 4px 8px rgba(0, 0, 0, 0.15);
+        0 12px 35px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
-.phone-panel-btn:hover::before {
+.dock-app:hover::before {
     opacity: 1;
 }
 
-.phone-panel-btn:active {
-    transform: translateY(0);
+.dock-app:active {
+    transform: translateY(-6px) scale(1.06);
 }
 
 /* ========================================
-   通知系统
+   🔔 通知系统美化
    ======================================== */
 
 .badge-notification {
@@ -329,17 +677,20 @@
     transform: translateX(-50%);
     width: 90%;
     max-width: 320px;
-    background: rgba(20, 20, 20, 0.96);
-    backdrop-filter: blur(30px) saturate(180%);
+    /* 🎨 优化：更深的毛玻璃 */
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
     border-radius: 16px;
     padding: 12px 14px;
     display: flex;
     align-items: center;
     gap: 12px;
+    /* 🎨 优化：更深的阴影 */
     box-shadow: 
-        0 10px 40px rgba(0, 0, 0, 0.6),
-        0 2px 8px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        0 12px 45px rgba(0, 0, 0, 0.7),
+        0 5px 20px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
     animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
 }
@@ -351,6 +702,7 @@
 .notification-icon {
     font-size: 24px;
     flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .notification-content {
@@ -371,196 +723,7 @@
 }
 
 /* ========================================
-   主屏幕
-   ======================================== */
-
-.home-screen {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.wallpaper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-size: cover;
-    background-position: center;
-    z-index: 0;
-}
-
-.home-time {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    padding: 50px 20px 25px;
-    color: #fff;
-    text-shadow: 0 3px 15px rgba(0, 0, 0, 0.5);
-}
-
-.time-large {
-    font-size: 68px;
-    font-weight: 100;
-    letter-spacing: -2px;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-    margin-bottom: 5px;
-}
-
-.date {
-    font-size: 17px;
-    font-weight: 400;
-    opacity: 0.95;
-    margin-top: 8px;
-}
-
-/* APP网格 */
-.app-grid {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
-    padding: 18px 22px;
-}
-
-.app-icon {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-}
-
-.app-icon:active {
-    transform: scale(0.92);
-}
-
-.app-icon-bg {
-    width: 56px;
-    height: 56px;
-    background: var(--app-color, #666);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 
-        0 4px 16px rgba(0, 0, 0, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-}
-
-.app-icon-bg::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
-}
-
-.app-icon:hover .app-icon-bg {
-    transform: scale(1.08);
-    box-shadow: 
-        0 6px 24px rgba(0, 0, 0, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.app-icon-emoji {
-    font-size: 32px;
-    position: relative;
-    z-index: 1;
-}
-
-.app-name {
-    margin-top: 7px;
-    font-size: 11px;
-    font-weight: 500;
-    color: #fff;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-    text-align: center;
-    max-width: 68px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* APP角标 */
-.app-badge {
-    position: absolute;
-    top: -4px;
-    right: 4px;
-    background: linear-gradient(135deg, #ff3b30 0%, #d32f2f 100%);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 18px;
-    text-align: center;
-    box-shadow: 
-        0 2px 8px rgba(255, 59, 48, 0.6),
-        0 0 0 2px rgba(0, 0, 0, 0.1);
-    border: 1.5px solid #fff;
-}
-
-/* Dock栏 */
-.dock {
-    position: absolute;
-    bottom: 22px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 16px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(40px) saturate(180%);
-    padding: 12px 18px;
-    border-radius: 24px;
-    box-shadow: 
-        0 10px 40px rgba(0, 0, 0, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-    z-index: 2;
-}
-
-.dock-app {
-    width: 56px;
-    height: 56px;
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(20px);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 
-        0 4px 16px rgba(0, 0, 0, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.dock-app:hover {
-    transform: translateY(-6px) scale(1.1);
-    box-shadow: 
-        0 8px 28px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.dock-app:active {
-    transform: translateY(-4px) scale(1.05);
-}
-
-/* ========================================
-   设置APP
+   ⚙️ 设置APP美化
    ======================================== */
 
 .settings-app {
@@ -579,7 +742,10 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    /* 🎨 优化：添加阴影 */
+    box-shadow: 
+        0 4px 16px rgba(102, 126, 234, 0.3),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .app-back-btn {
@@ -592,12 +758,19 @@
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
-    transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+    /* 🎨 优化：添加阴影 */
+    box-shadow: 
+        0 3px 10px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .app-back-btn:hover {
     background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 5px 15px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .app-back-btn:active {
@@ -609,6 +782,7 @@
     color: #fff;
     font-size: 18px;
     font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .app-body {
@@ -621,7 +795,10 @@
     padding: 0;
     margin-bottom: 18px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    /* 🎨 优化：微妙阴影 */
+    box-shadow: 
+        0 2px 10px rgba(0, 0, 0, 0.06),
+        0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .setting-section-title {
@@ -637,10 +814,16 @@
 .setting-item {
     padding: 14px 16px;
     border-bottom: 0.5px solid #e5e5ea;
+    transition: background 0.2s;
 }
 
 .setting-item:last-child {
     border-bottom: none;
+}
+
+/* 🎨 新增：点击反馈 */
+.setting-item:active {
+    background: #f9f9f9;
 }
 
 .setting-toggle {
@@ -677,7 +860,10 @@
     border-radius: 8px;
 }
 
-/* 开关按钮 */
+/* ========================================
+   🔘 开关按钮优化
+   ======================================== */
+
 .toggle-switch {
     position: relative;
     display: inline-block;
@@ -701,6 +887,8 @@
     background-color: #e5e5ea;
     transition: 0.3s;
     border-radius: 31px;
+    /* 🎨 新增：阴影 */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .toggle-slider:before {
@@ -717,14 +905,21 @@
 }
 
 input:checked + .toggle-slider {
-    background-color: #34c759;
+    /* 🎨 优化：渐变绿色 */
+    background: linear-gradient(135deg, #34c759 0%, #30d158 100%);
+    box-shadow: 
+        inset 0 1px 3px rgba(0, 0, 0, 0.1),
+        0 0 8px rgba(52, 199, 89, 0.3);
 }
 
 input:checked + .toggle-slider:before {
     transform: translateX(20px);
 }
 
-/* 设置按钮 */
+/* ========================================
+   🔘 设置按钮优化
+   ======================================== */
+
 .setting-btn {
     width: 100%;
     padding: 14px;
@@ -733,7 +928,7 @@ input:checked + .toggle-slider:before {
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -741,39 +936,104 @@ input:checked + .toggle-slider:before {
 }
 
 .setting-btn-warning {
-    background: #ff9500;
+    /* 🎨 优化：渐变橙色 */
+    background: linear-gradient(135deg, #ff9500 0%, #ff8c00 100%);
     color: #fff;
-    box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
+    box-shadow: 
+        0 4px 14px rgba(255, 149, 0, 0.4),
+        0 2px 6px rgba(255, 149, 0, 0.2);
 }
 
 .setting-btn-warning:hover {
-    background: #ff8c00;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 149, 0, 0.4);
-}
-
-.setting-btn-warning:active {
-    transform: translateY(0);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 20px rgba(255, 149, 0, 0.5),
+        0 3px 10px rgba(255, 149, 0, 0.3);
 }
 
 .setting-btn-danger {
-    background: #ff3b30;
+    /* 🎨 优化：渐变红色 */
+    background: linear-gradient(135deg, #ff3b30 0%, #ff1744 100%);
     color: #fff;
-    box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3);
+    box-shadow: 
+        0 4px 14px rgba(255, 59, 48, 0.4),
+        0 2px 6px rgba(255, 59, 48, 0.2);
 }
 
 .setting-btn-danger:hover {
-    background: #ff2d55;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 20px rgba(255, 59, 48, 0.5),
+        0 3px 10px rgba(255, 59, 48, 0.3);
 }
 
-.setting-btn-danger:active {
+.setting-btn:active {
     transform: translateY(0);
 }
 
 /* ========================================
-   动画
+   🎨 面板控制按钮
+   ======================================== */
+
+.phone-panel-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 15px;
+    padding: 0 10px;
+}
+
+.phone-panel-btn {
+    flex: 1;
+    padding: 12px 18px;
+    /* 🎨 优化：渐变紫色 */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* 🎨 优化：更深的阴影 */
+    box-shadow: 
+        0 5px 18px rgba(102, 126, 234, 0.5),
+        0 2px 8px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.phone-panel-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.phone-panel-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+        0 8px 25px rgba(102, 126, 234, 0.6),
+        0 4px 12px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.phone-panel-btn:hover::before {
+    opacity: 1;
+}
+
+.phone-panel-btn:active {
+    transform: translateY(-1px);
+}
+
+/* ========================================
+   ✨ 动画效果
    ======================================== */
 
 @keyframes slideDown {
@@ -801,10 +1061,9 @@ input:checked + .toggle-slider:before {
 }
 
 /* ========================================
-   响应式 - 完全自适应
+   📱 响应式设计（完全保留原版）
    ======================================== */
 
-/* 小屏幕（手机） */
 @media (max-width: 500px) {
     .phone-body-panel {
         width: 90vw;
@@ -872,7 +1131,6 @@ input:checked + .toggle-slider:before {
     }
 }
 
-/* 中等屏幕（平板） */
 @media (min-width: 501px) and (max-width: 1024px) {
     .phone-body-panel {
         width: 320px;
@@ -899,7 +1157,6 @@ input:checked + .toggle-slider:before {
     }
 }
 
-/* 高度限制 */
 @media (max-height: 800px) {
     .phone-body-panel {
         max-height: 80vh;
@@ -959,7 +1216,6 @@ input:checked + .toggle-slider:before {
     }
 }
 
-/* 横屏适配 */
 @media (orientation: landscape) and (max-height: 600px) {
     .phone-body-panel {
         height: 85vh;
@@ -976,7 +1232,6 @@ input:checked + .toggle-slider:before {
     }
 }
 
-/* 超小屏幕 */
 @media (max-width: 360px) {
     .phone-body-panel {
         width: 95vw;
@@ -987,4 +1242,18 @@ input:checked + .toggle-slider:before {
         gap: 10px;
         padding: 10px;
     }
+}
+
+/* ========================================
+   🎯 优化滚动条
+   ======================================== */
+
+.home-screen::-webkit-scrollbar,
+.settings-app::-webkit-scrollbar {
+    width: 0;
+}
+
+.home-screen,
+.settings-app {
+    scroll-behavior: smooth;
 }
