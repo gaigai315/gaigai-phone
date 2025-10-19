@@ -247,6 +247,19 @@ export class ChatView {
         if (messagesDiv) {
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
+
+        // 添加头像点击事件（在 bindEvents 方法末尾）
+document.querySelectorAll('.message-avatar').forEach(avatar => {
+    avatar.addEventListener('click', (e) => {
+        const message = e.target.closest('.chat-message');
+        const isMe = message.classList.contains('message-right');
+        
+        if (!isMe) {
+            // 显示设置面板
+            this.showAvatarSettings(this.app.currentChat);
+        }
+    });
+});
     }
     
     sendMessage() {
@@ -329,5 +342,74 @@ export class ChatView {
     
     selectPhoto() {
         this.app.phoneShell.showNotification('相册', '打开相册选择...', '📷');
+    }
+}
+
+// 显示头像设置面板
+showAvatarSettings(chat) {
+    const modal = document.createElement('div');
+    modal.className = 'avatar-settings-modal';
+    modal.innerHTML = `
+        <div class="avatar-settings-content">
+            <div class="avatar-settings-title">设置备注和头像</div>
+            <div class="avatar-preview" id="avatar-preview">
+                ${chat.avatar || '👤'}
+            </div>
+            <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+            <button class="avatar-upload-btn" onclick="document.getElementById('avatar-upload').click()">
+                上传头像
+            </button>
+            <input type="text" class="remark-input" id="remark-input" 
+                   placeholder="设置备注名" value="${chat.name}">
+            <div class="avatar-settings-buttons">
+                <button class="save-avatar-btn" id="save-avatar">保存</button>
+                <button class="cancel-avatar-btn" id="cancel-avatar">取消</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 绑定事件
+    document.getElementById('cancel-avatar').onclick = () => modal.remove();
+    
+    document.getElementById('save-avatar').onclick = () => {
+        const remark = document.getElementById('remark-input').value;
+        if (remark) {
+            chat.name = remark;
+            this.app.data.saveData();
+            this.app.render();
+        }
+        modal.remove();
+    };
+    
+    document.getElementById('avatar-upload').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('avatar-preview');
+                preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+                chat.avatar = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+}
+
+// 显示输入状态
+showTypingStatus() {
+    const header = document.querySelector('.wechat-header-title');
+    if (header && this.app.currentChat) {
+        const originalContent = header.innerHTML;
+        header.innerHTML = `
+            <div>${this.app.currentChat.name}</div>
+            <div class="typing-status">对方正在输入<span class="typing-dots">...</span></div>
+        `;
+        
+        // 3秒后恢复
+        setTimeout(() => {
+            header.innerHTML = originalContent;
+        }, 3000);
     }
 }
