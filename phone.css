@@ -710,7 +710,8 @@
 
 .notification-content {
     flex: 1;
-    color: #fff;
+    color: var(--phone-app-name-color);
+    text-shadow: var(--phone-app-name-shadow);
 }
 
 .notification-title {
