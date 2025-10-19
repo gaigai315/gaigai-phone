@@ -1403,3 +1403,53 @@ body.phone-input-active {
         font-size: 16px !important; /* ← 防止iOS自动缩放 */
     }
 }
+
+/* ========================================
+   📱 移动端聊天输入框优化
+   ======================================== */
+
+@media (max-width: 500px) {
+    /* 输入框尺寸优化 */
+    .chat-input {
+        font-size: 14px !important;
+        padding: 6px 10px !important;
+        max-width: 180px !important; /* ← 限制最大宽度 */
+    }
+    
+    /* 输入栏整体布局 */
+    .chat-input-bar {
+        padding: 6px !important;
+        gap: 6px !important;
+    }
+    
+    /* 按钮尺寸优化 */
+    .input-btn {
+        font-size: 20px !important;
+        padding: 4px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .send-btn {
+        padding: 5px 10px !important;
+        font-size: 13px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* 输入区域固定布局 */
+    .chat-input-area {
+        background: #f7f7f7 !important;
+        border-top: 0.5px solid #d8d8d8 !important;
+    }
+}
+
+/* 极小屏幕优化 */
+@media (max-width: 360px) {
+    .chat-input {
+        max-width: 150px !important; /* ← 更小屏幕进一步缩小 */
+        font-size: 13px !important;
+    }
+    
+    .input-btn {
+        font-size: 18px !important;
+    }
+}
