@@ -274,37 +274,36 @@ export class ChatView {
     }
     
     sendToAI(message) {
-    // 发送消息到酒馆聊天框，添加手机标记
-    const event = new CustomEvent('phone:sendToChat', {
-        detail: {
-            message: `[📱手机] ${message}`,
-            chatId: this.app.currentChat.id,
-            chatName: this.app.currentChat.name
-        }
-    });
-    window.dispatchEvent(event);
+    // 获取设置
+    const settings = window.VirtualPhone?.settings;
     
-    console.log('📱 已发送到酒馆:', message);
-}
-    
-    handleMoreAction(action) {
-        switch (action) {
-            case 'transfer':
-                this.showTransferDialog();
-                break;
-            case 'redpacket':
-                this.showRedPacketDialog();
-                break;
-            case 'video':
-                this.startVideoCall();
-                break;
-            case 'photo':
-                this.selectPhoto();
-                break;
-            default:
-                this.app.phoneShell.showNotification('提示', `${action} 功能开发中...`, '🚧');
-        }
+    if (!settings?.onlineMode) {
+        console.log('⚠️ 在线模式未开启，消息不会发送到AI');
+        return;
     }
+    
+    // 💡 核心改动：添加隐藏的手机模式标记
+    // 这个标记会让AI知道"用户在用手机聊天，只回复手机消息"
+    const phoneMessage = `((PHONE_CHAT_MODE))${message}`;
+    
+    // 发送到酒馆聊天框
+    const textarea = document.querySelector('#send_textarea');
+    if (textarea) {
+        textarea.value = phoneMessage;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // 自动发送
+        setTimeout(() => {
+            const sendButton = document.querySelector('#send_but');
+            if (sendButton) {
+                sendButton.click();
+                console.log('📱 已发送手机消息到AI:', message);
+            }
+        }, 100);
+    } else {
+        console.warn('❌ 找不到聊天输入框');
+    }
+}
     
     showTransferDialog() {
         const amount = prompt('请输入转账金额：');
