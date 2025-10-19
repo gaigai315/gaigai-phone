@@ -242,7 +242,7 @@ renderAppIconUpload() {
     
 // 获取默认提示词模板
 getDefaultPrompt() {
-    return this.settings.promptTemplate || `# # 📱 虚拟手机 - 智能双通道系统 v3.0
+    return this.settings.promptTemplate || `# 📱 虚拟手机 - 智能双通道系统 v3.0
 
 ## 🎯 核心机制
 
