@@ -147,63 +147,90 @@ export class WechatData {
         this.saveData();
     }
     
-    // ✅ 智能加载联系人（从角色卡生成）
-    async loadContactsFromCharacter() {
-        const context = this.storage.getContext();
+     // ✅ 智能加载联系人（调用AI生成）
+async loadContactsFromCharacter() {
+    const context = this.storage.getContext();
+    
+    if (!context) {
+        return { success: false, message: '无法获取上下文信息' };
+    }
+    
+    // 1️⃣ 获取角色卡信息
+    const charName = context.name2 || context.name || '角色';
+    const charDesc = context.description || '';
+    const scenario = context.scenario || '';
+    const personality = context.personality || '';
+    
+    // 2️⃣ 获取最近的聊天记录（最多50条）
+    const chatHistory = [];
+    if (context.chat && Array.isArray(context.chat)) {
+        const recentChats = context.chat.slice(-50); // 最近50条
+        recentChats.forEach(msg => {
+            chatHistory.push({
+                speaker: msg.is_user ? '用户' : charName,
+                message: msg.mes || ''
+            });
+        });
+    }
+    
+    console.log('📖 准备发送给AI:', {
+        角色名: charName,
+        描述长度: charDesc.length,
+        聊天记录条数: chatHistory.length
+    });
+    
+    // 3️⃣ 构建AI提示词
+    const prompt = this.buildAIPrompt(charName, charDesc, scenario, personality, chatHistory);
+    
+    // 4️⃣ 发送给AI
+    try {
+        const aiResponse = await this.sendToAI(prompt);
         
-        if (!context) {
-            return { success: false, message: '无法获取角色卡信息' };
+        if (!aiResponse) {
+            throw new Error('AI未返回数据');
         }
         
-        const charName = context.name2 || '角色';
-        const charAvatar = '🤖';
-        const charDesc = context.description || '';
-        const scenario = context.scenario || '';
+        // 5️⃣ 解析AI返回的JSON
+        const generatedData = this.parseAIResponse(aiResponse);
         
-        console.log('📖 分析角色卡:', charName);
+        if (!generatedData || !generatedData.contacts) {
+            throw new Error('AI返回的数据格式错误');
+        }
         
-        // 分析角色信息
-        const info = this.analyzeCharacterInfo(charName, charDesc, scenario);
-        
-        // 生成联系人
-        const newContacts = this.generateContactsFromInfo(info, charAvatar);
-        
-        // 合并到现有数据
+        // 6️⃣ 保存联系人
         let addedCount = 0;
-        newContacts.forEach(contact => {
-            const exists = this.data.contacts.find(c => c.id === contact.id);
+        generatedData.contacts.forEach(contact => {
+            const exists = this.data.contacts.find(c => c.name === contact.name);
             if (!exists) {
-                this.data.contacts.push(contact);
+                this.data.contacts.push({
+                    id: `contact_${Date.now()}_${Math.random()}`,
+                    name: contact.name,
+                    avatar: contact.avatar || '👤',
+                    remark: contact.remark || '',
+                    letter: this.getFirstLetter(contact.name),
+                    relation: contact.relation || ''
+                });
                 addedCount++;
             }
         });
         
-        // 生成初始聊天
-        if (newContacts.length > 0 && addedCount > 0) {
-            const mainContact = newContacts[0];
-            
-            const chatExists = this.data.chats.find(c => c.id === mainContact.id);
-            
-            if (!chatExists) {
-                this.data.chats.push({
-                    id: mainContact.id,
-                    name: mainContact.name,
-                    type: 'single',
-                    avatar: mainContact.avatar,
-                    lastMessage: '你好！',
-                    time: '刚刚',
-                    unread: 1,
-                    contactId: mainContact.id
-                });
-                
-                this.data.messages[mainContact.id] = [{
-                    from: mainContact.name,
-                    content: `你好！我是${mainContact.name}`,
-                    time: '刚刚',
-                    type: 'text',
-                    avatar: mainContact.avatar
-                }];
-            }
+        // 7️⃣ 创建群聊（如果AI生成了）
+        if (generatedData.groups && generatedData.groups.length > 0) {
+            generatedData.groups.forEach(group => {
+                const exists = this.data.chats.find(c => c.name === group.name);
+                if (!exists) {
+                    this.data.chats.push({
+                        id: `group_${Date.now()}_${Math.random()}`,
+                        name: group.name,
+                        type: 'group',
+                        avatar: group.avatar || '👥',
+                        lastMessage: group.lastMessage || '',
+                        time: '刚刚',
+                        unread: 0,
+                        members: group.members || []
+                    });
+                }
+            });
         }
         
         await this.saveData();
@@ -211,9 +238,180 @@ export class WechatData {
         return {
             success: true,
             count: addedCount,
-            contacts: newContacts
+            message: `成功生成${addedCount}个联系人`
+        };
+        
+    } catch (error) {
+        console.error('❌ AI生成失败:', error);
+        return {
+            success: false,
+            message: `生成失败: ${error.message}`
         };
     }
+}
+
+// 🔧 构建发送给AI的提示词
+buildAIPrompt(charName, desc, scenario, personality, chatHistory) {
+    const chatText = chatHistory.length > 0 
+        ? chatHistory.map(c => `${c.speaker}: ${c.message}`).join('\n')
+        : '（暂无聊天记录）';
+    
+    return `
+# 任务：根据角色卡和聊天记录，智能生成微信联系人和群聊
+
+## 角色卡信息
+- 角色名：${charName}
+- 描述：${desc}
+- 场景：${scenario}
+- 性格：${personality}
+
+## 聊天记录（最近50条）
+${chatText}
+
+---
+
+## 要求
+1. 分析角色卡和聊天记录，推测出可能的人物关系（家人、朋友、同事等）
+2. 生成合理的微信联系人列表（5-10人）
+3. 如果有多人互动，创建群聊（1-3个）
+4. 每个联系人需要包含：name（姓名）、avatar（emoji头像）、relation（关系）
+5. **必须返回纯JSON格式**，不要有任何其他文字
+
+## 返回格式示例
+\`\`\`json
+{
+  "contacts": [
+    {"name": "妈妈", "avatar": "👩‍🦱", "relation": "母亲"},
+    {"name": "李明", "avatar": "👨", "relation": "同事"}
+  ],
+  "groups": [
+    {"name": "家庭群", "avatar": "👨‍👩‍👧", "members": ["妈妈", "爸爸"], "lastMessage": "今晚回家吃饭吗？"}
+  ]
+}
+\`\`\`
+
+现在开始生成：
+`;
+}
+
+// 🔧 发送给AI（调用酒馆API）
+async sendToAI(prompt) {
+    return new Promise((resolve, reject) => {
+        const textarea = document.querySelector('#send_textarea');
+        if (!textarea) {
+            reject(new Error('找不到聊天输入框'));
+            return;
+        }
+        
+        // 保存原始值
+        const originalValue = textarea.value;
+        
+        // 设置AI提示词
+        textarea.value = prompt;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // 等待AI回复
+        const context = this.storage.getContext();
+        let responded = false;
+        
+        const handler = (messageId) => {
+            if (responded) return;
+            responded = true;
+            
+            try {
+                const chat = context.chat;
+                const lastMsg = chat[chat.length - 1];
+                
+                if (lastMsg && !lastMsg.is_user) {
+                    const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
+                    
+                    // 恢复原始输入
+                    textarea.value = originalValue;
+                    
+                    // 移除监听
+                    context.eventSource.removeListener(
+                        context.event_types.CHARACTER_MESSAGE_RENDERED,
+                        handler
+                    );
+                    
+                    resolve(aiText);
+                }
+            } catch (e) {
+                reject(e);
+            }
+        };
+        
+        // 监听AI回复
+        context.eventSource.on(
+            context.event_types.CHARACTER_MESSAGE_RENDERED,
+            handler
+        );
+        
+        // 点击发送
+        setTimeout(() => {
+            const sendBtn = document.querySelector('#send_but');
+            if (sendBtn) {
+                sendBtn.click();
+            } else {
+                reject(new Error('找不到发送按钮'));
+            }
+        }, 100);
+        
+        // 超时处理（30秒）
+        setTimeout(() => {
+            if (!responded) {
+                responded = true;
+                textarea.value = originalValue;
+                reject(new Error('AI响应超时'));
+            }
+        }, 30000);
+    });
+}
+
+// 🔧 解析AI返回的JSON
+parseAIResponse(text) {
+    try {
+        // 提取JSON（可能被markdown包裹）
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || 
+                         text.match(/```\s*([\s\S]*?)\s*```/) ||
+                         [null, text];
+        
+        const jsonText = jsonMatch[1].trim();
+        const data = JSON.parse(jsonText);
+        
+        console.log('✅ AI返回数据:', data);
+        return data;
+        
+    } catch (e) {
+        console.error('❌ 解析AI返回失败:', e);
+        console.log('原始文本:', text);
+        
+        // 尝试容错处理
+        return this.fallbackParse(text);
+    }
+}
+
+// 🔧 容错解析（如果AI没返回标准JSON）
+fallbackParse(text) {
+    console.warn('⚠️ 使用容错解析');
+    
+    const contacts = [];
+    const lines = text.split('\n');
+    
+    lines.forEach(line => {
+        // 简单匹配 "张三 - 朋友" 这种格式
+        const match = line.match(/([^\s-]+)\s*[-:：]\s*(.+)/);
+        if (match) {
+            contacts.push({
+                name: match[1].trim(),
+                avatar: '👤',
+                relation: match[2].trim()
+            });
+        }
+    });
+    
+    return { contacts, groups: [] };
+}
     
     // 分析角色信息
     analyzeCharacterInfo(name, desc, scenario) {
