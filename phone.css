@@ -7,15 +7,26 @@
    ⭐ 顶部图标样式（必须保留！）
    ======================================== */
 
-.drawer-icon {
+/* 只针对手机图标，不影响其他图标 */
+#phoneDrawerIcon {
+    position: relative;
     font-size: 20px;
-    color: #fff;
     padding: 10px;
     cursor: pointer;
 }
 
+/* 根据主题自动调整颜色 */
+body.theme-light #phoneDrawerIcon {
+    color: #333;
+}
+
+body.theme-dark #phoneDrawerIcon {
+    color: #fff;
+}
+
+/* 如果没有主题类，默认白色 */
 #phoneDrawerIcon {
-    position: relative;
+    color: #fff;
 }
 
 /* ========================================
