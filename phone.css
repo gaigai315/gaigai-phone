@@ -675,11 +675,11 @@
 
 .phone-notification {
     position: absolute;
-    top: 45px;
+    top: 42px;
     left: 50%;
     transform: translateX(-50%);
-    width: 85%;
-    max-width: 250px;
+    width: calc(100% - 24px);
+   max-width: none;
     /* 🎨 优化：更深的毛玻璃 */
     background: rgba(20, 20, 20, 0.95);
     backdrop-filter: blur(40px) saturate(180%);
@@ -1090,9 +1090,9 @@ input:checked + .toggle-slider:before {
     
    /* 🎨 通知栏响应式 */
     .phone-notification {
-        top: 40px;
-        width: 82%;
-        max-width: 230px;        /* 移动端更小 */
+        top: 42px;
+        width: calc(100% - 20px);
+        max-width: none;
         border-radius: 12px;
         padding: 9px 11px;
         gap: 9px;
