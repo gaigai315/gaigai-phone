@@ -55,7 +55,6 @@
     border: none !important;
     box-shadow: none !important;
     /* 🎨 美化：添加渐变背景 */
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     z-index: 99999 !important;
@@ -270,7 +269,7 @@
 
 .phone-screen {
     width: 100%;
-    height: calc(100% - 95px);
+    height: calc(100% - 55px);
     background: #ffffff;
     border-radius: 32px;
     overflow: hidden;
