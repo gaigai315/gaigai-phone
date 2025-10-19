@@ -283,6 +283,33 @@ input?.addEventListener('input', (e) => {
         if (messagesDiv) {
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
+
+                // 🔧 消息气泡长按/点击事件
+        document.querySelectorAll('.chat-message').forEach((msgElement, index) => {
+            let pressTimer;
+            
+            // 移动端长按
+            msgElement.addEventListener('touchstart', (e) => {
+                pressTimer = setTimeout(() => {
+                    this.showMessageMenu(index);
+                }, 500);
+            });
+            
+            msgElement.addEventListener('touchend', () => {
+                clearTimeout(pressTimer);
+            });
+            
+            // 桌面端右键
+            msgElement.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.showMessageMenu(index);
+            });
+            
+            // 或者简单的双击
+            msgElement.addEventListener('dblclick', () => {
+                this.showMessageMenu(index);
+            });
+        });
     }
     
     async sendMessage() {
@@ -789,6 +816,286 @@ async fallbackSend(prompt) {
             setTimeout(() => {
                 header.innerHTML = originalContent;
             }, 3000);
+        }
+    }
+        // 🔧 显示聊天设置菜单
+    showChatMenu() {
+        const html = `
+            <div class="wechat-app">
+                <div class="wechat-header">
+                    <div class="wechat-header-left">
+                        <button class="wechat-back-btn" id="back-from-menu">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    <div class="wechat-header-title">聊天设置</div>
+                    <div class="wechat-header-right"></div>
+                </div>
+                
+                <div class="wechat-content" style="background: #ededed;">
+                    <!-- 聊天背景 -->
+                    <div style="background: #fff; padding: 15px 20px; margin-bottom: 10px; cursor: pointer;" id="set-bg-btn">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 16px; color: #000;">设置聊天背景</div>
+                                <div style="font-size: 12px; color: #999; margin-top: 3px;">更换当前聊天的背景图片</div>
+                            </div>
+                            <i class="fa-solid fa-chevron-right" style="color: #c8c8c8;"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- 删除聊天 -->
+                    <div style="background: #fff; padding: 15px 20px; margin-bottom: 10px; cursor: pointer;" id="delete-chat-btn">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 16px; color: #ff3b30;">删除聊天</div>
+                            <i class="fa-solid fa-chevron-right" style="color: #c8c8c8;"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- 拉黑好友 -->
+                    <div style="background: #fff; padding: 15px 20px; cursor: pointer;" id="block-contact-btn">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 16px; color: #ff3b30;">拉黑好友</div>
+                            <i class="fa-solid fa-chevron-right" style="color: #c8c8c8;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.app.phoneShell.setContent(html);
+        
+        // 返回按钮
+        document.getElementById('back-from-menu')?.addEventListener('click', () => {
+            this.app.render();
+        });
+        
+        // 设置背景按钮
+        document.getElementById('set-bg-btn')?.addEventListener('click', () => {
+            this.showBackgroundPicker();
+        });
+        
+        // 删除聊天按钮
+        document.getElementById('delete-chat-btn')?.addEventListener('click', () => {
+            if (confirm('确定要删除这个聊天吗？')) {
+                this.app.data.deleteChat(this.app.currentChat.id);
+                this.app.phoneShell.showNotification('已删除', '聊天已删除', '✅');
+                this.app.currentChat = null;
+                this.app.currentView = 'chats';
+                setTimeout(() => this.app.render(), 1000);
+            }
+        });
+        
+        // 拉黑好友按钮
+        document.getElementById('block-contact-btn')?.addEventListener('click', () => {
+            if (confirm(`确定要拉黑 ${this.app.currentChat.name} 吗？`)) {
+                this.app.data.blockContact(this.app.currentChat.contactId);
+                this.app.phoneShell.showNotification('已拉黑', `${this.app.currentChat.name}已被拉黑`, '✅');
+                this.app.currentChat = null;
+                this.app.currentView = 'chats';
+                setTimeout(() => this.app.render(), 1000);
+            }
+        });
+    }
+    
+    // 🎨 显示背景选择器
+    showBackgroundPicker() {
+        const html = `
+            <div class="wechat-app">
+                <div class="wechat-header">
+                    <div class="wechat-header-left">
+                        <button class="wechat-back-btn" id="back-from-bg">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    <div class="wechat-header-title">选择背景</div>
+                    <div class="wechat-header-right"></div>
+                </div>
+                
+                <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                    <!-- 上传自定义背景 -->
+                    <div style="background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 15px; text-align: center;">
+                        <div style="font-size: 14px; color: #999; margin-bottom: 12px;">上传自定义背景</div>
+                        <input type="file" id="bg-upload" accept="image/*" style="display: none;">
+                        <button id="upload-bg-btn" style="
+                            width: 100%;
+                            padding: 12px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: #fff;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            cursor: pointer;
+                        ">
+                            <i class="fa-solid fa-upload"></i> 选择图片
+                        </button>
+                    </div>
+                    
+                    <!-- 预设背景 -->
+                    <div style="background: #fff; border-radius: 10px; padding: 20px;">
+                        <div style="font-size: 14px; color: #999; margin-bottom: 12px;">预设背景</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div class="preset-bg" data-bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
+                                 style="height: 80px; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); cursor: pointer;"></div>
+                            <div class="preset-bg" data-bg="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" 
+                                 style="height: 80px; border-radius: 8px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); cursor: pointer;"></div>
+                            <div class="preset-bg" data-bg="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" 
+                                 style="height: 80px; border-radius: 8px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); cursor: pointer;"></div>
+                            <div class="preset-bg" data-bg="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" 
+                                 style="height: 80px; border-radius: 8px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); cursor: pointer;"></div>
+                            <div class="preset-bg" data-bg="linear-gradient(135deg, #fa709a 0%, #fee140 100%)" 
+                                 style="height: 80px; border-radius: 8px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); cursor: pointer;"></div>
+                            <div class="preset-bg" data-bg="#ffffff" 
+                                 style="height: 80px; border-radius: 8px; background: #ffffff; border: 1px solid #e5e5e5; cursor: pointer;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.app.phoneShell.setContent(html);
+        
+        // 返回按钮
+        document.getElementById('back-from-bg')?.addEventListener('click', () => {
+            this.showChatMenu();
+        });
+        
+        // 上传背景按钮
+        document.getElementById('upload-bg-btn')?.addEventListener('click', () => {
+            document.getElementById('bg-upload').click();
+        });
+        
+        // 上传背景
+        document.getElementById('bg-upload')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    this.app.phoneShell.showNotification('提示', '图片太大，请选择小于5MB的图片', '⚠️');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.app.data.setChatBackground(this.app.currentChat.id, e.target.result);
+                    this.app.phoneShell.showNotification('设置成功', '聊天背景已更新', '✅');
+                    setTimeout(() => this.app.render(), 1000);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // 预设背景点击
+        document.querySelectorAll('.preset-bg').forEach(item => {
+            item.addEventListener('click', () => {
+                const bg = item.dataset.bg;
+                this.app.data.setChatBackground(this.app.currentChat.id, bg);
+                this.app.phoneShell.showNotification('设置成功', '聊天背景已更新', '✅');
+                setTimeout(() => this.app.render(), 1000);
+            });
+        });
+    }
+    
+    // 🗑️ 显示消息操作菜单
+    showMessageMenu(messageIndex) {
+        const messages = this.app.data.getMessages(this.app.currentChat.id);
+        const message = messages[messageIndex];
+        
+        const menuHtml = `
+            <div class="message-action-menu" id="message-menu-${messageIndex}" style="
+                position: absolute;
+                background: rgba(50, 50, 50, 0.95);
+                backdrop-filter: blur(10px);
+                border-radius: 8px;
+                padding: 8px;
+                display: flex;
+                gap: 12px;
+                z-index: 1000;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            ">
+                <button class="msg-action-btn" data-action="edit" data-index="${messageIndex}" style="
+                    background: #667eea;
+                    color: #fff;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 8px 12px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    <i class="fa-solid fa-pen"></i> 编辑
+                </button>
+                <button class="msg-action-btn" data-action="delete" data-index="${messageIndex}" style="
+                    background: #ff3b30;
+                    color: #fff;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 8px 12px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    <i class="fa-solid fa-trash"></i> 删除
+                </button>
+            </div>
+        `;
+        
+        // 移除旧菜单
+        document.querySelectorAll('.message-action-menu').forEach(menu => menu.remove());
+        
+        // 添加新菜单
+        const messageElement = document.querySelectorAll('.chat-message')[messageIndex];
+        if (messageElement) {
+            messageElement.style.position = 'relative';
+            messageElement.insertAdjacentHTML('beforeend', menuHtml);
+            
+            // 绑定按钮事件
+            document.querySelectorAll('.msg-action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+                    const index = parseInt(btn.dataset.index);
+                    
+                    if (action === 'delete') {
+                        this.deleteMessage(index);
+                    } else if (action === 'edit') {
+                        this.editMessage(index);
+                    }
+                });
+            });
+            
+            // 点击其他地方关闭菜单
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu() {
+                    document.querySelectorAll('.message-action-menu').forEach(menu => menu.remove());
+                    document.removeEventListener('click', closeMenu);
+                }, { once: true });
+            }, 100);
+        }
+    }
+    
+    // 🗑️ 删除消息
+    deleteMessage(messageIndex) {
+        if (confirm('确定要删除这条消息吗？')) {
+            this.app.data.deleteMessage(this.app.currentChat.id, messageIndex);
+            this.app.render();
+            this.app.phoneShell.showNotification('已删除', '消息已删除', '✅');
+        }
+    }
+    
+    // ✏️ 编辑消息
+    editMessage(messageIndex) {
+        const messages = this.app.data.getMessages(this.app.currentChat.id);
+        const message = messages[messageIndex];
+        
+        const newContent = prompt('编辑消息内容：', message.content);
+        if (newContent !== null && newContent.trim()) {
+            this.app.data.editMessage(this.app.currentChat.id, messageIndex, newContent.trim());
+            this.app.render();
+            this.app.phoneShell.showNotification('已修改', '消息已更新', '✅');
         }
     }
 }
