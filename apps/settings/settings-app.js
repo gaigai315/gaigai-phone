@@ -661,7 +661,7 @@ getDefaultPrompt() {
             }
         });
         
-        // 清空所有数据
+                // 清空所有数据
         document.getElementById('clear-all-data')?.addEventListener('click', () => {
             if (confirm('⚠️ 警告！\n\n确定清空所有角色的手机数据？\n此操作将删除所有聊天记录、消息、联系人等！\n\n此操作不可恢复！')) {
                 if (confirm('再次确认：真的要删除所有数据吗？')) {
@@ -671,92 +671,85 @@ getDefaultPrompt() {
             }
         });
 
-        // 🎨 新增：颜色设置事件
-    
-    // 时间颜色选择器
-    document.getElementById('time-color-picker')?.addEventListener('input', (e) => {
-        const color = e.target.value;
-        this.storage.set('phone-time-color', color);
-        this.applyColors();
-    });
-    
-    // 图标文字颜色选择器
-    document.getElementById('app-name-color-picker')?.addEventListener('input', (e) => {
-        const color = e.target.value;
-        this.storage.set('phone-app-name-color', color);
-        this.applyColors();
-    });
-    
-    // 预设按钮
-    document.querySelectorAll('.preset-color-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const preset = btn.dataset.preset;
-            
-            let timeColor, appNameColor;
-            
-            if (preset === 'dark') {
-                // 深色壁纸 - 白色文字
-                timeColor = '#ffffff';
-                appNameColor = '#ffffff';
-            } else if (preset === 'light') {
-                // 浅色壁纸 - 深色文字
-                timeColor = '#000000';
-                appNameColor = '#000000';
-            } else if (preset === 'reset') {
-                // 恢复默认
-                timeColor = '#ffffff';
-                appNameColor = '#ffffff';
-            }
-            
-            if (timeColor && appNameColor) {
-                this.storage.set('phone-time-color', timeColor);
-                this.storage.set('phone-app-name-color', appNameColor);
-                
-                // 更新颜色选择器显示
-                const timePicker = document.getElementById('time-color-picker');
-                const appNamePicker = document.getElementById('app-name-color-picker');
-                if (timePicker) timePicker.value = timeColor;
-                if (appNamePicker) appNamePicker.value = appNameColor;
-                
-                this.applyColors();
-            }
+        // 🎨 颜色设置事件
+        
+        // 时间颜色选择器
+        document.getElementById('time-color-picker')?.addEventListener('input', (e) => {
+            const color = e.target.value;
+            this.storage.set('phone-time-color', color);
+            this.applyColors();
         });
-    });
-}
+        
+        // 图标文字颜色选择器
+        document.getElementById('app-name-color-picker')?.addEventListener('input', (e) => {
+            const color = e.target.value;
+            this.storage.set('phone-app-name-color', color);
+            this.applyColors();
+        });
+        
+        // 预设按钮
+        document.querySelectorAll('.preset-color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const preset = btn.dataset.preset;
+                
+                let timeColor, appNameColor;
+                
+                if (preset === 'dark') {
+                    timeColor = '#ffffff';
+                    appNameColor = '#ffffff';
+                } else if (preset === 'light') {
+                    timeColor = '#000000';
+                    appNameColor = '#000000';
+                } else if (preset === 'reset') {
+                    timeColor = '#ffffff';
+                    appNameColor = '#ffffff';
+                }
+                
+                if (timeColor && appNameColor) {
+                    this.storage.set('phone-time-color', timeColor);
+                    this.storage.set('phone-app-name-color', appNameColor);
+                    
+                    const timePicker = document.getElementById('time-color-picker');
+                    const appNamePicker = document.getElementById('app-name-color-picker');
+                    if (timePicker) timePicker.value = timeColor;
+                    if (appNamePicker) appNamePicker.value = appNameColor;
+                    
+                    this.applyColors();
+                }
+            });
+        });
+    }
 
-// 🎨 新增：应用颜色到页面的方法
-applyColors() {
-    const timeColor = this.storage.get('phone-time-color') || '#ffffff';
-    const appNameColor = this.storage.get('phone-app-name-color') || '#ffffff';
-    
-    // 应用到CSS变量
-    document.documentElement.style.setProperty('--phone-time-color', timeColor);
-    document.documentElement.style.setProperty('--phone-app-name-color', appNameColor);
-    
-    // 根据颜色亮度自动调整阴影
-    const timeShadow = this.isLightColor(timeColor) 
-        ? '0 2px 8px rgba(255, 255, 255, 0.4), 0 1px 4px rgba(255, 255, 255, 0.2)' 
-        : '0 4px 20px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3)';
-    
-    const appNameShadow = this.isLightColor(appNameColor) 
-        ? '0 1px 4px rgba(255, 255, 255, 0.4)' 
-        : '0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5)';
-    
-    document.documentElement.style.setProperty('--phone-time-shadow', timeShadow);
-    document.documentElement.style.setProperty('--phone-app-name-shadow', appNameShadow);
-    
-    console.log('✅ 颜色已应用:', { timeColor, appNameColor });
-}
+    // 🎨 应用颜色到页面的方法
+    applyColors() {
+        const timeColor = this.storage.get('phone-time-color') || '#ffffff';
+        const appNameColor = this.storage.get('phone-app-name-color') || '#ffffff';
+        
+        document.documentElement.style.setProperty('--phone-time-color', timeColor);
+        document.documentElement.style.setProperty('--phone-app-name-color', appNameColor);
+        
+        const timeShadow = this.isLightColor(timeColor) 
+            ? '0 2px 8px rgba(255, 255, 255, 0.4), 0 1px 4px rgba(255, 255, 255, 0.2)' 
+            : '0 4px 20px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3)';
+        
+        const appNameShadow = this.isLightColor(appNameColor) 
+            ? '0 1px 4px rgba(255, 255, 255, 0.4)' 
+            : '0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5)';
+        
+        document.documentElement.style.setProperty('--phone-time-shadow', timeShadow);
+        document.documentElement.style.setProperty('--phone-app-name-shadow', appNameShadow);
+        
+        console.log('✅ 颜色已应用:', { timeColor, appNameColor });
+    }
 
-// 🎨 新增：判断颜色是否为浅色
-isLightColor(color) {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 155;
-}
+    // 🎨 判断颜色是否为浅色
+    isLightColor(color) {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness > 155;
     }
     
     updatePhoneIcon() {
