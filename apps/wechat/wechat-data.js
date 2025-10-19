@@ -424,3 +424,44 @@ ${chatText}
         return letterMap[firstChar] || firstChar.toUpperCase() || '#';
     }
 }
+
+    // 🗑️ 删除消息
+    deleteMessage(chatId, messageIndex) {
+        if (this.data.messages[chatId] && this.data.messages[chatId][messageIndex]) {
+            this.data.messages[chatId].splice(messageIndex, 1);
+            this.saveData();
+        }
+    }
+    
+    // ✏️ 编辑消息
+    editMessage(chatId, messageIndex, newContent) {
+        if (this.data.messages[chatId] && this.data.messages[chatId][messageIndex]) {
+            this.data.messages[chatId][messageIndex].content = newContent;
+            this.saveData();
+        }
+    }
+    
+    // 🎨 设置聊天背景
+    setChatBackground(chatId, background) {
+        const chat = this.getChat(chatId);
+        if (chat) {
+            chat.background = background;
+            this.saveData();
+        }
+    }
+    
+    // 🗑️ 删除聊天
+    deleteChat(chatId) {
+        this.data.chats = this.data.chats.filter(c => c.id !== chatId);
+        delete this.data.messages[chatId];
+        this.saveData();
+    }
+    
+    // 🚫 拉黑联系人
+    blockContact(contactId) {
+        const contact = this.getContact(contactId);
+        if (contact) {
+            contact.blocked = true;
+            this.saveData();
+        }
+    }
