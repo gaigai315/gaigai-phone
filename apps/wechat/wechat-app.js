@@ -1081,27 +1081,43 @@ export class WechatApp {
             this.chatView.bindEvents();
         }
 
-        // 智能加载联系人
-        document.getElementById('smart-load-contacts')?.addEventListener('click', async () => {
-            if (confirm('将从当前角色卡智能生成联系人，确定吗？')) {
-                const result = await this.data.loadContactsFromCharacter();
-                
-                if (result.success) {
-                    this.phoneShell.showNotification(
-                        '加载成功', 
-                        `已生成${result.count}个联系人`, 
-                        '✅'
-                    );
-                    this.render();
-                } else {
-                    this.phoneShell.showNotification(
-                        '加载失败', 
-                        result.message, 
-                        '❌'
-                    );
-                }
-            }
-        });
+     // 智能加载联系人
+document.getElementById('smart-load-contacts')?.addEventListener('click', async () => {
+    if (!confirm('将使用AI分析当前角色卡和聊天记录，智能生成联系人。\n\n⚠️ 这会发送一条消息给AI，确定吗？')) {
+        return;
+    }
+    
+    // 显示加载提示
+    this.phoneShell.showNotification('正在生成', '请稍候，AI正在分析...', '⏳');
+    
+    try {
+        const result = await this.data.loadContactsFromCharacter();
+        
+        if (result.success) {
+            this.phoneShell.showNotification(
+                '生成成功', 
+                result.message, 
+                '✅'
+            );
+            
+            // 刷新界面
+            this.currentView = 'contacts';
+            this.render();
+        } else {
+            this.phoneShell.showNotification(
+                '生成失败', 
+                result.message, 
+                '❌'
+            );
+        }
+    } catch (error) {
+        this.phoneShell.showNotification(
+            '错误', 
+            error.message || '未知错误', 
+            '❌'
+        );
+    }
+});
         
         // 编辑个人资料
         document.getElementById('edit-profile')?.addEventListener('click', () => {
