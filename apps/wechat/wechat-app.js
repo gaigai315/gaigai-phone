@@ -1138,8 +1138,11 @@ export class WechatApp {
 
 .contacts-list {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     background: #fff;
+    height: 100%;
+    -webkit-overflow-scrolling: touch;
 }
 
 .contacts-group {
