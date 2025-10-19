@@ -159,27 +159,58 @@ export class PhoneStorage {
         return defaultApps;
     }
     
-    // 保存设置（全局，支持同步）
-    async saveSettings(settings) {
-        try {
-            const data = JSON.stringify(settings);
-            
-            // 服务器存储
-            if (this.useServerStorage) {
-                const extSettings = this.getExtensionSettings();
-                if (extSettings) {
-                    extSettings['global_settings'] = data;
-                    await this.saveExtensionSettings();
-                    return;
-                }
-            }
-            
-            // 本地存储
-            localStorage.setItem(`${this.storageKey}_global_settings`, data);
-        } catch (e) {
-            console.error('保存设置失败:', e);
+    // 保存扩展设置（会自动同步到服务器）
+async saveExtensionSettings() {
+    try {
+        // 获取上下文
+        const context = SillyTavern.getContext();
+        
+        // 方案1：使用 saveSettingsDebounced（最优先）
+        if (typeof saveSettingsDebounced === 'function') {
+            await saveSettingsDebounced();
+            console.log('💾 数据已保存到服务器（saveSettingsDebounced）');
+            return;
         }
+        
+        // 方案2：使用 extension_settings.js 的保存函数
+        if (typeof window.saveSettings === 'function') {
+            await window.saveSettings();
+            console.log('💾 数据已保存到服务器（saveSettings）');
+            return;
+        }
+        
+        // 方案3：手动触发保存（最可靠）
+        if (context && context.extensionSettings) {
+            // 手动发送保存请求
+            const response = await fetch('/api/extensions/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: 'virtual_phone',
+                    settings: context.extensionSettings.virtual_phone
+                })
+            });
+            
+            if (response.ok) {
+                console.log('💾 数据已保存到服务器（手动API）');
+                return;
+            }
+        }
+        
+        // 方案4：触发设置变更事件
+        if (typeof eventSource !== 'undefined' && eventSource) {
+            eventSource.emit('settingsUpdated');
+            console.log('💾 触发设置更新事件');
+        }
+        
+        console.warn('⚠️ 无法保存到服务器，请手动刷新页面');
+        
+    } catch (e) {
+        console.error('❌ 保存扩展设置失败:', e);
     }
+}
     
     // 加载设置
     loadSettings() {
