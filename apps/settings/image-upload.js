@@ -5,14 +5,14 @@ export class ImageUploadManager {
         this.storageKey = 'phone_images';
     }
     
-    // 🎨 修改：使用服务器存储加载图片
+    // 🎨 使用服务器存储加载图片
     loadImages() {
-        try {
-            // ✅ 优先从服务器加载
-            const saved = this.storage.get(this.storageKey, false);  // false = 非全局，跟随角色
-            if (saved) {
-                return JSON.parse(saved);
-            }
+    try {
+        // ✅ 优先从服务器加载（改为全局）
+        const saved = this.storage.get(this.storageKey, true);  // ← 改成 true = 全局
+        if (saved) {
+            return JSON.parse(saved);
+        }
         } catch (e) {
             console.error('加载图片失败:', e);
         }
@@ -23,11 +23,11 @@ export class ImageUploadManager {
         };
     }
     
-    // 🎨 修改：使用服务器存储保存图片
+    // 🎨 使用服务器存储保存图片
     async saveImages(images) {
-        try {
-            await this.storage.set(this.storageKey, JSON.stringify(images), false);  // ✅ 保存到服务器
-            console.log('✅ 图片已保存到服务器（支持同步）');
+    try {
+        await this.storage.set(this.storageKey, JSON.stringify(images), true);  // ← 改成 true = 全局
+        console.log('✅ 图片已保存到服务器（全局设置，所有角色共享）');
         } catch (e) {
             console.error('❌ 图片保存失败:', e);
             if (e.name === 'QuotaExceededError') {
