@@ -322,20 +322,44 @@ async sendToAI(prompt) {
                 const chat = context.chat;
                 const lastMsg = chat[chat.length - 1];
                 
-                if (lastMsg && !lastMsg.is_user) {
-                    const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
-                    
-                    // 恢复原始输入
-                    textarea.value = originalValue;
-                    
-                    // 移除监听
-                    context.eventSource.removeListener(
-                        context.event_types.CHARACTER_MESSAGE_RENDERED,
-                        handler
-                    );
-                    
-                    resolve(aiText);
-                }
+             if (lastMsg && !lastMsg.is_user) {
+    const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
+    
+    // 🔥 隐藏用户发送的提示词消息
+    setTimeout(() => {
+        const allMessages = document.querySelectorAll('.mes');
+        if (allMessages.length >= 2) {
+            // 隐藏倒数第二条（用户发的）
+            const userMsg = allMessages[allMessages.length - 2];
+            if (userMsg) {
+                userMsg.style.display = 'none';
+            }
+        }
+    }, 100);
+    
+    // 🔥 隐藏AI的回复消息
+    setTimeout(() => {
+        const allMessages = document.querySelectorAll('.mes');
+        if (allMessages.length >= 1) {
+            // 隐藏最后一条（AI回复的）
+            const aiMsg = allMessages[allMessages.length - 1];
+            if (aiMsg) {
+                aiMsg.style.display = 'none';
+            }
+        }
+    }, 200);
+    
+    // 恢复原始输入
+    textarea.value = originalValue;
+    
+    // 移除监听
+    context.eventSource.removeListener(
+        context.event_types.CHARACTER_MESSAGE_RENDERED,
+        handler
+    );
+    
+    resolve(aiText);
+}
             } catch (e) {
                 reject(e);
             }
