@@ -103,7 +103,7 @@
 .phone-in-panel {
     width: 100% !important;
     height: auto !important;
-    max-width: 400px !important;
+     max-width: 100% !important;
     padding: 0 !important;
     margin: auto !important;
     background: transparent !important;
@@ -1181,7 +1181,7 @@ input:checked + .toggle-slider:before {
 }
 
 /* 低矮屏幕优化 */
-@media (max-height: 700px) {
+@media (max-height: 700px) and (min-width: 501px) {  /* ← 加上 min-width 限制 */
     .phone-body-panel {
         width: 240px !important;
         height: 514px !important;
@@ -1203,7 +1203,7 @@ input:checked + .toggle-slider:before {
 }
 
 /* 极低屏幕 */
-@media (max-height: 600px) {
+@media (max-height: 600px) and (min-width: 501px) {  /* ← 加上 min-width 限制 */
     .phone-body-panel {
         width: 220px !important;
         height: 471px !important;
@@ -1231,13 +1231,12 @@ input:checked + .toggle-slider:before {
 }
 
 /* 横屏处理 */
-@media (orientation: landscape) and (max-height: 600px) {
+@media (orientation: landscape) and (max-height: 600px) and (max-width: 500px) {  /* ← 只对手机横屏生效 */
     .phone-body-panel {
-        width: 220px !important;
-        height: 471px !important;
-        max-height: 80vh !important;
-        aspect-ratio: 9 / 19.5;
-    }
+        width: 300px !important;      /* ← 横屏时也保持较大尺寸 */
+        height: 643px !important;
+        max-height: 90vh !important;  /* ← 提高高度限制 */
+       }
     
     #phone-panel-content {
         padding: 10px;
@@ -1251,9 +1250,9 @@ input:checked + .toggle-slider:before {
 /* 超小屏幕 */
 @media (max-width: 360px) {
     .phone-body-panel {
-        width: 240px !important;
-        height: 514px !important;
-        max-width: 80vw !important;
+        width: 320px !important;
+        height: 685px !important;
+        max-width: 95vw !important;
     }
     
     .app-grid {
