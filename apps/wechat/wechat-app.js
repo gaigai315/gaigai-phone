@@ -1550,7 +1550,6 @@ document.getElementById('edit-avatar-btn')?.addEventListener('click', () => {
 });
 
 // 🔧 智能加载联系人
-document.getElementById('smart-load-contacts')?.addEventListener('click', async () => {
 document.getElementById('smart-load-contacts')?.addEventListener('click', () => {
     this.showLoadContactsConfirm();
 });
@@ -1611,15 +1610,6 @@ openChat(chatId) {
         this.render();
     }
 }
-    
-    openChat(chatId) {
-        const chat = this.data.getChat(chatId);
-        if (chat) {
-            chat.unread = 0; // 清空未读
-            this.currentChat = chat;
-            this.render();
-        }
-    }
     
     openMoments() {
         this.momentsView.render();
