@@ -9,64 +9,119 @@ export class SettingsApp {
         this.imageManager = new ImageUploadManager(storage);
     }
     
-    render() {
-        const context = this.storage.getContext();
-        const charName = context?.name2 || context?.characterId || '未知';
-        
-        // 加载壁纸
-        const wallpaper = this.imageManager.getWallpaper();
-        
-        const html = `
-            <div class="settings-app">
-                <div class="app-header">
-                    <button class="app-back-btn" id="settings-back">← 返回</button>
-                    <h2>⚙️ 设置</h2>
+   render() {
+    const context = this.storage.getContext();
+    const charName = context?.name2 || context?.characterId || '未知';
+    
+    // 加载壁纸和颜色设置
+    const wallpaper = this.imageManager.getWallpaper();
+    const timeColor = this.storage.get('phone-time-color') || '#ffffff';
+    const appNameColor = this.storage.get('phone-app-name-color') || '#ffffff';
+    
+    const html = `
+        <div class="settings-app">
+            <div class="app-header">
+                <button class="app-back-btn" id="settings-back">← 返回</button>
+                <h2>⚙️ 设置</h2>
+            </div>
+            
+            <div class="app-body">
+                <!-- 当前角色信息 -->
+                <div class="setting-section">
+                    <div class="setting-section-title">📱 当前角色</div>
+                    <div class="setting-item">
+                        <div class="setting-label">角色名称</div>
+                        <div class="setting-value">${charName}</div>
+                    </div>
                 </div>
                 
-                <div class="app-body">
-                    <!-- 当前角色信息 -->
-                    <div class="setting-section">
-                        <div class="setting-section-title">📱 当前角色</div>
-                        <div class="setting-item">
-                            <div class="setting-label">角色名称</div>
-                            <div class="setting-value">${charName}</div>
+                <!-- 个性化设置 -->
+                <div class="setting-section">
+                    <div class="setting-section-title">🎨 个性化</div>
+                    
+                    <!-- 壁纸设置 -->
+                    <div class="setting-item">
+                        <div class="setting-label">手机壁纸</div>
+                        <div class="setting-desc">支持jpg/png，最大2MB</div>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <label for="upload-wallpaper" class="setting-btn" style="flex: 1; background: #667eea; cursor: pointer; color: #fff;">
+                                <i class="fa-solid fa-upload"></i> 选择壁纸
+                            </label>
+                            <input type="file" id="upload-wallpaper" accept="image/*" style="display: none;">
+                            <button id="delete-wallpaper" class="setting-btn" style="flex: 1; background: #f44336; color: #fff;">
+                                <i class="fa-solid fa-trash"></i> 删除
+                            </button>
+                        </div>
+                        <div id="wallpaper-preview" style="margin-top: 10px; max-height: 100px; overflow: hidden; border-radius: 8px; ${wallpaper ? '' : 'display: none;'}">
+                            <img src="${wallpaper || ''}" style="width: 100%; height: auto; display: ${wallpaper ? 'block' : 'none'};">
                         </div>
                     </div>
                     
-                    <!-- 个性化设置 -->
-                    <div class="setting-section">
-                        <div class="setting-section-title">🎨 个性化</div>
-                        
-                        <!-- 壁纸设置 -->
-                        <div class="setting-item">
-                            <div class="setting-label">手机壁纸</div>
-                            <div class="setting-desc">支持jpg/png，最大2MB</div>
-                            <div style="margin-top: 10px; display: flex; gap: 10px;">
-                                <label for="upload-wallpaper" class="setting-btn" style="flex: 1; background: #667eea; cursor: pointer; color: #fff;">
-                                    <i class="fa-solid fa-upload"></i> 选择壁纸
-                                </label>
-                                <input type="file" id="upload-wallpaper" accept="image/*" style="display: none;">
-                                <button id="delete-wallpaper" class="setting-btn" style="flex: 1; background: #f44336; color: #fff;">
-                                    <i class="fa-solid fa-trash"></i> 删除
-                                </button>
-                            </div>
-                            <div id="wallpaper-preview" style="margin-top: 10px; max-height: 100px; overflow: hidden; border-radius: 8px; ${wallpaper ? '' : 'display: none;'}">
-                                <img src="${wallpaper || ''}" style="width: 100%; height: auto; display: ${wallpaper ? 'block' : 'none'};">
-                            </div>
+                    <!-- APP图标设置 -->
+                    <div class="setting-item">
+                        <div class="setting-label">自定义APP图标</div>
+                        <div class="setting-desc">点击APP选择图片替换图标</div>
+                        <div class="app-icon-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;">
+                            ${this.renderAppIconUpload()}
                         </div>
-                        
-                        <!-- APP图标设置 -->
-                        <div class="setting-item">
-                            <div class="setting-label">自定义APP图标</div>
-                            <div class="setting-desc">点击APP选择图片替换图标</div>
-                            <div class="app-icon-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;">
-                                ${this.renderAppIconUpload()}
+                    </div>
+                </div>
+                
+                <!-- 🎨 新增：文字颜色设置 -->
+                <div class="setting-section">
+                    <div class="setting-section-title">🎨 文字颜色</div>
+                    
+                    <!-- 时间颜色 -->
+                    <div class="setting-item">
+                        <div class="setting-toggle">
+                            <div>
+                                <div class="setting-label">时间颜色</div>
+                                <div class="setting-desc">设置主屏幕时间显示的颜色</div>
                             </div>
+                            <input type="color" 
+                                   id="time-color-picker" 
+                                   value="${timeColor}" 
+                                   class="color-picker-input">
                         </div>
                     </div>
                     
-                    <!-- 互动模式 -->
-                    <div class="setting-section">
+                    <!-- 图标文字颜色 -->
+                    <div class="setting-item">
+                        <div class="setting-toggle">
+                            <div>
+                                <div class="setting-label">图标文字颜色</div>
+                                <div class="setting-desc">设置APP图标下方文字的颜色</div>
+                            </div>
+                            <input type="color" 
+                                   id="app-name-color-picker" 
+                                   value="${appNameColor}" 
+                                   class="color-picker-input">
+                        </div>
+                    </div>
+                    
+                    <!-- 快速预设 -->
+                    <div class="setting-item">
+                        <div class="setting-label" style="margin-bottom: 10px;">🎯 快速预设</div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="preset-color-btn" data-preset="dark">
+                                深色壁纸（白色文字）
+                            </button>
+                            <button class="preset-color-btn" data-preset="light">
+                                浅色壁纸（深色文字）
+                            </button>
+                            <button class="preset-color-btn" data-preset="reset">
+                                🔄 恢复默认
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-info">
+                        💡 如果壁纸是浅色，建议使用深色文字；如果壁纸是深色，建议使用白色文字
+                    </div>
+                </div>
+                
+                <!-- 互动模式 -->
+                <div class="setting-section">
                         <div class="setting-section-title">📡 互动模式</div>
                         
                         <div class="setting-item setting-toggle">
@@ -615,6 +670,93 @@ getDefaultPrompt() {
                 }
             }
         });
+
+        // 🎨 新增：颜色设置事件
+    
+    // 时间颜色选择器
+    document.getElementById('time-color-picker')?.addEventListener('input', (e) => {
+        const color = e.target.value;
+        this.storage.set('phone-time-color', color);
+        this.applyColors();
+    });
+    
+    // 图标文字颜色选择器
+    document.getElementById('app-name-color-picker')?.addEventListener('input', (e) => {
+        const color = e.target.value;
+        this.storage.set('phone-app-name-color', color);
+        this.applyColors();
+    });
+    
+    // 预设按钮
+    document.querySelectorAll('.preset-color-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const preset = btn.dataset.preset;
+            
+            let timeColor, appNameColor;
+            
+            if (preset === 'dark') {
+                // 深色壁纸 - 白色文字
+                timeColor = '#ffffff';
+                appNameColor = '#ffffff';
+            } else if (preset === 'light') {
+                // 浅色壁纸 - 深色文字
+                timeColor = '#000000';
+                appNameColor = '#000000';
+            } else if (preset === 'reset') {
+                // 恢复默认
+                timeColor = '#ffffff';
+                appNameColor = '#ffffff';
+            }
+            
+            if (timeColor && appNameColor) {
+                this.storage.set('phone-time-color', timeColor);
+                this.storage.set('phone-app-name-color', appNameColor);
+                
+                // 更新颜色选择器显示
+                const timePicker = document.getElementById('time-color-picker');
+                const appNamePicker = document.getElementById('app-name-color-picker');
+                if (timePicker) timePicker.value = timeColor;
+                if (appNamePicker) appNamePicker.value = appNameColor;
+                
+                this.applyColors();
+            }
+        });
+    });
+}
+
+// 🎨 新增：应用颜色到页面的方法
+applyColors() {
+    const timeColor = this.storage.get('phone-time-color') || '#ffffff';
+    const appNameColor = this.storage.get('phone-app-name-color') || '#ffffff';
+    
+    // 应用到CSS变量
+    document.documentElement.style.setProperty('--phone-time-color', timeColor);
+    document.documentElement.style.setProperty('--phone-app-name-color', appNameColor);
+    
+    // 根据颜色亮度自动调整阴影
+    const timeShadow = this.isLightColor(timeColor) 
+        ? '0 2px 8px rgba(255, 255, 255, 0.4), 0 1px 4px rgba(255, 255, 255, 0.2)' 
+        : '0 4px 20px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3)';
+    
+    const appNameShadow = this.isLightColor(appNameColor) 
+        ? '0 1px 4px rgba(255, 255, 255, 0.4)' 
+        : '0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5)';
+    
+    document.documentElement.style.setProperty('--phone-time-shadow', timeShadow);
+    document.documentElement.style.setProperty('--phone-app-name-shadow', appNameShadow);
+    
+    console.log('✅ 颜色已应用:', { timeColor, appNameColor });
+}
+
+// 🎨 新增：判断颜色是否为浅色
+isLightColor(color) {
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 155;
+}
     }
     
     updatePhoneIcon() {
