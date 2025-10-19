@@ -1584,13 +1584,13 @@ showEditProfile() {
         modal.remove();
     };
     
-    // 头像上传
+         // 头像上传
     document.getElementById('user-avatar-upload').onchange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            // 检查文件大小（限制2MB）
+            // 检查文件大小(限制2MB)
             if (file.size > 2 * 1024 * 1024) {
-                alert('图片太大，请选择小于2MB的图片');
+                alert('图片太大,请选择小于2MB的图片');
                 return;
             }
             
@@ -1605,7 +1605,6 @@ showEditProfile() {
     };
 }
 
-// 🔧 设置页面
 showSettings() {
     const modal = document.createElement('div');
     modal.className = 'profile-edit-modal';
@@ -1645,7 +1644,7 @@ showSettings() {
                         "></span>
                     </label>
                 </div>
-                <div style="font-size: 12px; color: #999;">开启后，手机消息会发送给AI</div>
+                <div style="font-size: 12px; color: #999;">开启后,手机消息会发送给AI</div>
             </div>
             
             <div style="background: #fff3cd; border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid #ffc107;">
@@ -1672,7 +1671,6 @@ showSettings() {
     
     document.body.appendChild(modal);
     
-    // 样式调整（开关按钮）
     const checkbox = document.getElementById('online-mode-toggle');
     const slider = modal.querySelector('.toggle-slider');
     const ball = modal.querySelector('.toggle-ball');
@@ -1697,15 +1695,13 @@ showSettings() {
         }
     });
     
-    // 初始状态
     if (checkbox.checked) {
         slider.style.backgroundColor = '#07c160';
         ball.style.transform = 'translateX(22px)';
     }
     
-    // 清空数据
     document.getElementById('clear-wechat-data').onclick = () => {
-        if (confirm('⚠️ 确定要清空当前角色的所有微信数据吗？\n\n此操作不可恢复！')) {
+        if (confirm('⚠️ 确定要清空当前角色的所有微信数据吗?\n\n此操作不可恢复!')) {
             this.data.data = {
                 userInfo: {
                     name: '我',
@@ -1726,10 +1722,8 @@ showSettings() {
         }
     };
     
-    // 关闭按钮
     document.getElementById('close-settings').onclick = () => modal.remove();
     
-    // 点击背景关闭
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.remove();
