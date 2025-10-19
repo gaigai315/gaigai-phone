@@ -875,27 +875,15 @@ async fallbackSend(prompt) {
             this.showBackgroundPicker();
         });
         
-        // 删除聊天按钮
-        document.getElementById('delete-chat-btn')?.addEventListener('click', () => {
-            if (confirm('确定要删除这个聊天吗？')) {
-                this.app.data.deleteChat(this.app.currentChat.id);
-                this.app.phoneShell.showNotification('已删除', '聊天已删除', '✅');
-                this.app.currentChat = null;
-                this.app.currentView = 'chats';
-                setTimeout(() => this.app.render(), 1000);
-            }
-        });
+       // 删除聊天按钮
+document.getElementById('delete-chat-btn')?.addEventListener('click', () => {
+    this.showDeleteConfirm();
+});
         
-        // 拉黑好友按钮
-        document.getElementById('block-contact-btn')?.addEventListener('click', () => {
-            if (confirm(`确定要拉黑 ${this.app.currentChat.name} 吗？`)) {
-                this.app.data.blockContact(this.app.currentChat.contactId);
-                this.app.phoneShell.showNotification('已拉黑', `${this.app.currentChat.name}已被拉黑`, '✅');
-                this.app.currentChat = null;
-                this.app.currentView = 'chats';
-                setTimeout(() => this.app.render(), 1000);
-            }
-        });
+       // 拉黑好友按钮
+document.getElementById('block-contact-btn')?.addEventListener('click', () => {
+    this.showBlockConfirm();
+});
     }
     
     // 🎨 显示背景选择器
@@ -1079,23 +1067,207 @@ async fallbackSend(prompt) {
     
     // 🗑️ 删除消息
     deleteMessage(messageIndex) {
-        if (confirm('确定要删除这条消息吗？')) {
-            this.app.data.deleteMessage(this.app.currentChat.id, messageIndex);
-            this.app.render();
-            this.app.phoneShell.showNotification('已删除', '消息已删除', '✅');
-        }
-    }
+    // 直接删除，不需要确认（因为已经是长按操作了）
+    this.app.data.deleteMessage(this.app.currentChat.id, messageIndex);
+    this.app.render();
+    this.app.phoneShell.showNotification('已删除', '消息已删除', '✅');
+}
     
     // ✏️ 编辑消息
     editMessage(messageIndex) {
-        const messages = this.app.data.getMessages(this.app.currentChat.id);
-        const message = messages[messageIndex];
-        
-        const newContent = prompt('编辑消息内容：', message.content);
-        if (newContent !== null && newContent.trim()) {
-            this.app.data.editMessage(this.app.currentChat.id, messageIndex, newContent.trim());
+    const messages = this.app.data.getMessages(this.app.currentChat.id);
+    const message = messages[messageIndex];
+    
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-edit">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">编辑消息</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                <div style="background: #fff; border-radius: 12px; padding: 20px;">
+                    <div style="font-size: 14px; color: #999; margin-bottom: 10px;">消息内容</div>
+                    <textarea id="edit-message-input" style="
+                        width: 100%;
+                        min-height: 120px;
+                        padding: 12px;
+                        border: 1.5px solid #e5e5e5;
+                        border-radius: 8px;
+                        font-size: 15px;
+                        box-sizing: border-box;
+                        resize: vertical;
+                        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                    ">${message.content}</textarea>
+                </div>
+                
+                <button id="save-edit" style="
+                    width: 100%;
+                    padding: 14px;
+                    background: #07c160;
+                    color: #fff;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    margin-top: 15px;
+                ">保存修改</button>
+            </div>
+        </div>
+    `;
+    
+    this.app.phoneShell.setContent(html);
+    
+    document.getElementById('back-from-edit')?.addEventListener('click', () => {
+        this.app.render();
+    });
+    
+    document.getElementById('save-edit')?.addEventListener('click', () => {
+        const newContent = document.getElementById('edit-message-input').value.trim();
+        if (newContent) {
+            this.app.data.editMessage(this.app.currentChat.id, messageIndex, newContent);
             this.app.render();
             this.app.phoneShell.showNotification('已修改', '消息已更新', '✅');
         }
+    });
+}
+        // 📋 显示删除聊天确认界面
+    showDeleteConfirm() {
+        const html = `
+            <div class="wechat-app">
+                <div class="wechat-header">
+                    <div class="wechat-header-left">
+                        <button class="wechat-back-btn" id="back-from-delete">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    <div class="wechat-header-title">删除聊天</div>
+                    <div class="wechat-header-right"></div>
+                </div>
+                
+                <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                    <div style="background: #fff; border-radius: 12px; padding: 30px; text-align: center;">
+                        <i class="fa-solid fa-trash" style="font-size: 48px; color: #ff3b30; margin-bottom: 20px;"></i>
+                        <div style="font-size: 18px; font-weight: 600; color: #000; margin-bottom: 10px;">确定要删除这个聊天吗？</div>
+                        <div style="font-size: 14px; color: #999; margin-bottom: 30px;">删除后将清空所有聊天记录</div>
+                        
+                        <button id="confirm-delete" style="
+                            width: 100%;
+                            padding: 14px;
+                            background: #ff3b30;
+                            color: #fff;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            margin-bottom: 10px;
+                        ">确定删除</button>
+                        
+                        <button id="cancel-delete" style="
+                            width: 100%;
+                            padding: 14px;
+                            background: #f0f0f0;
+                            color: #666;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            cursor: pointer;
+                        ">取消</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.app.phoneShell.setContent(html);
+        
+        document.getElementById('back-from-delete')?.addEventListener('click', () => {
+            this.showChatMenu();
+        });
+        
+        document.getElementById('cancel-delete')?.addEventListener('click', () => {
+            this.showChatMenu();
+        });
+        
+        document.getElementById('confirm-delete')?.addEventListener('click', () => {
+            this.app.data.deleteChat(this.app.currentChat.id);
+            this.app.phoneShell.showNotification('已删除', '聊天已删除', '✅');
+            this.app.currentChat = null;
+            this.app.currentView = 'chats';
+            setTimeout(() => this.app.render(), 1000);
+        });
+    }
+    
+    // 🚫 显示拉黑确认界面
+    showBlockConfirm() {
+        const html = `
+            <div class="wechat-app">
+                <div class="wechat-header">
+                    <div class="wechat-header-left">
+                        <button class="wechat-back-btn" id="back-from-block">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    <div class="wechat-header-title">拉黑好友</div>
+                    <div class="wechat-header-right"></div>
+                </div>
+                
+                <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                    <div style="background: #fff; border-radius: 12px; padding: 30px; text-align: center;">
+                        <i class="fa-solid fa-ban" style="font-size: 48px; color: #ff3b30; margin-bottom: 20px;"></i>
+                        <div style="font-size: 18px; font-weight: 600; color: #000; margin-bottom: 10px;">确定要拉黑 ${this.app.currentChat.name} 吗？</div>
+                        <div style="font-size: 14px; color: #999; margin-bottom: 30px;">拉黑后将无法收到对方消息</div>
+                        
+                        <button id="confirm-block" style="
+                            width: 100%;
+                            padding: 14px;
+                            background: #ff3b30;
+                            color: #fff;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            margin-bottom: 10px;
+                        ">确定拉黑</button>
+                        
+                        <button id="cancel-block" style="
+                            width: 100%;
+                            padding: 14px;
+                            background: #f0f0f0;
+                            color: #666;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            cursor: pointer;
+                        ">取消</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.app.phoneShell.setContent(html);
+        
+        document.getElementById('back-from-block')?.addEventListener('click', () => {
+            this.showChatMenu();
+        });
+        
+        document.getElementById('cancel-block')?.addEventListener('click', () => {
+            this.showChatMenu();
+        });
+        
+        document.getElementById('confirm-block')?.addEventListener('click', () => {
+            this.app.data.blockContact(this.app.currentChat.contactId);
+            this.app.phoneShell.showNotification('已拉黑', `${this.app.currentChat.name}已被拉黑`, '✅');
+            this.app.currentChat = null;
+            this.app.currentView = 'chats';
+            setTimeout(() => this.app.render(), 1000);
+        });
     }
 }
