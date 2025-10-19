@@ -151,37 +151,36 @@ export class ChatView {
         `;
     }
     
-  parseEmoji(text) {
-    const emojiMap = {
-        '[微笑]': '😊',
-        '[撇嘴]': '😥',
-        '[色]': '😍',
-        '[发呆]': '😳',
-        '[得意]': '😏',
-        '[流泪]': '😭',
-        '[害羞]': '😊',
-        '[闭嘴]': '🤐',
-        '[睡]': '😴',
-        '[大哭]': '😭',
-        '[尴尬]': '😅',
-        '[发怒]': '😠',
-        '[调皮]': '😜',
-        '[呲牙]': '😁',
-        '[惊讶]': '😮',
-        '[难过]': '😔',
-        '[酷]': '😎',
-        '[冷汗]': '😰',
-        '[抓狂]': '😤',
-        '[吐]': '🤮'
-    };
-    
-    // 简单替换每个表情
-    let result = text;
-    for (let emoji in emojiMap) {
-        result = result.split(emoji).join(emojiMap[emoji]);
+    parseEmoji(text) {
+        const emojiMap = {
+            '[微笑]': '😊',
+            '[撇嘴]': '😥',
+            '[色]': '😍',
+            '[发呆]': '😳',
+            '[得意]': '😏',
+            '[流泪]': '😭',
+            '[害羞]': '😊',
+            '[闭嘴]': '🤐',
+            '[睡]': '😴',
+            '[大哭]': '😭',
+            '[尴尬]': '😅',
+            '[发怒]': '😠',
+            '[调皮]': '😜',
+            '[呲牙]': '😁',
+            '[惊讶]': '😮',
+            '[难过]': '😔',
+            '[酷]': '😎',
+            '[冷汗]': '😰',
+            '[抓狂]': '😤',
+            '[吐]': '🤮'
+        };
+        
+        let result = text;
+        for (let emoji in emojiMap) {
+            result = result.split(emoji).join(emojiMap[emoji]);
+        }
+        return result;
     }
-    return result;
-}
     
     bindEvents() {
         const input = document.getElementById('chat-input');
@@ -242,24 +241,23 @@ export class ChatView {
             });
         });
         
+        // 添加头像点击事件
+        document.querySelectorAll('.message-avatar').forEach(avatar => {
+            avatar.addEventListener('click', (e) => {
+                const message = e.target.closest('.chat-message');
+                const isMe = message.classList.contains('message-right');
+                
+                if (!isMe) {
+                    this.showAvatarSettings(this.app.currentChat);
+                }
+            });
+        });
+        
         // 滚动到底部
         const messagesDiv = document.getElementById('chat-messages');
         if (messagesDiv) {
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
-
-        // 添加头像点击事件（在 bindEvents 方法末尾）
-document.querySelectorAll('.message-avatar').forEach(avatar => {
-    avatar.addEventListener('click', (e) => {
-        const message = e.target.closest('.chat-message');
-        const isMe = message.classList.contains('message-right');
-        
-        if (!isMe) {
-            // 显示设置面板
-            this.showAvatarSettings(this.app.currentChat);
-        }
-    });
-});
     }
     
     sendMessage() {
@@ -287,36 +285,60 @@ document.querySelectorAll('.message-avatar').forEach(avatar => {
     }
     
     sendToAI(message) {
-    // 获取设置
-    const settings = window.VirtualPhone?.settings;
-    
-    if (!settings?.onlineMode) {
-        console.log('⚠️ 在线模式未开启，消息不会发送到AI');
-        return;
-    }
-    
-    // 💡 核心改动：添加隐藏的手机模式标记
-    // 这个标记会让AI知道"用户在用手机聊天，只回复手机消息"
-    const phoneMessage = `((PHONE_CHAT_MODE))${message}`;
-    
-    // 发送到酒馆聊天框
-    const textarea = document.querySelector('#send_textarea');
-    if (textarea) {
-        textarea.value = phoneMessage;
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        const settings = window.VirtualPhone?.settings;
         
-        // 自动发送
-        setTimeout(() => {
-            const sendButton = document.querySelector('#send_but');
-            if (sendButton) {
-                sendButton.click();
-                console.log('📱 已发送手机消息到AI:', message);
-            }
-        }, 100);
-    } else {
-        console.warn('❌ 找不到聊天输入框');
+        if (!settings?.onlineMode) {
+            console.log('⚠️ 在线模式未开启，消息不会发送到AI');
+            return;
+        }
+        
+        const phoneMessage = `((PHONE_CHAT_MODE))${message}`;
+        
+        const textarea = document.querySelector('#send_textarea');
+        if (textarea) {
+            textarea.value = phoneMessage;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            setTimeout(() => {
+                const sendButton = document.querySelector('#send_but');
+                if (sendButton) {
+                    sendButton.click();
+                    console.log('📱 已发送手机消息到AI:', message);
+                }
+            }, 100);
+        } else {
+            console.warn('❌ 找不到聊天输入框');
+        }
     }
-}
+    
+    handleMoreAction(action) {
+        switch(action) {
+            case 'photo':
+                this.selectPhoto();
+                break;
+            case 'camera':
+                this.app.phoneShell.showNotification('相机', '打开相机...', '📸');
+                break;
+            case 'video':
+                this.startVideoCall();
+                break;
+            case 'location':
+                this.app.phoneShell.showNotification('位置', '正在获取位置...', '📍');
+                break;
+            case 'transfer':
+                this.showTransferDialog();
+                break;
+            case 'redpacket':
+                this.showRedPacketDialog();
+                break;
+            case 'file':
+                this.app.phoneShell.showNotification('文件', '选择文件...', '📁');
+                break;
+            case 'contact':
+                this.app.phoneShell.showNotification('名片', '选择联系人...', '👤');
+                break;
+        }
+    }
     
     showTransferDialog() {
         const amount = prompt('请输入转账金额：');
@@ -343,73 +365,129 @@ document.querySelectorAll('.message-avatar').forEach(avatar => {
     selectPhoto() {
         this.app.phoneShell.showNotification('相册', '打开相册选择...', '📷');
     }
-}
-
-// 显示头像设置面板
-showAvatarSettings(chat) {
-    const modal = document.createElement('div');
-    modal.className = 'avatar-settings-modal';
-    modal.innerHTML = `
-        <div class="avatar-settings-content">
-            <div class="avatar-settings-title">设置备注和头像</div>
-            <div class="avatar-preview" id="avatar-preview">
-                ${chat.avatar || '👤'}
-            </div>
-            <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
-            <button class="avatar-upload-btn" onclick="document.getElementById('avatar-upload').click()">
-                上传头像
-            </button>
-            <input type="text" class="remark-input" id="remark-input" 
-                   placeholder="设置备注名" value="${chat.name}">
-            <div class="avatar-settings-buttons">
-                <button class="save-avatar-btn" id="save-avatar">保存</button>
-                <button class="cancel-avatar-btn" id="cancel-avatar">取消</button>
-            </div>
-        </div>
-    `;
     
-    document.body.appendChild(modal);
-    
-    // 绑定事件
-    document.getElementById('cancel-avatar').onclick = () => modal.remove();
-    
-    document.getElementById('save-avatar').onclick = () => {
-        const remark = document.getElementById('remark-input').value;
-        if (remark) {
-            chat.name = remark;
-            this.app.data.saveData();
-            this.app.render();
-        }
-        modal.remove();
-    };
-    
-    document.getElementById('avatar-upload').onchange = async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const preview = document.getElementById('avatar-preview');
-                preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
-                chat.avatar = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-}
-
-// 显示输入状态
-showTypingStatus() {
-    const header = document.querySelector('.wechat-header-title');
-    if (header && this.app.currentChat) {
-        const originalContent = header.innerHTML;
-        header.innerHTML = `
-            <div>${this.app.currentChat.name}</div>
-            <div class="typing-status">对方正在输入<span class="typing-dots">...</span></div>
+    // ✅ 这些方法现在在类的里面了
+    showAvatarSettings(chat) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
         `;
         
-        // 3秒后恢复
-        setTimeout(() => {
-            header.innerHTML = originalContent;
-        }, 3000);
+        modal.innerHTML = `
+            <div style="background: #fff; border-radius: 12px; padding: 20px; width: 90%; max-width: 300px;">
+                <h3 style="margin: 0 0 15px 0; text-align: center;">设置备注和头像</h3>
+                <div id="avatar-preview" style="
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 8px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    margin: 0 auto 15px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 40px;
+                    cursor: pointer;
+                ">${chat.avatar || '👤'}</div>
+                <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+                <button id="upload-avatar-btn" style="
+                    display: block;
+                    width: 100%;
+                    padding: 10px;
+                    background: #f0f0f0;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    cursor: pointer;
+                    margin-bottom: 10px;
+                ">上传头像</button>
+                <input type="text" id="remark-input" placeholder="设置备注名" value="${chat.name}" style="
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    margin-bottom: 15px;
+                    box-sizing: border-box;
+                ">
+                <div style="display: flex; gap: 10px;">
+                    <button id="save-avatar" style="
+                        flex: 1;
+                        padding: 10px;
+                        border: none;
+                        border-radius: 6px;
+                        font-size: 14px;
+                        cursor: pointer;
+                        background: #07c160;
+                        color: #fff;
+                    ">保存</button>
+                    <button id="cancel-avatar" style="
+                        flex: 1;
+                        padding: 10px;
+                        border: none;
+                        border-radius: 6px;
+                        font-size: 14px;
+                        cursor: pointer;
+                        background: #f0f0f0;
+                        color: #666;
+                    ">取消</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // 绑定事件
+        document.getElementById('cancel-avatar').onclick = () => modal.remove();
+        
+        document.getElementById('upload-avatar-btn').onclick = () => {
+            document.getElementById('avatar-upload').click();
+        };
+        
+        document.getElementById('save-avatar').onclick = () => {
+            const remark = document.getElementById('remark-input').value;
+            if (remark) {
+                chat.name = remark;
+                this.app.data.saveData();
+                this.app.render();
+            }
+            modal.remove();
+        };
+        
+        document.getElementById('avatar-upload').onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.getElementById('avatar-preview');
+                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+                    chat.avatar = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+    }
+    
+    showTypingStatus() {
+        const header = document.querySelector('.wechat-header-title');
+        if (header && this.app.currentChat) {
+            const originalContent = header.innerHTML;
+            header.innerHTML = `
+                <div>${this.app.currentChat.name}</div>
+                <div style="font-size: 12px; color: #999; font-weight: normal; margin-top: 2px;">对方正在输入...</div>
+            `;
+            
+            setTimeout(() => {
+                header.innerHTML = originalContent;
+            }, 3000);
+        }
     }
 }
