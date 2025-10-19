@@ -857,3 +857,72 @@ input:checked + .toggle-slider:before {
         margin-top: 8px;
     }
 }
+
+/* ========================================
+   顶部图标样式（重要！）
+   ======================================== */
+
+/* 图标容器 */
+#phone-panel-holder {
+    display: flex !important;
+    align-items: center;
+}
+
+.drawer-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 手机图标本身 */
+#phoneDrawerIcon {
+    position: relative;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    padding: 10px;
+    color: #ffffff;
+    transition: all 0.3s ease;
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
+#phoneDrawerIcon:hover {
+    transform: scale(1.15);
+    color: #667eea;
+}
+
+#phoneDrawerIcon:active {
+    transform: scale(1.05);
+}
+
+/* 确保图标在深色和浅色主题下都可见 */
+.drawer-icon {
+    font-size: 20px;
+    color: inherit;
+}
+
+/* 图标打开状态 */
+#phoneDrawerIcon.openIcon {
+    color: #667eea;
+}
+
+/* 图标关闭状态 */
+#phoneDrawerIcon.closedIcon {
+    color: #ffffff;
+}
+
+/* 如果主题是浅色 */
+body.theme-light #phoneDrawerIcon.closedIcon {
+    color: #333333;
+}
+
+/* 红点徽章定位 */
+#phoneDrawerIcon .badge-notification {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+}
