@@ -1502,106 +1502,74 @@ export class WechatApp {
     `;
 }
     
-    bindEvents() {
-        // 返回按钮
-        document.getElementById('wechat-back')?.addEventListener('click', () => {
-            if (this.currentChat) {
-                this.currentChat = null;
-                this.render();
-            } else {
-                window.dispatchEvent(new CustomEvent('phone:goHome'));
-            }
-        });
-        
-        // 底部导航切换
-document.querySelectorAll('.wechat-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        this.currentView = tab.dataset.view;
-        this.render();
-        
-        // ← 新增：如果切换到通讯录，绑定事件
-        if (this.currentView === 'contacts') {
-            setTimeout(() => {
-                this.contactsView.bindEvents();
-            }, 100);
-        }
-    });
-});
-        
-        // 聊天列表点击
-        document.querySelectorAll('.chat-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const chatId = item.dataset.chatId;
-                this.openChat(chatId);
-            });
-        });
-        
-        // 朋友圈入口
-        document.getElementById('moments-btn')?.addEventListener('click', () => {
-            this.openMoments();
-        });
-        
-        // 绑定聊天界面事件
+bindEvents() {
+    // 返回按钮
+    document.getElementById('wechat-back')?.addEventListener('click', () => {
         if (this.currentChat) {
-            this.chatView.bindEvents();
-        }
-
-    // 🎨 头像点击 - 快捷编辑
-document.getElementById('edit-avatar-btn')?.addEventListener('click', () => {
-    this.showEditProfile();
-});
-
-// 🔧 智能加载联系人
-document.getElementById('smart-load-contacts')?.addEventListener('click', () => {
-    this.showLoadContactsConfirm();
-});
-    
-    this.phoneShell.showNotification('AI分析中', '请稍候，正在生成联系人...', '⏳');
-    
-    try {
-        const result = await this.data.loadContactsFromCharacter();
-        
-        if (result.success) {
-            this.phoneShell.showNotification(
-                                '✅ 生成成功', 
-                result.message, 
-                '✅'
-            );
-            
-            // 刷新到通讯录页面
-            this.currentView = 'contacts';
+            this.currentChat = null;
             this.render();
         } else {
-            this.phoneShell.showNotification(
-                '❌ 生成失败', 
-                result.message, 
-                '❌'
-            );
+            window.dispatchEvent(new CustomEvent('phone:goHome'));
         }
-    } catch (error) {
-        console.error('加载联系人失败:', error);
-        this.phoneShell.showNotification(
-            '❌ 错误', 
-            error.message || '未知错误', 
-            '❌'
-        );
-    }
-});
-
-// 🔧 编辑个人资料
-document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
-    this.showEditProfile();
-});
-
-// 🔧 设置按钮
-document.getElementById('wechat-settings-btn')?.addEventListener('click', () => {
-    this.showSettings();
-});
-
-        // 🔧 聊天设置按钮（三个点）
-        document.getElementById('chat-info')?.addEventListener('click', () => {
-            this.chatView.showChatMenu();
+    });
+    
+    // 底部导航切换
+    document.querySelectorAll('.wechat-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            this.currentView = tab.dataset.view;
+            this.render();
+            
+            // ← 新增：如果切换到通讯录，绑定事件
+            if (this.currentView === 'contacts') {
+                setTimeout(() => {
+                    this.contactsView.bindEvents();
+                }, 100);
+            }
         });
+    });
+    
+    // 聊天列表点击
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const chatId = item.dataset.chatId;
+            this.openChat(chatId);
+        });
+    });
+    
+    // 朋友圈入口
+    document.getElementById('moments-btn')?.addEventListener('click', () => {
+        this.openMoments();
+    });
+    
+    // 绑定聊天界面事件
+    if (this.currentChat) {
+        this.chatView.bindEvents();
+    }
+
+    // 🎨 头像点击 - 快捷编辑
+    document.getElementById('edit-avatar-btn')?.addEventListener('click', () => {
+        this.showEditProfile();
+    });
+
+    // 🔧 智能加载联系人
+    document.getElementById('smart-load-contacts')?.addEventListener('click', () => {
+        this.showLoadContactsConfirm();
+    });
+
+    // 🔧 编辑个人资料
+    document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
+        this.showEditProfile();
+    });
+
+    // 🔧 设置按钮
+    document.getElementById('wechat-settings-btn')?.addEventListener('click', () => {
+        this.showSettings();
+    });
+
+    // 🔧 聊天设置按钮（三个点）
+    document.getElementById('chat-info')?.addEventListener('click', () => {
+        this.chatView.showChatMenu();
+    });
 }
     
 openChat(chatId) {
