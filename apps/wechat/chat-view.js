@@ -185,6 +185,20 @@ export class ChatView {
     bindEvents() {
         const input = document.getElementById('chat-input');
         const sendBtn = document.getElementById('send-btn');
+
+        // 📱 移动端防变形：输入框聚焦时锁定页面
+input?.addEventListener('focus', () => {
+    if (window.innerWidth <= 500) {
+        document.body.classList.add('phone-input-active');
+    }
+});
+
+input?.addEventListener('blur', () => {
+    document.body.classList.remove('phone-input-active');
+});
+
+// 输入框变化（原有代码保持不变）
+input?.addEventListener('input', (e) => {
         
         // 输入框变化
         input?.addEventListener('input', (e) => {
