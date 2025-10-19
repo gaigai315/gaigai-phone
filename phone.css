@@ -124,8 +124,9 @@
 .phone-body-panel {
     width: 280px;
     height: 600px;
-    max-width: 90vw;
-    max-height: 80vh;
+    max-width: 280px;
+    max-height: 600px;
+    aspect-ratio: 9 / 19.5;
     margin: 0 auto;
     /* 🎨 优化：更真实的金属渐变 */
     background: linear-gradient(145deg, #2a2d3a 0%, #1a1d2e 50%, #0f1117 100%);
@@ -1066,60 +1067,65 @@ input:checked + .toggle-slider:before {
    📱 响应式设计（完全保留原版）
    ======================================== */
 
+/* 小屏设备（手机竖屏） */
 @media (max-width: 500px) {
     .phone-body-panel {
-        width: 90vw;
-        height: 80vh;
+        width: 260px !important;        /* 固定宽度，不用 vw */
+        height: 556px !important;       /* 按比例计算的高度 */
+        max-width: 85vw !important;     /* 最大不超过屏幕 85% */
+        max-height: 75vh !important;    /* 最大不超过高度 75% */
+        aspect-ratio: 9 / 19.5 !important;
         border-radius: 30px;
-        padding: 8px;
+        padding: 6px;
     }
     
     .phone-notch {
-        width: 100px;
-        height: 22px;
+        width: 70px;
+        height: 18px;
     }
     
     .phone-statusbar {
-        font-size: 10px;
-        padding: 0 12px;
+        font-size: 9px;
+        padding: 0 10px;
+        height: 28px;
     }
     
     .time-large {
-        font-size: 40px;
+        font-size: 36px;
     }
     
     .date {
-        font-size: 13px;
+        font-size: 12px;
     }
     
     .app-grid {
-        gap: 12px;
-        padding: 12px 16px;
+        gap: 10px;
+        padding: 10px 14px;
     }
     
     .app-icon-bg {
-        width: 48px;
-        height: 48px;
+        width: 38px;
+        height: 38px;
     }
     
     .app-icon-emoji {
-        font-size: 26px;
+        font-size: 22px;
     }
     
     .app-name {
-        font-size: 10px;
+        font-size: 9px;
     }
     
     .dock {
-        gap: 12px;
-        padding: 8px 14px;
-        bottom: 16px;
+        gap: 10px;
+        padding: 7px 12px;
+        bottom: 14px;
     }
     
     .dock-app {
-        width: 48px;
-        height: 48px;
-        font-size: 26px;
+        width: 38px;
+        height: 38px;
+        font-size: 22px;
     }
     
     .phone-panel-buttons {
@@ -1133,95 +1139,71 @@ input:checked + .toggle-slider:before {
     }
 }
 
+/* 平板/中等屏幕 */
 @media (min-width: 501px) and (max-width: 1024px) {
     .phone-body-panel {
-        width: 320px;
-        height: 680px;
-    }
-    
-    .time-large {
-        font-size: 48px;
-    }
-    
-    .app-icon-bg {
-        width: 52px;
-        height: 52px;
-    }
-    
-    .app-icon-emoji {
-        font-size: 28px;
-    }
-    
-    .dock-app {
-        width: 52px;
-        height: 52px;
-        font-size: 28px;
+        width: 280px !important;   /* 保持和桌面端一样 */
+        height: 600px !important;
+        aspect-ratio: 9 / 19.5;
     }
 }
 
-@media (max-height: 800px) {
-    .phone-body-panel {
-        max-height: 80vh;
-    }
-    
-    .home-time {
-        padding: 25px 16px 14px;
-    }
-    
-    .time-large {
-        font-size: 44px;
-    }
-}
-
+/* 低矮屏幕优化 */
 @media (max-height: 700px) {
     .phone-body-panel {
-        max-height: 75vh;
-    }
-    
-    .time-large {
-        font-size: 38px;
-    }
-    
-    .app-grid {
-        gap: 14px;
-        padding: 14px 18px;
-    }
-}
-
-@media (max-height: 600px) {
-    .phone-body-panel {
-        max-height: 70vh;
+        width: 240px !important;
+        height: 514px !important;
+        max-height: 70vh !important;
     }
     
     .time-large {
         font-size: 32px;
     }
     
+    .home-time {
+        padding: 20px 14px 12px;
+    }
+    
     .app-grid {
-        gap: 12px;
-        padding: 12px 16px;
-    }
-    
-    .app-icon-bg {
-        width: 44px;
-        height: 44px;
-    }
-    
-    .app-icon-emoji {
-        font-size: 24px;
-    }
-    
-    .dock-app {
-        width: 44px;
-        height: 44px;
-        font-size: 24px;
+        gap: 10px;
+        padding: 10px 14px;
     }
 }
 
+/* 极低屏幕 */
+@media (max-height: 600px) {
+    .phone-body-panel {
+        width: 220px !important;
+        height: 471px !important;
+        max-height: 65vh !important;
+    }
+    
+    .time-large {
+        font-size: 28px;
+    }
+    
+    .app-icon-bg {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .app-icon-emoji {
+        font-size: 20px;
+    }
+    
+    .dock-app {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+    }
+}
+
+/* 横屏处理 */
 @media (orientation: landscape) and (max-height: 600px) {
     .phone-body-panel {
-        height: 85vh;
-        width: auto;
+        width: 220px !important;
+        height: 471px !important;
+        max-height: 80vh !important;
         aspect-ratio: 9 / 19.5;
     }
     
@@ -1234,15 +1216,17 @@ input:checked + .toggle-slider:before {
     }
 }
 
+/* 超小屏幕 */
 @media (max-width: 360px) {
     .phone-body-panel {
-        width: 95vw;
-        height: 75vh;
+        width: 240px !important;
+        height: 514px !important;
+        max-width: 80vw !important;
     }
     
     .app-grid {
-        gap: 10px;
-        padding: 10px;
+        gap: 8px;
+        padding: 8px 12px;
     }
 }
 
