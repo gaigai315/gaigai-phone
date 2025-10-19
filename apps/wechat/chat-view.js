@@ -274,16 +274,18 @@ export class ChatView {
     }
     
     sendToAI(message) {
-        // 发送消息到酒馆聊天框
-        const event = new CustomEvent('phone:sendToChat', {
-            detail: {
-                message: `[📱手机] ${message}`,
-                chatId: this.app.currentChat.id,
-                chatName: this.app.currentChat.name
-            }
-        });
-        window.dispatchEvent(event);
-    }
+    // 发送消息到酒馆聊天框，添加手机标记
+    const event = new CustomEvent('phone:sendToChat', {
+        detail: {
+            message: `[📱手机] ${message}`,
+            chatId: this.app.currentChat.id,
+            chatName: this.app.currentChat.name
+        }
+    });
+    window.dispatchEvent(event);
+    
+    console.log('📱 已发送到酒馆:', message);
+}
     
     handleMoreAction(action) {
         switch (action) {
