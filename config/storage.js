@@ -35,6 +35,31 @@ export class PhoneStorage {
         return `${this.storageKey}_${this.currentCharacterId}_${this.currentChatId}_${dataType}`;
     }
     
+    // 🎨 新增：通用的 get 方法（获取数据）
+    get(key, global = true) {
+        try {
+            const storageKey = global 
+                ? `${this.storageKey}_global_${key}` // 全局数据（所有角色共享）
+                : this.getStorageKey(key); // 角色独立数据
+            return localStorage.getItem(storageKey);
+        } catch (e) {
+            console.warn(`读取 ${key} 失败:`, e);
+            return null;
+        }
+    }
+    
+    // 🎨 新增：通用的 set 方法（保存数据）
+    set(key, value, global = true) {
+        try {
+            const storageKey = global 
+                ? `${this.storageKey}_global_${key}` // 全局数据
+                : this.getStorageKey(key); // 角色独立数据
+            localStorage.setItem(storageKey, value);
+        } catch (e) {
+            console.error(`保存 ${key} 失败:`, e);
+        }
+    }
+    
     // 保存APP数据
     saveApps(apps) {
         try {
