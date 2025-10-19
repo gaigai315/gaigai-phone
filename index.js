@@ -285,29 +285,44 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
     }
     
     function onMessageReceived(messageId) {
-        if (!settings.enabled) return;
+    if (!settings.enabled) return;
+    
+    try {
+        const context = getContext();
+        if (!context || !context.chat) return;
         
-        try {
-            const context = getContext();
-            if (!context || !context.chat) return;
-            
-            const index = typeof messageId === 'number' ? messageId : context.chat.length - 1;
-            const message = context.chat[index];
-            
-            if (!message || message.is_user) return;
-            
-            const text = message.mes || message.swipes?.[message.swipe_id || 0] || '';
-            const commands = parsePhoneCommands(text);
-            
-            commands.forEach(cmd => executePhoneCommand(cmd));
-            
-            if (commands.length > 0) {
-                setTimeout(hidePhoneTags, 100);
-            }
-        } catch (e) {
-            console.error('❌ 消息处理失败:', e);
+        const index = typeof messageId === 'number' ? messageId : context.chat.length - 1;
+        const message = context.chat[index];
+        
+        if (!message || message.is_user) return;
+        
+        const text = message.mes || message.swipes?.[message.swipe_id || 0] || '';
+        const commands = parsePhoneCommands(text);
+        
+        // 执行手机指令
+        commands.forEach(cmd => executePhoneCommand(cmd));
+        
+        // 隐藏标签（包括用户发的标记和AI的JSON）
+        if (commands.length > 0) {
+            setTimeout(hidePhoneTags, 100);
         }
+        
+        // 💡 重要：也要隐藏用户消息中的手机模式标记
+        setTimeout(() => {
+            $('.mes_text').each(function() {
+                const $this = $(this);
+                let html = $this.html();
+                if (html && html.includes('((PHONE_CHAT_MODE))')) {
+                    html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '');
+                    $this.html(html);
+                }
+            });
+        }, 150);
+        
+    } catch (e) {
+        console.error('❌ 消息处理失败:', e);
     }
+}
     
     function onChatChanged() {
         console.log('🔄 聊天已切换，重新加载数据...');
@@ -320,14 +335,22 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
     }
     
     function hidePhoneTags() {
-        $('.mes_text').each(function() {
-            const $this = $(this);
-            let html = $this.html();
-            if (!html) return;
-            html = html.replace(PHONE_TAG_REGEX, '<span style="display:none!important;">$&</span>');
-            $this.html(html);
-        });
-    }
+    $('.mes_text').each(function() {
+        const $this = $(this);
+        let html = $this.html();
+        if (!html) return;
+        
+        // 隐藏 <Phone> 标签及其内容（AI发的手机消息）
+        html = html.replace(PHONE_TAG_REGEX, '<span style="display:none!important;" class="phone-hidden-tag">$&</span>');
+        
+        // 隐藏手机模式标记（用户发的）
+        html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '<span style="display:none!important;" class="phone-mode-hidden"></span>');
+        
+        $this.html(html);
+    });
+    
+    console.log('✅ 已隐藏手机标签内容');
+}
     
     function getContext() {
         return (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) 
