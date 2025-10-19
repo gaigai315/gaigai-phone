@@ -1515,72 +1515,136 @@ openChat(chatId) {
         this.data.saveData();
     }
 
-        // ✅ 编辑个人资料（美化版）
+// ✅ 编辑个人资料（手机内部界面，不用弹窗）
 showEditProfile() {
     const userInfo = this.data.getUserInfo();
     
-    const modal = document.createElement('div');
-    modal.className = 'profile-edit-modal';
-    
-    modal.innerHTML = `
-        <div class="profile-edit-content">
-            <h3 class="profile-edit-title">编辑个人资料</h3>
-            
-            <div class="profile-edit-avatar" id="user-avatar-preview">
-                ${userInfo.avatar || '😊'}
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-profile-edit">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">编辑个人资料</div>
+                <div class="wechat-header-right"></div>
             </div>
             
-            <input type="file" id="user-avatar-upload" accept="image/*" style="display: none;">
-            
-            <button class="profile-edit-upload-btn" id="upload-user-avatar-btn">
-                <i class="fa-solid fa-camera"></i> 更换头像
-            </button>
-            
-            <input type="text" 
-                   class="profile-edit-input" 
-                   id="user-name-input" 
-                   placeholder="输入昵称" 
-                   value="${userInfo.name || ''}"
-                   maxlength="20">
-            
-            <input type="text" 
-                   class="profile-edit-input" 
-                   id="user-signature-input" 
-                   placeholder="输入个性签名" 
-                   value="${userInfo.signature || ''}"
-                   maxlength="50">
-            
-            <div class="profile-edit-buttons">
-                <button class="profile-cancel-btn" id="cancel-user-profile">取消</button>
-                <button class="profile-save-btn" id="save-user-profile">保存</button>
+            <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                <!-- 头像区域 -->
+                <div style="background: #fff; border-radius: 12px; padding: 30px; text-align: center; margin-bottom: 15px;">
+                    <div style="font-size: 14px; color: #999; margin-bottom: 15px;">点击头像更换</div>
+                    <div id="user-avatar-preview" style="
+                        width: 90px;
+                        height: 90px;
+                        border-radius: 12px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        margin: 0 auto 20px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 45px;
+                        cursor: pointer;
+                        overflow: hidden;
+                        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+                        transition: transform 0.2s;
+                    ">${userInfo.avatar || '😊'}</div>
+                    <input type="file" id="user-avatar-upload" accept="image/*" style="display: none;">
+                    <button id="upload-user-avatar-btn" style="
+                        width: 100%;
+                        padding: 12px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: #fff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        cursor: pointer;
+                    ">
+                        <i class="fa-solid fa-camera"></i> 更换头像
+                    </button>
+                </div>
+                
+                <!-- 资料输入 -->
+                <div style="background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 15px;">
+                    <div style="color: #999; font-size: 13px; margin-bottom: 8px;">昵称</div>
+                    <input type="text" id="user-name-input" placeholder="输入昵称" 
+                           value="${userInfo.name || ''}" maxlength="20" style="
+                        width: 100%;
+                        padding: 12px;
+                        border: 1.5px solid #e5e5e5;
+                        border-radius: 8px;
+                        font-size: 15px;
+                        box-sizing: border-box;
+                        margin-bottom: 15px;
+                    ">
+                    
+                    <div style="color: #999; font-size: 13px; margin-bottom: 8px;">个性签名</div>
+                    <input type="text" id="user-signature-input" placeholder="输入个性签名" 
+                           value="${userInfo.signature || ''}" maxlength="50" style="
+                        width: 100%;
+                        padding: 12px;
+                        border: 1.5px solid #e5e5e5;
+                        border-radius: 8px;
+                        font-size: 15px;
+                        box-sizing: border-box;
+                    ">
+                </div>
+                
+                <!-- 保存按钮 -->
+                <button id="save-user-profile" style="
+                    width: 100%;
+                    padding: 14px;
+                    background: #07c160;
+                    color: #fff;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 500;
+                    cursor: pointer;
+                ">保存</button>
             </div>
         </div>
     `;
     
-    document.body.appendChild(modal);
+    this.phoneShell.setContent(html);
     
-    // 点击背景关闭
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
+    // 返回按钮
+    document.getElementById('back-from-profile-edit')?.addEventListener('click', () => {
+        this.render();
+    });
+    
+    // 上传头像按钮
+    document.getElementById('upload-user-avatar-btn')?.addEventListener('click', () => {
+        document.getElementById('user-avatar-upload').click();
+    });
+    
+    // 头像上传
+    document.getElementById('user-avatar-upload')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                this.phoneShell.showNotification('提示', '图片太大，请选择小于2MB的图片', '⚠️');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('user-avatar-preview');
+                preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">`;
+                this.data.updateUserInfo({ avatar: e.target.result });
+            };
+            reader.readAsDataURL(file);
         }
     });
     
-    // 取消按钮
-    document.getElementById('cancel-user-profile').onclick = () => modal.remove();
-    
-    // 上传头像按钮
-    document.getElementById('upload-user-avatar-btn').onclick = () => {
-        document.getElementById('user-avatar-upload').click();
-    };
-    
     // 保存按钮
-    document.getElementById('save-user-profile').onclick = () => {
+    document.getElementById('save-user-profile')?.addEventListener('click', () => {
         const newName = document.getElementById('user-name-input').value.trim();
         const newSignature = document.getElementById('user-signature-input').value.trim();
         
         if (!newName) {
-            alert('请输入昵称');
+            this.phoneShell.showNotification('提示', '请输入昵称', '⚠️');
             return;
         }
         
@@ -1590,29 +1654,8 @@ showEditProfile() {
         });
         
         this.phoneShell.showNotification('保存成功', '个人资料已更新', '✅');
-        this.render();
-        modal.remove();
-    };
-    
-         // 头像上传
-    document.getElementById('user-avatar-upload').onchange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            // 检查文件大小(限制2MB)
-            if (file.size > 2 * 1024 * 1024) {
-                alert('图片太大,请选择小于2MB的图片');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const preview = document.getElementById('user-avatar-preview');
-                preview.innerHTML = `<img src="${e.target.result}">`;
-                this.data.updateUserInfo({ avatar: e.target.result });
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+        setTimeout(() => this.render(), 1000);
+    });
 }
 
 showSettings() {
