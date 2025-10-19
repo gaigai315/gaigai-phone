@@ -71,21 +71,22 @@ export class WechatData {
     }
     
     createChat(chatInfo) {
-        const chat = {
-            id: chatInfo.id || Date.now().toString(),
-            name: chatInfo.name,
-            type: chatInfo.type || 'single',
-            avatar: chatInfo.avatar,
-            lastMessage: '',
-            time: '刚刚',
-            unread: 0,
-            members: chatInfo.members || []
-        };
-        
-        this.data.chats.push(chat);
-        this.saveData();
-        return chat;
-    }
+    const chat = {
+        id: chatInfo.id || Date.now().toString(),
+        contactId: chatInfo.contactId,  // ← 添加这一行
+        name: chatInfo.name,
+        type: chatInfo.type || 'single',
+        avatar: chatInfo.avatar,
+        lastMessage: '',
+        time: '刚刚',
+        unread: 0,
+        members: chatInfo.members || []
+    };
+    
+    this.data.chats.push(chat);
+    this.saveData();
+    return chat;
+}
     
     getChatByContactId(contactId) {
         return this.data.chats.find(c => c.contactId === contactId);
