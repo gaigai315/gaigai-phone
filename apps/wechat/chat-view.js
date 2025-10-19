@@ -183,96 +183,93 @@ export class ChatView {
     }
     
     bindEvents() {
-        const input = document.getElementById('chat-input');
-        const sendBtn = document.getElementById('send-btn');
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
 
-        // 📱 移动端防变形：输入框聚焦时锁定页面
-input?.addEventListener('focus', () => {
-    if (window.innerWidth <= 500) {
-        document.body.classList.add('phone-input-active');
-    }
-});
-
-input?.addEventListener('blur', () => {
-    document.body.classList.remove('phone-input-active');
-});
-
-// 输入框变化（原有代码保持不变）
-input?.addEventListener('input', (e) => {
-        
-        // 输入框变化
-        input?.addEventListener('input', (e) => {
-            this.inputText = e.target.value;
-            if (this.inputText) {
-                sendBtn.style.display = 'block';
-                document.getElementById('more-btn').style.display = 'none';
-            } else {
-                sendBtn.style.display = 'none';
-                document.getElementById('more-btn').style.display = 'block';
-            }
-        });
-        
-        // 发送消息
-        sendBtn?.addEventListener('click', () => {
-            this.sendMessage();
-        });
-        
-        input?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.sendMessage();
-            }
-        });
-        
-        // 表情按钮
-        document.getElementById('emoji-btn')?.addEventListener('click', () => {
-            this.showEmoji = !this.showEmoji;
-            this.showMore = false;
-            this.app.render();
-        });
-        
-        // 更多按钮
-        document.getElementById('more-btn')?.addEventListener('click', () => {
-            this.showMore = !this.showMore;
-            this.showEmoji = false;
-            this.app.render();
-        });
-        
-        // 选择表情
-        document.querySelectorAll('.emoji-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const emoji = item.dataset.emoji;
-                this.inputText += emoji;
-                input.value = this.inputText;
-                input.focus();
-            });
-        });
-        
-        // 更多功能
-        document.querySelectorAll('.more-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const action = item.dataset.action;
-                this.handleMoreAction(action);
-            });
-        });
-        
-        // 添加头像点击事件
-        document.querySelectorAll('.message-avatar').forEach(avatar => {
-            avatar.addEventListener('click', (e) => {
-                const message = e.target.closest('.chat-message');
-                const isMe = message.classList.contains('message-right');
-                
-                if (!isMe) {
-                    this.showAvatarSettings(this.app.currentChat);
-                }
-            });
-        });
-        
-        // 滚动到底部
-        const messagesDiv = document.getElementById('chat-messages');
-        if (messagesDiv) {
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    // 📱 移动端防变形：输入框聚焦时锁定页面
+    input?.addEventListener('focus', () => {
+        if (window.innerWidth <= 500) {
+            document.body.classList.add('phone-input-active');
         }
+    });
+
+    input?.addEventListener('blur', () => {
+        document.body.classList.remove('phone-input-active');
+    });
+
+    // 输入框变化
+    input?.addEventListener('input', (e) => {
+        this.inputText = e.target.value;
+        if (this.inputText) {
+            sendBtn.style.display = 'block';
+            document.getElementById('more-btn').style.display = 'none';
+        } else {
+            sendBtn.style.display = 'none';
+            document.getElementById('more-btn').style.display = 'block';
+        }
+    });
+    
+    // 发送消息
+    sendBtn?.addEventListener('click', () => {
+        this.sendMessage();
+    });
+    
+    input?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            this.sendMessage();
+        }
+    });
+    
+    // 表情按钮
+    document.getElementById('emoji-btn')?.addEventListener('click', () => {
+        this.showEmoji = !this.showEmoji;
+        this.showMore = false;
+        this.app.render();
+    });
+    
+    // 更多按钮
+    document.getElementById('more-btn')?.addEventListener('click', () => {
+        this.showMore = !this.showMore;
+        this.showEmoji = false;
+        this.app.render();
+    });
+    
+    // 选择表情
+    document.querySelectorAll('.emoji-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const emoji = item.dataset.emoji;
+            this.inputText += emoji;
+            input.value = this.inputText;
+            input.focus();
+        });
+    });
+    
+    // 更多功能
+    document.querySelectorAll('.more-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const action = item.dataset.action;
+            this.handleMoreAction(action);
+        });
+    });
+    
+    // 添加头像点击事件
+    document.querySelectorAll('.message-avatar').forEach(avatar => {
+        avatar.addEventListener('click', (e) => {
+            const message = e.target.closest('.chat-message');
+            const isMe = message.classList.contains('message-right');
+            
+            if (!isMe) {
+                this.showAvatarSettings(this.app.currentChat);
+            }
+        });
+    });
+    
+    // 滚动到底部
+    const messagesDiv = document.getElementById('chat-messages');
+    if (messagesDiv) {
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+}
     
     async sendMessage() {
     if (!this.inputText.trim()) return;
