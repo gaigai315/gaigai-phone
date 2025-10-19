@@ -380,132 +380,128 @@ function initColors() {
 }
     
     // 初始化
-    function init() {
-        if (typeof $ === 'undefined') {
-            console.log('⏳ 等待 jQuery 加载...');
-            setTimeout(init, 500);
-            return;
-        }
-        
-        if (typeof SillyTavern === 'undefined') {
-            console.log('⏳ 等待 SillyTavern 加载...');
-            setTimeout(init, 500);
-            return;
-        }
-        
-        console.log('✅ 依赖加载完成，开始初始化');
-        
-        try {
-            loadData();
-            createTopPanel();
-
-            // 🎨 新增：加载保存的颜色设置
+function init() {
+    if (typeof $ === 'undefined') {
+        console.log('⏳ 等待 jQuery 加载...');
+        setTimeout(init, 500);
+        return;
+    }
+    
+    if (typeof SillyTavern === 'undefined') {
+        console.log('⏳ 等待 SillyTavern 加载...');
+        setTimeout(init, 500);
+        return;
+    }
+    
+    console.log('✅ 依赖加载完成，开始初始化');
+    
+    try {
+        loadData();
         initColors();
-        
         createTopPanel();
+        
+        // 监听返回主页
+        window.addEventListener('phone:goHome', () => {
+            currentApp = null;
+            window.currentWechatApp = null;
+            if (homeScreen) homeScreen.render();
+        });
+        
+        // 监听打开APP
+        window.addEventListener('phone:openApp', (e) => {
+            const { appId } = e.detail;
+            console.log('📱 打开APP:', appId);
             
-            // 监听返回主页
-            window.addEventListener('phone:goHome', () => {
-                currentApp = null;
-                window.currentWechatApp = null;
-                if (homeScreen) homeScreen.render();
-            });
-            
-            // 监听打开APP
-            window.addEventListener('phone:openApp', (e) => {
-                const { appId } = e.detail;
-                console.log('📱 打开APP:', appId);
-                
-                const app = currentApps.find(a => a.id === appId);
-                if (app) {
-                    app.badge = 0;
-                    totalNotifications = currentApps.reduce((sum, a) => sum + (a.badge || 0), 0);
-                    updateNotificationBadge(totalNotifications);
-                    saveData();
-                }
-                
-                // 打开对应的APP
-                if (appId === 'settings') {
-                    const settingsApp = new SettingsApp(phoneShell, storage, settings);
-                    settingsApp.render();
-                } else if (appId === 'wechat') {
-                    import('./apps/wechat/wechat-app.js').then(module => {
-                        const wechatApp = new module.WechatApp(phoneShell, storage);
-                        window.currentWechatApp = wechatApp;
-                        wechatApp.render();
-                    }).catch(err => {
-                        console.error('加载微信APP失败:', err);
-                        phoneShell?.showNotification('错误', '微信加载失败', '❌');
-                    });
-                } else {
-                    phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
-                }
-            });
-            
-            // 监听从微信发送到聊天的消息
-            window.addEventListener('phone:sendToChat', (e) => {
-                const { message, chatId, chatName } = e.detail;
-                
-                const textarea = document.querySelector('#send_textarea');
-                if (textarea) {
-                    textarea.value = message;
-                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                    
-                    const sendButton = document.querySelector('#send_but');
-                    if (sendButton && settings.autoSend) {
-                        setTimeout(() => sendButton.click(), 100);
-                    }
-                } else {
-                    console.warn('找不到聊天输入框');
-                }
-            });
-            
-            // 监听清空数据
-            window.addEventListener('phone:clearCurrentData', () => {
-                storage.clearCurrentData();
-                currentApps = JSON.parse(JSON.stringify(APPS));
-                totalNotifications = 0;
-                updateNotificationBadge(0);
-                if (homeScreen) {
-                    homeScreen.apps = currentApps;
-                    homeScreen.render();
-                }
-            });
-            
-            window.addEventListener('phone:clearAllData', () => {
-                storage.clearAllData();
-                currentApps = JSON.parse(JSON.stringify(APPS));
-                totalNotifications = 0;
-                updateNotificationBadge(0);
-                if (homeScreen) {
-                    homeScreen.apps = currentApps;
-                    homeScreen.render();
-                }
-            });
-            
-            // 连接到酒馆
-            const context = getContext();
-            if (context && context.eventSource) {
-                context.eventSource.on(
-                    context.event_types.CHARACTER_MESSAGE_RENDERED,
-                    onMessageReceived
-                );
-                
-                context.eventSource.on(
-                    context.event_types.CHAT_CHANGED,
-                    onChatChanged
-                );
-                
-                console.log('✅ 已连接到酒馆事件系统');
+            const app = currentApps.find(a => a.id === appId);
+            if (app) {
+                app.badge = 0;
+                totalNotifications = currentApps.reduce((sum, a) => sum + (a.badge || 0), 0);
+                updateNotificationBadge(totalNotifications);
+                saveData();
             }
             
-            console.log('🎉 虚拟手机初始化完成！');
-            console.log(`📊 状态: ${settings.enabled ? '已启用' : '已禁用'}`);
+            // 打开对应的APP
+            if (appId === 'settings') {
+                const settingsApp = new SettingsApp(phoneShell, storage, settings);
+                settingsApp.render();
+            } else if (appId === 'wechat') {
+                import('./apps/wechat/wechat-app.js').then(module => {
+                    const wechatApp = new module.WechatApp(phoneShell, storage);
+                    window.currentWechatApp = wechatApp;
+                    wechatApp.render();
+                }).catch(err => {
+                    console.error('加载微信APP失败:', err);
+                    phoneShell?.showNotification('错误', '微信加载失败', '❌');
+                });
+            } else {
+                phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
+            }
+        });
+        
+        // 监听从微信发送到聊天的消息
+        window.addEventListener('phone:sendToChat', (e) => {
+            const { message, chatId, chatName } = e.detail;
             
-        } catch (e) {
-            console.error('❌ 虚拟手机初始化失败:', e);
+            const textarea = document.querySelector('#send_textarea');
+            if (textarea) {
+                textarea.value = message;
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                const sendButton = document.querySelector('#send_but');
+                if (sendButton && settings.autoSend) {
+                    setTimeout(() => sendButton.click(), 100);
+                }
+            } else {
+                console.warn('找不到聊天输入框');
+            }
+        });
+        
+        // 监听清空数据
+        window.addEventListener('phone:clearCurrentData', () => {
+            storage.clearCurrentData();
+            currentApps = JSON.parse(JSON.stringify(APPS));
+            totalNotifications = 0;
+            updateNotificationBadge(0);
+            if (homeScreen) {
+                homeScreen.apps = currentApps;
+                homeScreen.render();
+            }
+        });
+        
+        window.addEventListener('phone:clearAllData', () => {
+            storage.clearAllData();
+            currentApps = JSON.parse(JSON.stringify(APPS));
+            totalNotifications = 0;
+            updateNotificationBadge(0);
+            if (homeScreen) {
+                homeScreen.apps = currentApps;
+                homeScreen.render();
+            }
+        });
+        
+        // 连接到酒馆
+        const context = getContext();
+        if (context && context.eventSource) {
+            context.eventSource.on(
+                context.event_types.CHARACTER_MESSAGE_RENDERED,
+                onMessageReceived
+            );
+            
+            context.eventSource.on(
+                context.event_types.CHAT_CHANGED,
+                onChatChanged
+            );
+            
+            console.log('✅ 已连接到酒馆事件系统');
         }
+        
+        console.log('🎉 虚拟手机初始化完成！');
+        console.log(`📊 状态: ${settings.enabled ? '已启用' : '已禁用'}`);
+        
+    } catch (e) {
+        console.error('❌ 虚拟手机初始化失败:', e);
     }
+}
     
     setTimeout(init, 1000);
     
