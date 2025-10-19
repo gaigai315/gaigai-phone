@@ -32,50 +32,63 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
     const PHONE_TAG_REGEX = /<Phone>([\s\S]*?)<\/Phone>/gi;
     
     // 创建顶部面板按钮
-    function createTopPanel() {
-        const topSettingsHolder = document.getElementById('top-settings-holder');
-        if (!topSettingsHolder) {
-            console.error('❌ 找不到 top-settings-holder');
-            return;
-        }
-        
-        const oldPanel = document.getElementById('phone-panel-holder');
-        if (oldPanel) oldPanel.remove();
-        
-        const iconStyle = settings.enabled ? '' : 'opacity: 0.4; filter: grayscale(1);';
-        const statusText = settings.enabled ? '已启用' : '已禁用';
-        
-        const panelHTML = `
-            <div id="phone-panel-holder" class="drawer">
-                <div class="drawer-toggle drawer-header">
-                    <div id="phoneDrawerIcon" class="drawer-icon fa-solid fa-mobile-screen-button fa-fw closedIcon interactable" 
-                         title="虚拟手机 (${statusText})" 
-                         style="${iconStyle}"
-                         tabindex="0" 
-                         role="button">
-                        <span id="phone-badge" class="badge-notification" style="display:none;">0</span>
-                    </div>
-                </div>
-                <div id="phone-panel" class="drawer-content fillRight closedDrawer">
-                    <div id="phone-panel-header" class="fa-solid fa-grip drag-grabber"></div>
-                    <div id="phone-panel-content">
-                        ${!settings.enabled ? '<div style="text-align:center; padding:40px; color:#999;">手机功能已禁用<br><small>在手机"设置"APP中启用</small></div>' : ''}
-                    </div>
+function createTopPanel() {
+    console.log('🔨 开始创建顶部面板...');
+    
+    const topSettingsHolder = document.getElementById('top-settings-holder');
+    if (!topSettingsHolder) {
+        console.error('❌ 找不到 top-settings-holder，500ms后重试');
+        setTimeout(createTopPanel, 500);
+        return;
+    }
+    
+    const oldPanel = document.getElementById('phone-panel-holder');
+    if (oldPanel) {
+        console.log('🗑️ 移除旧面板');
+        oldPanel.remove();
+    }
+    
+    const iconStyle = settings.enabled ? '' : 'opacity: 0.4; filter: grayscale(1);';
+    const statusText = settings.enabled ? '已启用' : '已禁用';
+    
+    const panelHTML = `
+        <div id="phone-panel-holder" class="drawer" style="display: flex;">
+            <div class="drawer-toggle drawer-header">
+                <div id="phoneDrawerIcon" 
+                     class="drawer-icon fa-solid fa-mobile-screen-button fa-fw closedIcon interactable" 
+                     title="虚拟手机 (${statusText})" 
+                     style="cursor: pointer; font-size: 20px; padding: 10px; color: #fff; ${iconStyle}"
+                     tabindex="0" 
+                     role="button">
+                    <span id="phone-badge" class="badge-notification" style="display:none;">0</span>
                 </div>
             </div>
-        `;
-        
-        topSettingsHolder.insertAdjacentHTML('afterbegin', panelHTML);
-        
-        const drawerIcon = document.getElementById('phoneDrawerIcon');
-        const drawerPanel = document.getElementById('phone-panel');
-        
-        drawerIcon?.addEventListener('click', () => {
-            toggleDrawer(drawerIcon, drawerPanel);
-        });
-        
-        console.log('✅ 顶部面板已创建（默认收起）');
+            <div id="phone-panel" class="drawer-content fillRight closedDrawer">
+                <div id="phone-panel-header" class="fa-solid fa-grip drag-grabber"></div>
+                <div id="phone-panel-content">
+                    ${!settings.enabled ? '<div style="text-align:center; padding:40px; color:#999;">手机功能已禁用<br><small>在手机"设置"APP中启用</small></div>' : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    topSettingsHolder.insertAdjacentHTML('afterbegin', panelHTML);
+    
+    const drawerIcon = document.getElementById('phoneDrawerIcon');
+    const drawerPanel = document.getElementById('phone-panel');
+    
+    if (!drawerIcon || !drawerPanel) {
+        console.error('❌ 面板创建失败');
+        return;
     }
+    
+    drawerIcon.addEventListener('click', () => {
+        toggleDrawer(drawerIcon, drawerPanel);
+    });
+    
+    console.log('✅ 顶部面板已创建');
+    console.log('📍 图标元素:', drawerIcon);
+}
     
     // 切换抽屉
     function toggleDrawer(icon, panel) {
@@ -312,10 +325,10 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             $('.mes_text').each(function() {
                 const $this = $(this);
                 let html = $this.html();
-                if (html && html.includes('((PHONE_CHAT_MODE))')) {
-                    html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '');
-                    $this.html(html);
-                }
+                iif (html && html.includes('((PHONE_CHAT_MODE))')) {
+                html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '');
+                $this.html(html);
+              }
             });
         }, 150);
         
@@ -345,8 +358,6 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
         
         // 隐藏手机模式标记（用户发的）
         html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '<span style="display:none!important;" class="phone-mode-hidden"></span>');
-        
-        $this.html(html);
     });
     
     console.log('✅ 已隐藏手机标签内容');
