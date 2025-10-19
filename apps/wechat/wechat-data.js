@@ -314,7 +314,7 @@ async sendToAI(prompt) {
         const context = this.storage.getContext();
         let responded = false;
         
-        const handler = (messageId) => {
+                const handler = (messageId) => {
             if (responded) return;
             responded = true;
             
@@ -322,7 +322,7 @@ async sendToAI(prompt) {
                 const chat = context.chat;
                 const lastMsg = chat[chat.length - 1];
                 
-                            if (lastMsg && !lastMsg.is_user) {
+                if (lastMsg && !lastMsg.is_user) {
                     const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
                     
                     // 🔥 隐藏用户发送的提示词消息
