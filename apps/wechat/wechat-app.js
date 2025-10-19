@@ -1659,101 +1659,81 @@ showEditProfile() {
 }
 
 showSettings() {
-    const modal = document.createElement('div');
-    modal.className = 'profile-edit-modal';
-    
-    modal.innerHTML = `
-        <div class="profile-edit-content" style="max-width: 350px;">
-            <h3 class="profile-edit-title">微信设置</h3>
-            
-            <div style="background: #f8f8f8; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 14px; color: #666;">在线模式</span>
-                    <label style="position: relative; display: inline-block; width: 50px; height: 28px;">
-                        <input type="checkbox" id="online-mode-toggle" 
-                               ${window.VirtualPhone?.settings?.onlineMode ? 'checked' : ''}
-                               style="opacity: 0; width: 0; height: 0;">
-                        <span class="toggle-slider" style="
-                            position: absolute;
-                            cursor: pointer;
-                            top: 0;
-                            left: 0;
-                            right: 0;
-                            bottom: 0;
-                            background-color: #ccc;
-                            transition: 0.4s;
-                            border-radius: 28px;
-                        "></span>
-                        <span class="toggle-ball" style="
-                            position: absolute;
-                            content: '';
-                            height: 22px;
-                            width: 22px;
-                            left: 3px;
-                            bottom: 3px;
-                            background-color: white;
-                            transition: 0.4s;
-                            border-radius: 50%;
-                        "></span>
-                    </label>
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-settings">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
                 </div>
-                <div style="font-size: 12px; color: #999;">开启后,手机消息会发送给AI</div>
+                <div class="wechat-header-title">微信设置</div>
+                <div class="wechat-header-right"></div>
             </div>
             
-            <div style="background: #fff3cd; border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid #ffc107;">
-                <div style="font-size: 14px; font-weight: 600; color: #856404; margin-bottom: 8px;">
-                    <i class="fa-solid fa-triangle-exclamation"></i> 数据管理
+            <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                <!-- 在线模式 -->
+                <div style="background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div>
+                            <div style="font-size: 16px; font-weight: 500; color: #000;">在线模式</div>
+                            <div style="font-size: 12px; color: #999; margin-top: 4px;">开启后，手机消息会发送给AI</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="online-mode-toggle" 
+                                   ${window.VirtualPhone?.settings?.onlineMode ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
-                <button id="clear-wechat-data" style="
-                    width: 100%;
-                    padding: 10px;
-                    background: #fff;
-                    border: 1px solid #ffc107;
-                    border-radius: 8px;
-                    color: #856404;
-                    font-size: 13px;
-                    cursor: pointer;
-                    margin-bottom: 8px;
-                ">清空当前角色微信数据</button>
-                <div style="font-size: 11px; color: #856404;">⚠️ 将删除所有聊天记录和联系人</div>
+                
+                <!-- 数据管理 -->
+                <div style="background: #fff3cd; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #ffc107;">
+                    <div style="font-size: 14px; font-weight: 600; color: #856404; margin-bottom: 12px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> 数据管理
+                    </div>
+                    <button id="clear-wechat-data" style="
+                        width: 100%;
+                        padding: 12px;
+                        background: #fff;
+                        border: 1px solid #ffc107;
+                        border-radius: 8px;
+                        color: #856404;
+                        font-size: 14px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        margin-bottom: 8px;
+                    ">清空当前角色微信数据</button>
+                    <div style="font-size: 11px; color: #856404;">⚠️ 将删除所有聊天记录和联系人</div>
+                </div>
             </div>
-            
-            <button class="profile-cancel-btn" id="close-settings" style="width: 100%;">关闭</button>
         </div>
     `;
     
-    document.body.appendChild(modal);
+    this.phoneShell.setContent(html);
     
+    // 返回按钮
+    document.getElementById('back-from-settings')?.addEventListener('click', () => {
+        this.render();
+    });
+    
+    // 在线模式开关
     const checkbox = document.getElementById('online-mode-toggle');
-    const slider = modal.querySelector('.toggle-slider');
-    const ball = modal.querySelector('.toggle-ball');
-    
-    checkbox.addEventListener('change', () => {
-        if (checkbox.checked) {
-            slider.style.backgroundColor = '#07c160';
-            ball.style.transform = 'translateX(22px)';
+    checkbox?.addEventListener('change', () => {
+        if (window.VirtualPhone?.settings) {
+            window.VirtualPhone.settings.onlineMode = checkbox.checked;
+            window.VirtualPhone.storage.saveSettings(window.VirtualPhone.settings);
             
-            if (window.VirtualPhone?.settings) {
-                window.VirtualPhone.settings.onlineMode = true;
-                window.VirtualPhone.storage.saveSettings(window.VirtualPhone.settings);
-            }
-        } else {
-            slider.style.backgroundColor = '#ccc';
-            ball.style.transform = 'translateX(0)';
-            
-            if (window.VirtualPhone?.settings) {
-                window.VirtualPhone.settings.onlineMode = false;
-                window.VirtualPhone.storage.saveSettings(window.VirtualPhone.settings);
-            }
+            this.phoneShell.showNotification(
+                checkbox.checked ? '已开启' : '已关闭',
+                checkbox.checked ? '手机消息将发送给AI' : '手机消息不会发送给AI',
+                '✅'
+            );
         }
     });
     
-    if (checkbox.checked) {
-        slider.style.backgroundColor = '#07c160';
-        ball.style.transform = 'translateX(22px)';
-    }
-    
-    document.getElementById('clear-wechat-data').onclick = () => {
+    // 清空数据按钮
+    document.getElementById('clear-wechat-data')?.addEventListener('click', () => {
         if (confirm('⚠️ 确定要清空当前角色的所有微信数据吗?\n\n此操作不可恢复!')) {
             this.data.data = {
                 userInfo: {
@@ -1770,16 +1750,7 @@ showSettings() {
             };
             this.data.saveData();
             this.phoneShell.showNotification('已清空', '微信数据已重置', '✅');
-            modal.remove();
-            this.render();
-        }
-    };
-    
-    document.getElementById('close-settings').onclick = () => modal.remove();
-    
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
+            setTimeout(() => this.render(), 1000);
         }
     });
 }
