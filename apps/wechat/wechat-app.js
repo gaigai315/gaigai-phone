@@ -1440,7 +1440,12 @@ document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
 document.getElementById('wechat-settings-btn')?.addEventListener('click', () => {
     this.showSettings();
 });
-}  // 👈 关闭 bindEvents() 方法
+
+        // 🔧 聊天设置按钮（三个点）
+        document.getElementById('chat-info')?.addEventListener('click', () => {
+            this.chatView.showChatMenu();
+        });
+}
     
 openChat(chatId) {
     const chat = this.data.getChat(chatId);
