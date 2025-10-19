@@ -124,22 +124,23 @@
 .phone-body-panel {
     width: 300px;
     height: 643px;
-    max-width: 280px;
-    max-height: 600px;
+    max-width: 300px;
+    max-height: 643px;
     aspect-ratio: 9 / 19.5;
     margin: 0 auto;
-    /* 🎨 优化：更真实的金属渐变 */
     background: linear-gradient(145deg, #2a2d3a 0%, #1a1d2e 50%, #0f1117 100%);
     border-radius: 42px;
-    /* 🎨 优化：更深的阴影层次 */
+    
+    /* 🎨 优化：更轻的阴影 */
     box-shadow: 
         0 0 0 1px rgba(255, 255, 255, 0.1),
-        0 0 0 6px #0d0d0d,
-        0 0 0 8px #1a1a1a,
-        0 30px 90px rgba(0, 0, 0, 0.9),
-        0 15px 40px rgba(0, 0, 0, 0.7),
+        0 0 0 3px #0d0d0d,              /* 从 6px 改成 3px */
+        0 0 0 4px #1a1a1a,              /* 从 8px 改成 4px */
+        0 15px 45px rgba(0, 0, 0, 0.6), /* 从 30px 90px 改小 */
+        0 8px 20px rgba(0, 0, 0, 0.4),  /* 从 15px 40px 改小 */
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
         inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+    
     padding: 8px;
     position: relative;
     overflow: hidden;
@@ -147,7 +148,6 @@
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    /* 🎨 新增：入场动画 */
     animation: phoneSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1070,16 +1070,25 @@ input:checked + .toggle-slider:before {
 /* 小屏设备（手机竖屏） */
 @media (max-width: 500px) {
     .phone-body-panel {
-        width: 280px !important;        /* 固定宽度，不用 vw */
-        height: 600px !important;       /* 按比例计算的高度 */
-        max-width: 88vw !important;     /* 最大不超过屏幕 85% */
-        max-height: 78vh !important;    /* 最大不超过高度 75% */
+        width: 280px !important;
+        height: 600px !important;
+        max-width: 88vw !important;
+        max-height: 78vh !important;
         aspect-ratio: 9 / 19.5 !important;
         border-radius: 32px;
         padding: 7px;
+        
+        /* 🎨 移动端专用：更轻的阴影 */
+        box-shadow: 
+            0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 0 2px #0d0d0d,              /* 边框更细 */
+            0 0 0 3px #1a1a1a,
+            0 10px 30px rgba(0, 0, 0, 0.5), /* 阴影更小 */
+            0 5px 15px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
     }
-
-   /* 🎨 新增：通知栏响应式 */
+    
+   /* 🎨 通知栏响应式 */
     .phone-notification {
         top: 40px;
         width: 82%;
