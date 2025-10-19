@@ -1081,14 +1081,18 @@ export class WechatApp {
 
 .wechat-contacts {
     height: 100%;
-    display: flex;
-    flex-direction: column;
+    overflow-y: auto !important;
+    overflow-x: hidden;
     background: #f5f5f5;
+    -webkit-overflow-scrolling: touch;
 }
 
 .contacts-search {
     padding: 10px 15px;
     background: #ededed;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .search-input {
@@ -1137,12 +1141,8 @@ export class WechatApp {
 }
 
 .contacts-list {
-    flex: 1;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
     background: #fff;
-    height: 100%;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible !important;  /* ← 改这里：不要内部滚动 */
 }
 
 .contacts-group {
