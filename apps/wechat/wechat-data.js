@@ -423,7 +423,6 @@ ${chatText}
         }
         return letterMap[firstChar] || firstChar.toUpperCase() || '#';
     }
-}
 
     // 🗑️ 删除消息
     deleteMessage(chatId, messageIndex) {
@@ -465,3 +464,4 @@ ${chatText}
             this.saveData();
         }
     }
+}
