@@ -974,6 +974,30 @@ export class WechatApp {
                         <i class="fa-solid fa-chevron-right"></i>
                     </div>
                 </div>
+
+                <div class="profile-divider"></div>
+
+<div class="profile-item" id="smart-load-contacts">
+    <div class="profile-icon" style="color: #07c160;">
+        <i class="fa-solid fa-download"></i>
+    </div>
+    <div class="profile-name">智能加载联系人</div>
+    <div class="profile-arrow">
+        <i class="fa-solid fa-chevron-right"></i>
+    </div>
+</div>
+
+<div class="profile-item" id="edit-profile">
+    <div class="profile-icon" style="color: #576b95;">
+        <i class="fa-solid fa-user-pen"></i>
+    </div>
+    <div class="profile-name">编辑个人资料</div>
+    <div class="profile-arrow">
+        <i class="fa-solid fa-chevron-right"></i>
+    </div>
+</div>
+
+<div class="profile-divider"></div>
                 
                 <div class="profile-item">
                     <div class="profile-icon" style="color: #3498db;">
@@ -1056,6 +1080,33 @@ export class WechatApp {
         if (this.currentChat) {
             this.chatView.bindEvents();
         }
+
+        // 智能加载联系人
+        document.getElementById('smart-load-contacts')?.addEventListener('click', async () => {
+            if (confirm('将从当前角色卡智能生成联系人，确定吗？')) {
+                const result = await this.data.loadContactsFromCharacter();
+                
+                if (result.success) {
+                    this.phoneShell.showNotification(
+                        '加载成功', 
+                        `已生成${result.count}个联系人`, 
+                        '✅'
+                    );
+                    this.render();
+                } else {
+                    this.phoneShell.showNotification(
+                        '加载失败', 
+                        result.message, 
+                        '❌'
+                    );
+                }
+            }
+        });
+        
+        // 编辑个人资料
+        document.getElementById('edit-profile')?.addEventListener('click', () => {
+            this.showEditProfile();
+        });
     }
     
     openChat(chatId) {
@@ -1120,5 +1171,137 @@ export class WechatApp {
         }
         
         this.data.saveData();
+    }
+
+        // ✅ 编辑个人资料
+    showEditProfile() {
+        const userInfo = this.data.getUserInfo();
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: #fff; border-radius: 12px; padding: 20px; width: 90%; max-width: 300px;">
+                <h3 style="margin: 0 0 15px 0; text-align: center;">编辑个人资料</h3>
+                
+                <div id="user-avatar-preview" style="
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 8px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    margin: 0 auto 15px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 40px;
+                    cursor: pointer;
+                ">${userInfo.avatar || '😊'}</div>
+                
+                <input type="file" id="user-avatar-upload" accept="image/*" style="display: none;">
+                
+                <button id="upload-user-avatar-btn" style="
+                    display: block;
+                    width: 100%;
+                    padding: 10px;
+                    background: #f0f0f0;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    cursor: pointer;
+                    margin-bottom: 10px;
+                ">上传头像</button>
+                
+                <input type="text" id="user-name-input" placeholder="昵称" value="${userInfo.name || ''}" style="
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    margin-bottom: 10px;
+                    box-sizing: border-box;
+                ">
+                
+                <input type="text" id="user-signature-input" placeholder="个性签名" value="${userInfo.signature || ''}" style="
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    margin-bottom: 15px;
+                    box-sizing: border-box;
+                ">
+                
+                <div style="display: flex; gap: 10px;">
+                    <button id="save-user-profile" style="
+                        flex: 1;
+                        padding: 10px;
+                        border: none;
+                        border-radius: 6px;
+                        font-size: 14px;
+                        cursor: pointer;
+                        background: #07c160;
+                        color: #fff;
+                    ">保存</button>
+                    <button id="cancel-user-profile" style="
+                        flex: 1;
+                        padding: 10px;
+                        border: none;
+                        border-radius: 6px;
+                        font-size: 14px;
+                        cursor: pointer;
+                        background: #f0f0f0;
+                        color: #666;
+                    ">取消</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // 绑定事件
+        document.getElementById('cancel-user-profile').onclick = () => modal.remove();
+        
+        document.getElementById('upload-user-avatar-btn').onclick = () => {
+            document.getElementById('user-avatar-upload').click();
+        };
+        
+        document.getElementById('save-user-profile').onclick = () => {
+            const newName = document.getElementById('user-name-input').value;
+            const newSignature = document.getElementById('user-signature-input').value;
+            
+            if (newName) {
+                this.data.updateUserInfo({
+                    name: newName,
+                    signature: newSignature
+                });
+                this.phoneShell.showNotification('保存成功', '个人资料已更新', '✅');
+                this.render();
+            }
+            modal.remove();
+        };
+        
+        document.getElementById('user-avatar-upload').onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.getElementById('user-avatar-preview');
+                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+                    this.data.updateUserInfo({ avatar: e.target.result });
+                };
+                reader.readAsDataURL(file);
+            }
+        };
     }
 }
