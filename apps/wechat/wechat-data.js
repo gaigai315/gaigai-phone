@@ -311,84 +311,125 @@ ${worldInfoText ? `## 🌍 世界设定\n${worldInfoText}\n` : ''}
 开始生成：`;
     }
     
-    // 📤 发送给AI
-    async sendToAI(prompt) {
-        return new Promise((resolve, reject) => {
-            const textarea = document.querySelector('#send_textarea');
-            if (!textarea) {
-                reject(new Error('找不到聊天输入框'));
-                return;
-            }
+     // 📤 发送给AI（隐藏消息）
+async sendToAI(prompt) {
+    return new Promise((resolve, reject) => {
+        const context = this.storage.getContext();
+        
+        if (!context) {
+            reject(new Error('无法获取上下文'));
+            return;
+        }
+        
+        // ✅ 直接调用生成API，不通过输入框
+        let responded = false;
+        
+        const handler = (messageId) => {
+            if (responded) return;
             
-            const originalValue = textarea.value;
-            
-            textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            
-            const context = this.storage.getContext();
-            let responded = false;
-            
-            const handler = (messageId) => {
-                if (responded) return;
-                responded = true;
+            try {
+                const chat = context.chat;
+                if (!chat || chat.length === 0) return;
                 
-                try {
-                    const chat = context.chat;
-                    const lastMsg = chat[chat.length - 1];
+                const lastMsg = chat[chat.length - 1];
+                
+                // 只处理AI的回复
+                if (lastMsg && !lastMsg.is_user) {
+                    responded = true;
                     
-                    if (lastMsg && !lastMsg.is_user) {
-                        const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
-                        
-                        // 隐藏用户消息和AI消息
-                        setTimeout(() => {
+                    const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
+                    
+                    // ✅ 删除用户消息和AI消息
+                    setTimeout(() => {
+                        // 删除最后两条消息（用户+AI）
+                        if (chat.length >= 2) {
+                            chat.splice(chat.length - 2, 2);
+                            
+                            // 刷新聊天显示
+                            if (typeof context.saveChat === 'function') {
+                                context.saveChat();
+                            }
+                            
+                            // 隐藏DOM元素
                             const allMessages = document.querySelectorAll('.mes');
                             if (allMessages.length >= 2) {
-                                allMessages[allMessages.length - 2].style.display = 'none';
-                                allMessages[allMessages.length - 1].style.display = 'none';
+                                allMessages[allMessages.length - 2].remove();
+                                allMessages[allMessages.length - 1].remove();
                             }
-                        }, 500);
-                        
-                        textarea.value = originalValue;
-                        
-                        context.eventSource.removeListener(
-                            context.event_types.CHARACTER_MESSAGE_RENDERED,
-                            handler
-                        );
-                        
-                        resolve(aiText);
-                    }
-                } catch (e) {
-                    reject(e);
-                }
-            };
-            
-            context.eventSource.on(
-                context.event_types.CHARACTER_MESSAGE_RENDERED,
-                handler
-            );
-            
-            setTimeout(() => {
-                const sendBtn = document.querySelector('#send_but');
-                if (sendBtn) {
-                    sendBtn.click();
-                } else {
-                    reject(new Error('找不到发送按钮'));
-                }
-            }, 100);
-            
-            setTimeout(() => {
-                if (!responded) {
-                    responded = true;
-                    textarea.value = originalValue;
+                        }
+                    }, 1000);
+                    
                     context.eventSource.removeListener(
                         context.event_types.CHARACTER_MESSAGE_RENDERED,
                         handler
                     );
-                    reject(new Error('AI响应超时（60秒）'));
+                    
+                    resolve(aiText);
                 }
-            }, 60000);
-        });
-    }
+            } catch (e) {
+                console.error('处理AI回复失败:', e);
+                reject(e);
+            }
+        };
+        
+        // 监听AI回复
+        context.eventSource.on(
+            context.event_types.CHARACTER_MESSAGE_RENDERED,
+            handler
+        );
+        
+        // ✅ 手动构建请求，绕过输入框
+        setTimeout(async () => {
+            try {
+                // 手动添加用户消息到聊天记录
+                const userMsg = {
+                    name: context.name1 || 'You',
+                    is_user: true,
+                    is_system: false,
+                    send_date: new Date().toISOString(),
+                    mes: prompt,
+                    extra: {}
+                };
+                
+                context.chat.push(userMsg);
+                
+                // 触发生成
+                if (typeof context.generate === 'function') {
+                    await context.generate();
+                } else if (typeof Generate === 'function') {
+                    await Generate();
+                } else {
+                    // 最后手段：点击发送按钮
+                    const sendBtn = document.querySelector('#send_but');
+                    if (sendBtn) {
+                        const textarea = document.querySelector('#send_textarea');
+                        if (textarea) {
+                            textarea.value = prompt;
+                            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                            setTimeout(() => sendBtn.click(), 100);
+                        }
+                    }
+                }
+                
+            } catch (e) {
+                console.error('发送失败:', e);
+                reject(e);
+            }
+        }, 100);
+        
+        // 60秒超时
+        setTimeout(() => {
+            if (!responded) {
+                responded = true;
+                context.eventSource.removeListener(
+                    context.event_types.CHARACTER_MESSAGE_RENDERED,
+                    handler
+                );
+                reject(new Error('AI响应超时（60秒）'));
+            }
+        }, 60000);
+    });
+}
     
     // 📥 解析AI返回
     parseAIResponse(text) {
