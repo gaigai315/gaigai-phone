@@ -187,27 +187,41 @@ export class ChatView {
         const sendBtn = document.getElementById('send-btn');
 
         // 📱 移动端防变形：输入框聚焦时锁定页面
-        input?.addEventListener('focus', () => {
-            if (window.innerWidth <= 500) {
-                document.body.classList.add('phone-input-active');
-            }
-        });
+input?.addEventListener('focus', () => {
+    if (window.innerWidth <= 500) {
+        document.body.classList.add('phone-input-active');
+        
+        // ← 新增：滚动到手机顶部
+        const phonePanel = document.querySelector('.phone-body-panel');
+        if (phonePanel) {
+            phonePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+});
 
-        input?.addEventListener('blur', () => {
-            document.body.classList.remove('phone-input-active');
-        });
+input?.addEventListener('blur', () => {
+    document.body.classList.remove('phone-input-active');
+});
 
-        // 输入框变化
-        input?.addEventListener('input', (e) => {
-            this.inputText = e.target.value;
-            if (this.inputText) {
-                sendBtn.style.display = 'block';
-                document.getElementById('more-btn').style.display = 'none';
-            } else {
-                sendBtn.style.display = 'none';
-                document.getElementById('more-btn').style.display = 'block';
-            }
-        });
+// 📱 新增：输入时阻止页面缩放
+input?.addEventListener('input', (e) => {
+    if (window.innerWidth <= 500) {
+        // 阻止视口变化
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+        }
+    }
+    
+    this.inputText = e.target.value;
+    if (this.inputText) {
+        sendBtn.style.display = 'block';
+        document.getElementById('more-btn').style.display = 'none';
+    } else {
+        sendBtn.style.display = 'none';
+        document.getElementById('more-btn').style.display = 'block';
+    }
+});
         
         // 发送消息
         sendBtn?.addEventListener('click', () => {
