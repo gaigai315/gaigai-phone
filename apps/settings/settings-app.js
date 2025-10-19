@@ -14,9 +14,9 @@ export class SettingsApp {
     const charName = context?.name2 || context?.characterId || '未知';
     
     // 加载壁纸和颜色设置
-    const wallpaper = this.imageManager.getWallpaper();
-    const timeColor = this.storage.get('phone-time-color') || '#ffffff';
-    const appNameColor = this.storage.get('phone-app-name-color') || '#ffffff';
+const wallpaper = this.imageManager.getWallpaper();
+const timeColor = this.storage.get('phone-time-color', true) || '#ffffff';
+const appNameColor = this.storage.get('phone-app-name-color', true) || '#ffffff';
     
     const html = `
         <div class="settings-app">
