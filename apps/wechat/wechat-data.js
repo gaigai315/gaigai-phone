@@ -141,19 +141,26 @@ export class WechatData {
         this.saveData();
     }
     
-    async loadContactsFromCharacter() {
-        const context = this.storage.getContext();
-        
-        if (!context) {
-            return { success: false, message: '无法获取上下文信息' };
-        }
-        
-        const charName = context.name2 || context.name || '角色';
-        const charDesc = context.description || '';
-        const scenario = context.scenario || '';
-        const personality = context.personality || '';
-        
-        const chatHistory = [];
+   async loadContactsFromCharacter() {
+    const context = this.storage.getContext();
+    
+    if (!context) {
+        return { success: false, message: '无法获取上下文信息' };
+    }
+    
+    // ✅ 获取角色卡信息
+    const charName = context.name2 || context.name || '角色';
+    const charDesc = context.description || '';
+    const scenario = context.scenario || '';
+    const personality = context.personality || '';
+    
+    // ✅ 获取用户信息（新增）
+    const userName = context.name1 || '用户';
+    const userPersona = context.user_persona || context.persona_description || '';
+    
+    // ✅ 获取聊天记录
+    const chatHistory = [];
+    // ... 保持原样
         if (context.chat && Array.isArray(context.chat)) {
             const recentChats = context.chat.slice(-50);
             recentChats.forEach(msg => {
@@ -170,7 +177,7 @@ export class WechatData {
             聊天记录条数: chatHistory.length
         });
         
-        const prompt = this.buildAIPrompt(charName, charDesc, scenario, personality, chatHistory);
+        const prompt = this.buildAIPrompt(charName, charDesc, scenario, personality, userName, userPersona, chatHistory);
         
         try {
             const aiResponse = await this.sendToAI(prompt);
@@ -250,48 +257,55 @@ generatedData.contacts.forEach(contact => {
         }
     }
     
-    buildAIPrompt(charName, desc, scenario, personality, chatHistory) {
-        const chatText = chatHistory.length > 0 
-            ? chatHistory.map(c => `${c.speaker}: ${c.message}`).join('\n')
-            : '（暂无聊天记录）';
-        
-        return `
-# 任务：根据角色卡和聊天记录，智能生成微信联系人和群聊
+buildAIPrompt(charName, charDesc, scenario, personality, userName, userPersona, chatHistory) {
+    const chatText = chatHistory.length > 0 
+        ? chatHistory.map(c => `${c.speaker}: ${c.message}`).join('\n')
+        : '（暂无聊天记录）';
+    
+    return `
+你是一个智能助手，现在需要根据提供的信息生成微信联系人列表。
 
-## 角色卡信息
-- 角色名：${charName}
-- 描述：${desc}
-- 场景：${scenario}
-- 性格：${personality}
+# 角色卡信息
+- **角色名：** ${charName}
+- **描述：** ${charDesc || '无'}
+- **场景设定：** ${scenario || '无'}
+- **性格特征：** ${personality || '无'}
 
-## 聊天记录（最近50条）
+# 用户信息
+- **用户名：** ${userName}
+- **用户设定：** ${userPersona || '无'}
+
+# 聊天记录（最近50条）
 ${chatText}
 
 ---
 
-## 要求
-1. 分析角色卡和聊天记录，推测出可能的人物关系（家人、朋友、同事等）
-2. 生成合理的微信联系人列表（5-10人）
-3. 如果有多人互动，创建群聊（1-3个）
-4. 每个联系人需要包含：name（姓名）、avatar（emoji头像）、relation（关系）
-5. **必须返回纯JSON格式**，不要有任何其他文字
+# 任务要求
+1. 分析角色卡、用户信息和聊天记录，推测出可能的人物关系
+2. 生成5-10个合理的联系人（家人、朋友、同事、同学等）
+3. 如果有多人场景，生成1-3个群聊
+4. **严格按照以下JSON格式返回**，不要有任何其他文字或解释
 
-## 返回格式示例
-\`\`\`json
+# 返回格式（必须严格遵守）
 {
   "contacts": [
-    {"name": "妈妈", "avatar": "👩‍🦱", "relation": "母亲"},
-    {"name": "李明", "avatar": "👨", "relation": "同事"}
+    {"name": "李明", "avatar": "👨", "relation": "同事"},
+    {"name": "小红", "avatar": "👩", "relation": "朋友"}
   ],
   "groups": [
     {"name": "家庭群", "avatar": "👨‍👩‍👧", "members": ["妈妈", "爸爸"], "lastMessage": "今晚回家吃饭吗？"}
   ]
 }
-\`\`\`
 
-现在开始生成：
-`;
-    }
+**注意：**
+- 只返回JSON对象，不要用markdown代码块包裹
+- 不要添加任何解释文字
+- name必须是中文或英文名字
+- avatar使用emoji表情
+- relation描述关系（如：母亲、父亲、同事、朋友、同学等）
+
+开始生成：`;
+}
     
     async sendToAI(prompt) {
         return new Promise((resolve, reject) => {
@@ -378,44 +392,120 @@ ${chatText}
         });
     }
     
-    parseAIResponse(text) {
-        try {
-            const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || 
-                             text.match(/```\s*([\s\S]*?)\s*```/) ||
-                             [null, text];
+parseAIResponse(text) {
+    try {
+        console.log('🔍 AI原始返回:', text);
+        
+        // 1️⃣ 尝试提取JSON代码块
+        let jsonText = text;
+        
+        // 移除markdown代码块
+        const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) {
+            jsonText = codeBlockMatch[1];
+        }
+        
+        // 2️⃣ 尝试提取花括号内容
+        const braceMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (braceMatch) {
+            jsonText = braceMatch[0];
+        }
+        
+        // 3️⃣ 清理可能的干扰字符
+        jsonText = jsonText
+            .replace(/^[^{]*/, '')  // 删除开头的非JSON字符
+            .replace(/[^}]*$/, '')  // 删除结尾的非JSON字符
+            .trim();
+        
+        console.log('🔍 提取的JSON:', jsonText);
+        
+        // 4️⃣ 解析JSON
+        const data = JSON.parse(jsonText);
+        
+        // 5️⃣ 验证数据结构
+        if (!data.contacts || !Array.isArray(data.contacts)) {
+            throw new Error('缺少contacts字段');
+        }
+        
+        console.log('✅ 成功解析，联系人数量:', data.contacts.length);
+        return data;
+        
+    } catch (e) {
+        console.error('❌ JSON解析失败:', e);
+        console.log('尝试容错解析...');
+        return this.fallbackParse(text);
+    }
+}
+    
+fallbackParse(text) {
+    console.warn('⚠️ 使用容错解析模式');
+    
+    const contacts = [];
+    const groups = [];
+    
+    // 提取联系人信息（支持多种格式）
+    const lines = text.split('\n');
+    
+    lines.forEach(line => {
+        // 匹配格式：李明 - 同事  或  李明：同事
+        const match = line.match(/["']?([^"'\s:：-]+)["']?\s*[-:：]\s*["']?([^"'\n]+)["']?/);
+        if (match && match[1].length < 10) {  // 名字不超过10个字
+            const name = match[1].trim();
+            const relation = match[2].trim();
             
-            const jsonText = jsonMatch[1].trim();
-            const data = JSON.parse(jsonText);
-            
-            console.log('✅ AI返回数据:', data);
-            return data;
-            
-        } catch (e) {
-            console.error('❌ 解析AI返回失败:', e);
-            console.log('原始文本:', text);
-            return this.fallbackParse(text);
+            // 排除明显不是名字的内容
+            if (!name.includes('联系人') && !name.includes('contacts')) {
+                contacts.push({
+                    name: name,
+                    avatar: this.guessAvatar(name, relation),
+                    relation: relation
+                });
+            }
+        }
+    });
+    
+    // 如果一个都没解析出来，创建默认联系人
+    if (contacts.length === 0) {
+        console.warn('⚠️ 无法解析，使用默认联系人');
+        contacts.push(
+            { name: '朋友A', avatar: '👤', relation: '朋友' },
+            { name: '朋友B', avatar: '👤', relation: '朋友' },
+            { name: '同事', avatar: '👔', relation: '同事' }
+        );
+    }
+    
+    console.log(`✅ 容错解析成功，生成${contacts.length}个联系人`);
+    return { contacts, groups };
+}
+
+// 🎨 根据名字和关系猜测头像
+guessAvatar(name, relation) {
+    const relationMap = {
+        '妈妈': '👩', '母亲': '👩', 
+        '爸爸': '👨', '父亲': '👨',
+        '哥哥': '👨', '弟弟': '👨', '姐姐': '👩', '妹妹': '👩',
+        '老师': '👨‍🏫', '教授': '👨‍🏫',
+        '同事': '👔', '上司': '💼', '老板': '💼',
+        '朋友': '👤', '同学': '🎓',
+        '医生': '👨‍⚕️', '护士': '👩‍⚕️'
+    };
+    
+    for (const [key, emoji] of Object.entries(relationMap)) {
+        if (relation.includes(key)) {
+            return emoji;
         }
     }
     
-    fallbackParse(text) {
-        console.warn('⚠️ 使用容错解析');
-        
-        const contacts = [];
-        const lines = text.split('\n');
-        
-        lines.forEach(line => {
-            const match = line.match(/([^\s-]+)\s*[-:：]\s*(.+)/);
-            if (match) {
-                contacts.push({
-                    name: match[1].trim(),
-                    avatar: '👤',
-                    relation: match[2].trim()
-                });
-            }
-        });
-        
-        return { contacts, groups: [] };
+    // 根据性别猜测
+    if (name.includes('女') || name.includes('小红') || name.includes('小芳')) {
+        return '👩';
     }
+    if (name.includes('男') || name.includes('小明') || name.includes('小刚')) {
+        return '👨';
+    }
+    
+    return '👤';  // 默认
+}
     
     getFirstLetter(name) {
         const letterMap = {
