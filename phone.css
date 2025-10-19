@@ -675,20 +675,20 @@
 
 .phone-notification {
     position: absolute;
-    top: 55px;
+    top: 45px;
     left: 50%;
     transform: translateX(-50%);
-    width: 90%;
-    max-width: 320px;
+    width: 85%;
+    max-width: 250px;
     /* 🎨 优化：更深的毛玻璃 */
     background: rgba(20, 20, 20, 0.95);
     backdrop-filter: blur(40px) saturate(180%);
     -webkit-backdrop-filter: blur(40px) saturate(180%);
-    border-radius: 16px;
-    padding: 12px 14px;
+    border-radius: 14px;
+    padding: 10px 12px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     /* 🎨 优化：更深的阴影 */
     box-shadow: 
         0 12px 45px rgba(0, 0, 0, 0.7),
@@ -703,7 +703,7 @@
 }
 
 .notification-icon {
-    font-size: 24px;
+    font-size: 20px;
     flex-shrink: 0;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
@@ -714,15 +714,15 @@
 }
 
 .notification-title {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
 }
 
 .notification-message {
-    font-size: 12px;
+    font-size: 11px;
     opacity: 0.85;
-    line-height: 1.4;
+    line-height: 1.3;
 }
 
 /* ========================================
@@ -1077,6 +1077,29 @@ input:checked + .toggle-slider:before {
         aspect-ratio: 9 / 19.5 !important;
         border-radius: 32px;
         padding: 7px;
+    }
+
+   /* 🎨 新增：通知栏响应式 */
+    .phone-notification {
+        top: 40px;
+        width: 82%;
+        max-width: 230px;        /* 移动端更小 */
+        border-radius: 12px;
+        padding: 9px 11px;
+        gap: 9px;
+    }
+    
+    .notification-icon {
+        font-size: 18px;         /* 移动端图标更小 */
+    }
+    
+    .notification-title {
+        font-size: 11px;
+    }
+    
+    .notification-message {
+        font-size: 10px;
+        line-height: 1.2;
     }
     
     .phone-notch {
