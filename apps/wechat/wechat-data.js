@@ -241,7 +241,7 @@ await this.saveData();
         }
     }
     
-// 🔧 构建联系人生成提示词（完整版：角色卡+记忆表格）
+// 🔧 构建联系人生成提示词（完整版：角色卡+记忆表格+世界书）
 buildContactPrompt(context) {
     const charName = context.name2 || context.name || '角色';
     const userName = context.name1 || '用户';
@@ -296,36 +296,33 @@ buildContactPrompt(context) {
         console.log('⚠️ [联系人生成] 未找到记忆表格');
     }
 
-     // ========================================
+    // ========================================
     // 3️⃣ 获取世界书
-   // ========================================
-let worldInfoData = '';
-
-const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
-    ? SillyTavern.getContext() 
-    : null;
-
-if (context?.worldInfoData && Array.isArray(context.worldInfoData)) {
-    const worldInfoLines = [];
+    // ========================================
+    let worldInfoData = '';
     
-    context.worldInfoData.forEach(entry => {
-        if (entry.content && entry.content.trim()) {
-            const title = entry.comment || entry.key?.[0] || 'NPC';
-            worldInfoLines.push(`### ${title}`);
-            worldInfoLines.push(entry.content.trim());
+    // 🔑 修复：直接使用传入的context参数，不要重新定义！
+    if (context?.worldInfoData && Array.isArray(context.worldInfoData)) {
+        const worldInfoLines = [];
+        
+        context.worldInfoData.forEach(entry => {
+            if (entry.content && entry.content.trim()) {
+                const title = entry.comment || entry.key?.[0] || 'NPC';
+                worldInfoLines.push(`### ${title}`);
+                worldInfoLines.push(entry.content.trim());
+            }
+        });
+        
+        if (worldInfoLines.length > 0) {
+            worldInfoData = '\n**世界书（NPC和设定）：**\n' + worldInfoLines.join('\n') + '\n';
+            console.log('✅ [联系人生成] 世界书:', worldInfoLines.length / 2, '条');
         }
-    });
-    
-    if (worldInfoLines.length > 0) {
-        worldInfoData = '\n**世界书（NPC和设定）：**\n' + worldInfoLines.join('\n') + '\n';
-        console.log('✅ [联系人生成] 世界书:', worldInfoLines.length / 2, '条');
+    } else {
+        console.log('⚠️ [联系人生成] 未找到世界书');
     }
-} else {
-    console.log('⚠️ [联系人生成] 未找到世界书');
-}
     
     // ========================================
-    // 3️⃣ 获取聊天记录
+    // 4️⃣ 获取聊天记录
     // ========================================
     const chatHistory = [];
     if (context.chat && Array.isArray(context.chat)) {
@@ -352,7 +349,7 @@ if (context?.worldInfoData && Array.isArray(context.worldInfoData)) {
     console.log('✅ [联系人生成] 聊天记录:', chatHistory.length, '条');
     
     // ========================================
-    // 4️⃣ 构建提示词
+    // 5️⃣ 构建提示词
     // ========================================
     return `你是一个数据生成助手。请根据以下信息，生成微信联系人列表。
 
@@ -362,6 +359,7 @@ if (context?.worldInfoData && Array.isArray(context.worldInfoData)) {
 
 ${charPersonality ? `**性格和背景：**\n${charPersonality}\n` : ''}
 ${charScenario ? `**场景：**\n${charScenario}\n` : ''}
+${worldInfoData}
 ${memoryTableData}
 
 # 聊天历史（最近30条）
@@ -375,6 +373,7 @@ ${chatText}
 **重点**：
 - 从性格背景中提取关系人物
 - 从记忆表格中提取NPC
+- 从世界书中提取NPC
 - **必须添加主角色 ${charName} 作为联系人**
 
 # 输出格式（严格按此JSON格式，不要任何其他文字）
