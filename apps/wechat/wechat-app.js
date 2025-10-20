@@ -427,6 +427,42 @@ export class WechatApp {
     cursor: pointer;
 }
 
+/* 🧧 红包消息样式 */
+.message-redpacket {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    min-width: 200px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+    transition: transform 0.2s;
+}
+
+.message-redpacket:active {
+    transform: scale(0.95);
+}
+
+.redpacket-icon {
+    font-size: 40px;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.redpacket-wish {
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+.redpacket-amount {
+    font-size: 14px;
+    text-align: center;
+    opacity: 0.9;
+}
+
 .transfer-icon {
     font-size: 32px;
 }
@@ -2104,25 +2140,26 @@ showClearDataConfirm() {
     });
     
     document.getElementById('confirm-clear-data')?.addEventListener('click', () => {
-        this.data.data = {
-            userInfo: {
-                name: '我',
-                wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
-                avatar: '😊',
-                signature: '',
-                coverImage: null
-            },
-            chats: [],
-            contacts: [],
-            messages: {},
-            moments: []
-        };
-        this.data.saveData();
-        this.phoneShell.showNotification('已清空', '微信数据已重置', '✅');
-        setTimeout(() => {
-            this.currentView = 'chats';
-            this.render();
-        }, 1000);
-    });
+    this.data.data = {
+        userInfo: {
+            name: '我',
+            wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
+            avatar: '😊',
+            signature: '',
+            coverImage: null
+        },
+        chats: [],
+        contacts: [],
+        messages: {},
+        moments: [],
+        customEmojis: [] // ← 新增
+    };
+    this.data.saveData();
+    this.phoneShell.showNotification('已清空', '微信数据已重置', '✅');
+    setTimeout(() => {
+        this.currentView = 'chats';
+        this.render();
+    }, 1000);
+});
 }
 }
