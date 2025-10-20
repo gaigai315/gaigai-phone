@@ -295,6 +295,34 @@ buildContactPrompt(context) {
     } else {
         console.log('⚠️ [联系人生成] 未找到记忆表格');
     }
+
+     // ========================================
+    // 3️⃣ 获取世界书
+   // ========================================
+let worldInfoData = '';
+
+const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
+    ? SillyTavern.getContext() 
+    : null;
+
+if (context?.worldInfoData && Array.isArray(context.worldInfoData)) {
+    const worldInfoLines = [];
+    
+    context.worldInfoData.forEach(entry => {
+        if (entry.content && entry.content.trim()) {
+            const title = entry.comment || entry.key?.[0] || 'NPC';
+            worldInfoLines.push(`### ${title}`);
+            worldInfoLines.push(entry.content.trim());
+        }
+    });
+    
+    if (worldInfoLines.length > 0) {
+        worldInfoData = '\n**世界书（NPC和设定）：**\n' + worldInfoLines.join('\n') + '\n';
+        console.log('✅ [联系人生成] 世界书:', worldInfoLines.length / 2, '条');
+    }
+} else {
+    console.log('⚠️ [联系人生成] 未找到世界书');
+}
     
     // ========================================
     // 3️⃣ 获取聊天记录
