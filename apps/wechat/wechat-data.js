@@ -405,9 +405,9 @@ async sendToAI(prompt) {
                 if (!responded) {
                     responded = true;
                     textarea.value = originalValue;
-                    reject(new Error('AI响应超时（30秒）'));
+                    reject(new Error('AI响应超时（120秒）'));
                 }
-            }, 30000);
+            }, 120000);
 
             const messageHandler = () => {
                 if (responded) return;
