@@ -423,7 +423,8 @@ detectAPIType(context) {
     
     console.warn('⚠️ [联系人生成] 无法确定API类型，默认使用OpenAI');
     return 'openai';
-}  
+}
+    
 // 📤 完全静默调用AI（智能检测API类型）
 async sendToAI(prompt) {
     try {
@@ -472,7 +473,7 @@ async callOpenAI(prompt, context) {
         if (apiUrl.endsWith('/v1')) {
             apiUrl = apiUrl + '/chat/completions';
         } else if (!apiUrl.endsWith('/')) {
-            apiUrl = apiUrl + '/v1/chat/completions';
+            apiUrl = apiUrl + 'v1/chat/completions';
         } else {
             apiUrl = apiUrl + 'v1/chat/completions';
         }
