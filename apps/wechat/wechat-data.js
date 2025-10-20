@@ -486,27 +486,45 @@ async sendToAI(prompt) {
     }
 }
 
-// 🔧 直接 API 调用方法（不经过聊天系统）
 async directAPICall(prompt) {
     console.log('📡 [静默AI] 调用Chat Completion API...');
     
     try {
-        // 🔥 获取正确的 CSRF Token（SillyTavern 的方式）
-        const token = typeof getRequestHeaders === 'function' 
-            ? getRequestHeaders()['X-CSRF-Token'] 
-            : window.token || '';
+        // 🔥 多种方式获取 CSRF Token
+        let token = '';
         
-        console.log('🔑 CSRF Token:', token ? '已获取' : '⚠️ 未获取');
+        // 方法1：从全局函数获取
+        if (typeof getRequestHeaders === 'function') {
+            const headers = getRequestHeaders();
+            token = headers['X-CSRF-Token'] || headers['x-csrf-token'] || '';
+        }
         
-        // 使用 jQuery ajax（SillyTavern 标准方式）
-        const response = await $.ajax({
-            url: '/api/backends/chat-completions/generate',
+        // 方法2：从 meta 标签获取
+        if (!token) {
+            const metaTag = document.querySelector('meta[name="csrf-token"]');
+            token = metaTag?.content || '';
+        }
+        
+        // 方法3：从全局变量获取
+        if (!token && window.token) {
+            token = window.token;
+        }
+        
+        console.log('🔑 CSRF Token:', token ? `已获取(${token.substring(0, 10)}...)` : '⚠️ 未获取到，尝试无token调用');
+        
+        // 🔥 使用 SillyTavern 的 fetch 包装器
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (token) {
+            headers['X-CSRF-Token'] = token;
+        }
+        
+        const response = await fetch('/api/backends/chat-completions/generate', {
             method: 'POST',
-            contentType: 'application/json',
-            headers: {
-                'X-CSRF-Token': token
-            },
-            data: JSON.stringify({
+            headers: headers,
+            body: JSON.stringify({
                 messages: [
                     {
                         role: 'system',
@@ -518,21 +536,35 @@ async directAPICall(prompt) {
                     }
                 ],
                 max_tokens: 2000,
-                temperature: 0.7
+                temperature: 0.7,
+                stream: false
             })
         });
         
-        console.log('📥 原始API响应:', response);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ API错误:', errorText.substring(0, 200));
+            
+            // 🔥 如果是 CSRF 错误，尝试备用方案
+            if (response.status === 403 && errorText.includes('CSRF')) {
+                console.warn('⚠️ CSRF验证失败，使用备用方案...');
+                return await this.fallbackGenerate(prompt);
+            }
+            
+            throw new Error(`API请求失败: ${response.status}`);
+        }
         
-        // 提取响应内容
+        const data = await response.json();
+        console.log('📥 原始API响应:', data);
+        
         const result = 
-            response.choices?.[0]?.message?.content ||
-            response.response ||
-            response.message?.content ||
+            data.choices?.[0]?.message?.content ||
+            data.response ||
+            data.message?.content ||
             '';
         
         if (!result) {
-            console.error('❌ AI返回为空，完整数据:', JSON.stringify(response));
+            console.error('❌ AI返回为空，完整数据:', JSON.stringify(data));
             throw new Error('AI返回为空');
         }
         
@@ -541,9 +573,94 @@ async directAPICall(prompt) {
         
     } catch (error) {
         console.error('❌ [静默AI] 失败:', error);
+        
+        // 🔥 最后的备用方案
+        console.warn('⚠️ API调用失败，尝试备用生成方法...');
+        return await this.fallbackGenerate(prompt);
+    }
+}
+
+// 🔧 备用生成方法（临时消息法 - 但会立即清理）
+async fallbackGenerate(prompt) {
+    console.log('📡 [备用方案] 使用临时消息法...');
+    
+    try {
+        const context = SillyTavern.getContext();
+        if (!context || !context.chat) {
+            throw new Error('无法获取聊天上下文');
+        }
+        
+        const originalLength = context.chat.length;
+        console.log('📊 当前聊天记录数:', originalLength);
+        
+        // 添加临时消息（最小化内容以减少显示）
+        const tempMsg = {
+            name: context.name1 || 'System',
+            is_user: true,
+            mes: '',  // 空消息
+            send_date: Date.now(),
+            extra: { isQuiet: true }
+        };
+        
+        context.chat.push(tempMsg);
+        
+        // 手动触发生成
+        console.log('📤 触发AI生成...');
+        
+        // 使用 quiet 生成
+        const generatePromise = context.generate(prompt, {
+            quiet: true,
+            quietToLoud: false,
+            force_name2: true,
+            skipWIAN: true
+        });
+        
+        // 等待生成完成
+        let result = '';
+        const checkInterval = setInterval(() => {
+            if (context.chat.length > originalLength + 1) {
+                clearInterval(checkInterval);
+                
+                const aiMsg = context.chat[context.chat.length - 1];
+                result = aiMsg.mes || aiMsg.swipes?.[aiMsg.swipe_id || 0] || '';
+                
+                // 🔥 立即删除临时消息
+                context.chat.splice(originalLength, 2);
+                console.log('🧹 已删除', 2, '条临时消息');
+                
+                // 🔥 强制刷新UI（清空显示）
+                if (typeof eventSource !== 'undefined' && eventSource.emit) {
+                    eventSource.emit('chatChanged', { preventSave: true });
+                }
+            }
+        }, 100);
+        
+        await generatePromise;
+        
+        // 等待result被设置
+        await new Promise(resolve => {
+            const wait = setInterval(() => {
+                if (result) {
+                    clearInterval(wait);
+                    resolve();
+                }
+            }, 100);
+            
+            setTimeout(() => {
+                clearInterval(wait);
+                resolve();
+            }, 30000);
+        });
+        
+        console.log('✅ [备用方案] 成功，长度:', result.length);
+        return result;
+        
+    } catch (error) {
+        console.error('❌ [备用方案] 失败:', error);
         throw error;
     }
-}   
+}
+    
 // 📥 解析AI返回（增强版）
 parseAIResponse(text) {
     try {
