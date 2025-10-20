@@ -241,17 +241,14 @@ async loadContactsFromCharacter() {
     }
 }
     
-// 🔧 构建联系人生成提示词（智能版3.0：精准提取人名）
+// 🔧 构建联系人生成提示词（完全重写版）
 buildContactPrompt(context) {
     const charName = context.name2 || context.name || '角色';
     const userName = context.name1 || '用户';
     
     console.log('📝 [联系人生成] 开始构建提示词...');
     
-    // ========================================
-    // 🎯 收集所有可能的人名
-    // ========================================
-    const potentialNames = new Set(); // 使用Set避免重复
+    const potentialNames = new Set();
     
     // ========================================
     // 1️⃣ 从角色卡提取
@@ -265,166 +262,109 @@ buildContactPrompt(context) {
             charPersonality = char.personality || '';
             charScenario = char.scenario || '';
             
-            // 🔥 使用正则提取可能的人名
-            const fullText = (charPersonality + ' ' + charScenario);
-            
-            // 查找中文人名（2-4个字）
-            const chineseNames = fullText.match(/[\u4e00-\u9fa5]{2,4}(?:老师|同学|朋友|哥|姐|弟|妹|爸|妈|叔|姨|姑|舅)/g);
-            if (chineseNames) {
-                chineseNames.forEach(name => {
-                    const cleanName = name.replace(/(老师|同学|朋友|哥|姐|弟|妹|爸|妈|叔|姨|姑|舅)$/, '');
-                    if (cleanName.length >= 2) {
-                        potentialNames.add(cleanName);
-                    }
-                });
-            }
-            
-            console.log('✅ [联系人生成] 角色卡信息已加载');
+            console.log('✅ [联系人生成] 角色卡:', charPersonality.substring(0, 100));
         }
     }
     
     // ========================================
-    // 2️⃣ 从记忆表格智能提取（重点改进）
+    // 2️⃣ 从记忆表格提取（修复版）
     // ========================================
     if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
-        console.log('🔍 [联系人生成] 开始解析记忆表格...');
+        console.log('🔍 [联系人生成] 解析记忆表格...');
         
-        // 遍历所有部分
-        window.Gaigai.m.s.forEach((section, sectionIdx) => {
-            console.log(`  检查部分 ${sectionIdx}: ${section.n}`);
+        window.Gaigai.m.s.forEach((section, idx) => {
+            console.log(`  [表格${idx}] ${section.n}`);
             
             if (Array.isArray(section.r) && section.r.length > 0) {
-                // 获取列名（第一行的键）
-                const columns = Object.keys(section.r[0] || {});
-                console.log(`    列名:`, columns);
+                console.log(`    共${section.r.length}行数据`);
                 
-                // 查找可能包含人名的列
-                const nameColumns = columns.filter(col => {
-                    const colLower = col.toLowerCase();
-                    return colLower.includes('name') || 
-                           colLower.includes('名') ||
-                           colLower.includes('npc') ||
-                           colLower.includes('人物') ||
-                           colLower.includes('角色');
-                });
-                
-                // 遍历每一行
                 section.r.forEach((row, rowIdx) => {
-                    // 优先从人名列提取
-                    if (nameColumns.length > 0) {
-                        nameColumns.forEach(col => {
-                            const value = row[col];
-                            if (value && typeof value === 'string') {
-                                const cleaned = value.trim();
-                                if (this.isPossibleName(cleaned)) {
-                                    potentialNames.add(cleaned);
-                                    console.log(`    ✓ 从${col}列提取: ${cleaned}`);
-                                }
+                    console.log(`    [行${rowIdx}]`, Object.keys(row));
+                    
+                    // 🔥 遍历每一行的所有值
+                    Object.entries(row).forEach(([key, value]) => {
+                        if (value && typeof value === 'string' && value.trim()) {
+                            const v = value.trim();
+                            
+                            // 跳过明显的系统字段
+                            if (this.isSystemField(v)) {
+                                return;
                             }
-                        });
-                    } else {
-                        // 如果没有明确的人名列，检查所有值
-                        Object.entries(row).forEach(([key, value]) => {
-                            if (typeof value === 'string' && value.trim()) {
-                                const cleaned = value.trim();
-                                // 跳过列名本身和系统字段
-                                if (!this.isSystemField(key) && this.isPossibleName(cleaned)) {
-                                    potentialNames.add(cleaned);
-                                    console.log(`    ✓ 从${key}提取: ${cleaned}`);
-                                }
+                            
+                            // 检查是否是人名
+                            if (this.isPossibleName(v)) {
+                                potentialNames.add(v);
+                                console.log(`      ✓ 提取人名: ${v}`);
                             }
-                        });
-                    }
+                        }
+                    });
                 });
             }
         });
-        
-        console.log('✅ [联系人生成] 记忆表格解析完成');
     }
     
     // ========================================
-    // 3️⃣ 从世界书提取
+    // 3️⃣ 从世界书提取（修复版）
     // ========================================
-    if (context?.worldInfoData && Array.isArray(context.worldInfoData)) {
-        console.log('🔍 [联系人生成] 开始解析世界书...');
-        
+    let worldBookNPCs = [];
+    
+    // 🔥 方法A：从 context.worldInfoData 读取
+    if (context.worldInfoData && Array.isArray(context.worldInfoData)) {
+        console.log('🔍 [世界书A] 找到', context.worldInfoData.length, '条');
         context.worldInfoData.forEach(entry => {
-            // 从标题提取
-            if (entry.comment && this.isPossibleName(entry.comment)) {
-                potentialNames.add(entry.comment.trim());
-                console.log(`  ✓ 从世界书标题提取: ${entry.comment}`);
+            if (entry.comment) {
+                const name = entry.comment.trim();
+                if (this.isPossibleName(name)) {
+                    potentialNames.add(name);
+                    console.log(`  ✓ 从世界书标题提取: ${name}`);
+                }
             }
-            
-            // 从关键词提取
-            if (entry.key && Array.isArray(entry.key)) {
-                entry.key.forEach(k => {
-                    if (this.isPossibleName(k)) {
-                        potentialNames.add(k.trim());
-                        console.log(`  ✓ 从世界书关键词提取: ${k}`);
-                    }
-                });
+        });
+    }
+    
+    // 🔥 方法B：从全局world_info读取
+    if (typeof world_info !== 'undefined' && world_info.entries) {
+        console.log('🔍 [世界书B] 找到', Object.keys(world_info.entries).length, '条');
+        Object.values(world_info.entries).forEach(entry => {
+            if (entry.comment) {
+                const name = entry.comment.trim();
+                if (this.isPossibleName(name)) {
+                    potentialNames.add(name);
+                    console.log(`  ✓ 从世界书提取: ${name}`);
+                }
             }
-            
-            // 从内容提取（查找明确标记的人名）
-            if (entry.content) {
-                // 查找"名字："或类似标记后的内容
-                const namePatterns = [
-                    /(?:名字|姓名|称呼|叫做|名为)[：:]\s*([^\s，。,\.]+)/g,
-                    /(?:他叫|她叫|名叫)\s*([^\s，。,\.]+)/g
-                ];
-                
-                namePatterns.forEach(pattern => {
-                    let match;
-                    while ((match = pattern.exec(entry.content)) !== null) {
-                        if (match[1] && this.isPossibleName(match[1])) {
-                            potentialNames.add(match[1].trim());
-                            console.log(`  ✓ 从世界书内容提取: ${match[1]}`);
+        });
+    }
+    
+    // 🔥 方法C：从角色的world_info读取
+    if (context.characters && context.characterId !== undefined) {
+        const char = context.characters[context.characterId];
+        if (char && char.data && char.data.character_book) {
+            const book = char.data.character_book;
+            if (book.entries && Array.isArray(book.entries)) {
+                console.log('🔍 [世界书C] 角色世界书', book.entries.length, '条');
+                book.entries.forEach(entry => {
+                    if (entry.comment) {
+                        const name = entry.comment.trim();
+                        if (this.isPossibleName(name)) {
+                            potentialNames.add(name);
+                            console.log(`  ✓ 从角色世界书提取: ${name}`);
                         }
                     }
                 });
             }
-        });
-        
-        console.log('✅ [联系人生成] 世界书解析完成');
+        }
     }
-    
-    // ========================================
-    // 4️⃣ 从聊天记录提取
-    // ========================================
-    if (context.chat && Array.isArray(context.chat)) {
-        console.log('🔍 [联系人生成] 开始解析聊天记录...');
-        
-        context.chat.slice(-50).forEach(msg => {
-            if (msg.mes) {
-                // 查找对话中提到的人
-                const patterns = [
-                    /(?:和|跟|与|给|找|叫|喊)([^\s，。,\.]{2,4})(?:说|讲|聊|玩)/g,
-                    /([^\s，。,\.]{2,4})(?:老师|同学|朋友)/g
-                ];
-                
-                patterns.forEach(pattern => {
-                    let match;
-                    while ((match = pattern.exec(msg.mes)) !== null) {
-                        if (match[1] && this.isPossibleName(match[1])) {
-                            potentialNames.add(match[1].trim());
-                        }
-                    }
-                });
-            }
-        });
-        
-        console.log('✅ [联系人生成] 聊天记录解析完成');
-    }
-    
-    // ========================================
-    // 5️⃣ 过滤并整理人名
-    // ========================================
     
     // 移除主角和用户名
     potentialNames.delete(charName);
     potentialNames.delete(userName);
+    potentialNames.delete('主线剧情');
+    potentialNames.delete('人物档案');
+    potentialNames.delete('世界设定');
+    potentialNames.delete('支线追踪');
+    potentialNames.delete('角色状态');
     
-    // 转换为数组
     const validNames = Array.from(potentialNames).filter(name => {
         return name && 
                name.length >= 2 && 
@@ -432,61 +372,85 @@ buildContactPrompt(context) {
                !this.isSystemField(name);
     });
     
-    console.log('📊 [联系人生成] 最终提取到的人名:', validNames);
+    console.log('📊 [联系人生成] 最终提取:', validNames);
     
     // ========================================
-    // 6️⃣ 构建提示词
+    // 构建提示词（简化版，避免角色卡污染）
     // ========================================
-    return `你是一个微信联系人生成助手。
+    return `你是联系人生成助手。
 
-# 角色信息
-- 主角色：${charName}
-- 用户：${userName}
+已识别的人物：
+${validNames.length > 0 ? validNames.map(n => `- ${n}`).join('\n') : '（未识别到）'}
 
-# 已识别的相关人物
-${validNames.length > 0 ? validNames.map(n => `- ${n}`).join('\n') : '（未识别到具体人物）'}
+角色：${charName}
 
-# 角色背景（参考）
-${charPersonality ? charPersonality.substring(0, 300) + '...' : '无'}
+任务：生成5-10个微信联系人JSON。
 
-# 任务
-生成5-10个微信联系人列表。
+规则：
+1. 第一个必须是"${charName}"
+2. 优先使用"已识别的人物"
+3. 不够就用通用名（张伟、李娜等）
+4. 不要用：时代、天气、地点、年龄、待办
 
-# 规则
-1. 第一个联系人必须是"${charName}"
-2. 如果上面有"已识别的相关人物"，优先使用这些名字
-3. 如果人物不够，根据角色背景添加合理的联系人（如：同学、同事、家人）
-4. 如果没有任何信息，使用通用中文名字（如：张伟、李娜、王强、陈静）
-
-# ⚠️ 禁止使用
-不要把这些当成人名：时代、天气、地点、全局时间、待办、区域、方位、生理、物品、静态、动态、年龄、日期、状态
-
-# 输出JSON格式
+输出格式（只返回JSON）：
 \`\`\`json
 {
   "contacts": [
-    {
-      "name": "${charName}",
-      "avatar": "⭐",
-      "relation": "主角",
-      "remark": ""
-    },
-    {
-      "name": "真实的人名",
-      "avatar": "👨或👩",
-      "relation": "关系类型",
-      "remark": "备注"
-    }
+    {"name": "${charName}", "avatar": "⭐", "relation": "主角", "remark": ""},
+    {"name": "真实人名", "avatar": "👨", "relation": "朋友", "remark": ""}
   ],
-  "groups": [
-    {
-      "name": "群名",
-      "avatar": "👥",
-      "members": ["成员1", "成员2", "${charName}"]
-    }
-  ]
+  "groups": []
 }
 \`\`\``;
+}
+
+// 🔧 修改 sendToAI：直接调用API，不用context.generate
+async sendToAI(prompt) {
+    try {
+        console.log('🚀 [手机AI调用] 直接调用API...');
+        
+        // 🔥 方法：直接fetch，完全绕过角色扮演系统
+        const apiUrl = '/api/backends/chat-completions/generate';
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                messages: [
+                    {
+                        role: 'system',
+                        content: '你是一个数据生成助手，只返回JSON格式数据。'
+                    },
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                max_tokens: 1000,
+                temperature: 0.7,
+                stream: false
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API错误: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const aiResponse = data.choices?.[0]?.message?.content || 
+                          data.response || 
+                          data.content || 
+                          '';
+        
+        console.log('✅ [手机AI调用] 成功，长度:', aiResponse.length);
+        return aiResponse;
+        
+    } catch (error) {
+        console.error('❌ [手机AI调用] 失败:', error);
+        throw new Error('AI调用失败: ' + error.message);
+    }
 }
 
 // 🔧 辅助方法：判断是否可能是人名
