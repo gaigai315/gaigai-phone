@@ -690,64 +690,137 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
     return finalPrompt;
 }
 
-// 🔧 完全静默调用AI（直接调用API，不经过界面）
+// 🔧 使用酒馆内部Generate方法（完全静默）
 async sendToAIHidden(prompt, context) {
-    try {
-        console.log('🚀 开始静默API调用...');
-        
-        // 获取当前API设置
-        const apiUrl = '/api/chat/completions';
-        
-        // 构建请求体
-        const requestBody = {
-            messages: [
-                {
-                    role: 'user',
-                    content: prompt
+    return new Promise((resolve, reject) => {
+        try {
+            console.log('🚀 开始静默生成...');
+
+            // 保存当前状态
+            const textarea = document.querySelector('#send_textarea');
+            const chatContainer = document.getElementById('chat');
+            
+            if (!textarea || !chatContainer) {
+                throw new Error('找不到必要元素');
+            }
+
+            const originalValue = textarea.value;
+            const originalChatLength = context.chat?.length || 0;
+            
+            let responded = false;
+            const timeout = setTimeout(() => {
+                if (!responded) {
+                    responded = true;
+                    textarea.value = originalValue;
+                    chatContainer.style.display = '';
+                    
+                    // 删除多余消息
+                    if (context.chat && context.chat.length > originalChatLength) {
+                        context.chat.splice(originalChatLength);
+                    }
+                    
+                    this.hideTypingStatus();
+                    reject(new Error('AI响应超时（60秒）'));
                 }
-            ],
-            // 使用当前酒馆的API设置
-            max_tokens: 500,
-            temperature: 0.9,
-            stream: false
-        };
-        
-        console.log('📤 发送请求到:', apiUrl);
-        
-        // 发送请求
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        if (!response.ok) {
-            throw new Error(`API请求失败: ${response.status}`);
+            }, 60000);
+
+            // 监听AI回复
+            const messageHandler = () => {
+                if (responded) return;
+                
+                try {
+                    if (!context.chat || context.chat.length <= originalChatLength) return;
+
+                    const lastMsg = context.chat[context.chat.length - 1];
+                    if (lastMsg && !lastMsg.is_user) {
+                        responded = true;
+                        clearTimeout(timeout);
+
+                        const aiText = lastMsg.mes || '';
+
+                        // 立即删除刚生成的消息（用户消息+AI回复）
+                        if (context.chat.length >= originalChatLength + 2) {
+                            context.chat.splice(originalChatLength, 2);
+                        }
+
+                        // 立即删除DOM中的消息元素
+                        setTimeout(() => {
+                            const allMessages = document.querySelectorAll('#chat .mes');
+                            if (allMessages.length >= 2) {
+                                allMessages[allMessages.length - 2]?.remove();
+                                allMessages[allMessages.length - 1]?.remove();
+                            }
+                        }, 10);
+
+                        // 恢复输入框和显示
+                        textarea.value = originalValue;
+                        chatContainer.style.display = '';
+
+                        // 移除监听器
+                        context.eventSource?.removeListener?.(
+                            context.event_types?.CHARACTER_MESSAGE_RENDERED,
+                            messageHandler
+                        );
+
+                        console.log('✅ 静默生成成功');
+                        this.hideTypingStatus();
+                        
+                        resolve(aiText);
+                    }
+                } catch (e) {
+                    console.error('❌ 消息处理失败:', e);
+                    responded = true;
+                    clearTimeout(timeout);
+                    textarea.value = originalValue;
+                    chatContainer.style.display = '';
+                    this.hideTypingStatus();
+                    reject(e);
+                }
+            };
+
+            // 注册监听器
+            if (context.eventSource && context.event_types) {
+                context.eventSource.on(
+                    context.event_types.CHARACTER_MESSAGE_RENDERED,
+                    messageHandler
+                );
+            } else {
+                throw new Error('无法注册事件监听器');
+            }
+
+            // 🔥 关键：瞬间隐藏聊天容器
+            chatContainer.style.display = 'none';
+
+            // 🔥 设置提示词到输入框（虽然隐藏了，但还是会被看到一瞬间）
+            // 所以我们先隐藏，再设置
+            textarea.value = prompt;
+            
+            // 🔥 立即触发发送（使用酒馆的Generate方法）
+            setTimeout(() => {
+                if (!responded) {
+                    // 调用酒馆的生成函数
+                    if (typeof Generate === 'function') {
+                        Generate();
+                        console.log('📤 已触发Generate（隐藏模式）');
+                    } else {
+                        // 备用：点击发送按钮
+                        const sendBtn = document.querySelector('#send_but');
+                        if (sendBtn) {
+                            sendBtn.click();
+                            console.log('📤 已点击发送按钮（隐藏模式）');
+                        } else {
+                            throw new Error('无法触发生成');
+                        }
+                    }
+                }
+            }, 50);
+
+        } catch (error) {
+            console.error('❌ 静默生成失败:', error);
+            this.hideTypingStatus();
+            reject(error);
         }
-        
-        const data = await response.json();
-        
-        // 提取AI回复
-        let aiResponse = '';
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-            aiResponse = data.choices[0].message.content;
-        } else if (data.content) {
-            aiResponse = data.content;
-        } else {
-            console.warn('⚠️ API返回格式异常:', data);
-            aiResponse = JSON.stringify(data);
-        }
-        
-        console.log('✅ 静默API调用成功，回复长度:', aiResponse.length);
-        
-        return aiResponse;
-        
-    } catch (error) {
-        console.error('❌ 静默API调用失败:', error);
-        throw error;
-    }
+    });
 }
     
     handleMoreAction(action) {
