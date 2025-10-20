@@ -389,45 +389,6 @@ ${chatHistory || '（暂无聊天记录）'}
 **重要**：你是数据提取助手，不要进行角色扮演，不要输出剧情或对话，只返回JSON格式的联系人列表。`;
 }
 
-// 📤 使用 context.generate 但明确system角色（修复版）
-async sendToAI(prompt) {
-    try {
-        console.log('🚀 [手机AI调用] 开始调用...');
-        
-        const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
-            ? SillyTavern.getContext() 
-            : null;
-        
-        if (!context || typeof context.generate !== 'function') {
-            throw new Error('context.generate 不可用');
-        }
-        
-        // 🔥 关键修改：用明确的system消息包装
-        const wrappedPrompt = `<|system|>你是一个JSON数据生成助手。只返回纯JSON格式，不要角色扮演，不要剧情，不要对话。<|end|>
-
-<|user|>${prompt}<|end|>
-
-<|assistant|>`;
-        
-        console.log('📡 使用 context.generate...');
-        
-        const response = await context.generate(wrappedPrompt, {
-            quiet: true,
-            quietToLoud: false,
-            skipWIAN: true,  // 🔥 跳过世界书注入（避免重复）
-            force_name2: false,
-            isQuiet: true
-        });
-        
-        console.log('✅ [手机AI调用] 成功，长度:', response?.length || 0);
-        return response || '';
-        
-    } catch (error) {
-        console.error('❌ [手机AI调用] 失败:', error);
-        throw error;
-    }
-}
-
 // 🔧 辅助方法：判断是否可能是人名
 isPossibleName(str) {
     if (!str || typeof str !== 'string') return false;
@@ -511,59 +472,13 @@ detectAPIType(context) {
     return 'openai';
 }
     
-// 📤 调用酒馆的生成API（适配新版酒馆）
+// 📤 调用AI生成联系人（完全静默，不影响聊天窗口）
 async sendToAI(prompt) {
     try {
         console.log('🚀 [手机AI调用] 开始静默调用...');
         
-        const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
-            ? SillyTavern.getContext() 
-            : null;
-        
-        if (!context) {
-            throw new Error('无法获取SillyTavern上下文，请确保在聊天界面');
-        }
-        
-        // 🔥 关键修复：保存原始聊天长度，调用后删除临时消息
-        const originalChatLength = context.chat?.length || 0;
-        
-        console.log('📊 [手机AI调用] 当前聊天记录数:', originalChatLength);
-        
-        try {
-            // 使用 context.generate 但不传递 prompt 作为用户消息
-            // 而是通过系统提示注入
-            const response = await context.generate('', {
-                quiet: true,
-                quietToLoud: false,
-                skipWIAN: true,
-                force_name2: false,
-                system_prompt: prompt,  // ← 关键：作为系统提示而非用户消息
-                quietImage: true
-            });
-            
-            console.log('✅ [手机AI调用] 成功，回复长度:', response?.length || 0);
-            
-            // 🧹 清理：删除可能添加的临时消息
-            if (context.chat && context.chat.length > originalChatLength) {
-                console.log('🧹 [手机AI调用] 检测到新消息，正在清理...');
-                const messagesToRemove = context.chat.length - originalChatLength;
-                context.chat.splice(originalChatLength, messagesToRemove);
-                console.log(`🧹 [手机AI调用] 已删除 ${messagesToRemove} 条临时消息`);
-                
-                // 触发聊天更新（但不保存）
-                if (typeof eventSource !== 'undefined' && eventSource.emit) {
-                    eventSource.emit('chatUpdated', { preventSave: true });
-                }
-            }
-            
-            return response || '';
-            
-        } catch (genError) {
-            console.warn('⚠️ context.generate 失败:', genError.message);
-            
-            // 🔧 备用方案：使用 API 直接调用
-            return await this.directAPICall(prompt);
-        }
+        // 🔥 直接使用 API 调用，不走 context.generate
+        return await this.directAPICall(prompt);
         
     } catch (error) {
         console.error('❌ [手机AI调用] 失败:', error);
@@ -571,21 +486,19 @@ async sendToAI(prompt) {
     }
 }
 
-// 🔧 新增：直接 API 调用方法（备用方案）
+// 🔧 直接 API 调用方法（不经过聊天系统）
 async directAPICall(prompt) {
     console.log('📡 [手机AI调用] 使用直接API调用...');
     
     try {
-        const context = SillyTavern.getContext();
-        
-        // 构建API请求（根据你的API类型）
+        // 🔥 使用酒馆的 generate 接口，但完全绕过聊天记录
         const apiUrl = '/api/backends/chat-completions/generate';
         
         const requestBody = {
             messages: [
                 {
                     role: 'system',
-                    content: '你是一个JSON数据生成助手。只返回纯JSON格式，不要角色扮演。'
+                    content: '你是一个JSON数据生成助手。只返回纯JSON格式，不要角色扮演，不要剧情对话。'
                 },
                 {
                     role: 'user',
@@ -593,7 +506,8 @@ async directAPICall(prompt) {
                 }
             ],
             temperature: 0.7,
-            max_tokens: 1000
+            max_tokens: 1500,
+            stream: false
         };
         
         console.log('📤 [手机AI调用] 发送API请求...');
@@ -602,23 +516,41 @@ async directAPICall(prompt) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
             },
             body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API错误响应:', errorText);
             throw new Error(`API请求失败: ${response.status}`);
         }
         
         const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || data.content || '';
+        console.log('📥 API返回数据:', data);
         
-        console.log('✅ [手机AI调用] API调用成功');
+        // 尝试多种可能的响应格式
+        const content = 
+            data.choices?.[0]?.message?.content ||  // OpenAI 格式
+            data.content ||                         // 简化格式
+            data.response ||                        // 某些代理格式
+            data.text ||                            // TextGen 格式
+            '';
+        
+        if (!content) {
+            console.warn('⚠️ AI返回为空，完整响应:', data);
+        }
+        
+        console.log('✅ [手机AI调用] API调用成功，长度:', content.length);
         return content;
         
     } catch (error) {
         console.error('❌ [手机AI调用] API调用失败:', error);
-        throw error;
+        
+        // 🔥 如果 API 调用失败，尝试备用方案
+        console.warn('⚠️ 尝试使用备用方案（临时消息法）...');
+        return await this.fallbackGenerate(SillyTavern.getContext(), prompt);
     }
 }
 
