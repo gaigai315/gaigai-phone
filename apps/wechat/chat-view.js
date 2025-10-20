@@ -690,25 +690,43 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
     return finalPrompt;
 }
 
-    // 🔧 完全静默调用AI（智能检测API类型）
+// 🔧 完全静默调用AI（使用酒馆API）
 async sendToAIHidden(prompt, context) {
     try {
-        console.log('🚀 [手机聊天] 开始静默API调用...');
+        console.log('🚀 [手机聊天] 开始静默调用...');
         
-        // 🔥 智能检测API类型
-        const apiType = this.detectAPIType(context);
-        console.log('📡 检测到API类型:', apiType);
-        
-        switch(apiType) {
-            case 'openai':
-                return await this.callOpenAI(prompt);
-            case 'claude':
-                return await this.callClaude(prompt);
-            case 'textgen':
-                return await this.callTextGen(prompt);
-            default:
-                throw new Error(`不支持的API类型: ${apiType}`);
+        // 复用 wechat-data.js 的方法
+        if (this.app.data && typeof this.app.data.sendToAI === 'function') {
+            return await this.app.data.sendToAI(prompt);
         }
+        
+        // 备用方案：直接调用酒馆API
+        const response = await fetch('/api/backends/chat-completions/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                messages: [{
+                    role: 'user',
+                    content: prompt
+                }],
+                max_tokens: 500,
+                temperature: 0.9,
+                stream: false,
+                quiet: true
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API错误: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const aiResponse = data.choices?.[0]?.message?.content || data.response || '';
+        
+        console.log('✅ [手机聊天] 调用成功，回复长度:', aiResponse.length);
+        return aiResponse;
         
     } catch (error) {
         console.error('❌ [手机聊天] 静默调用失败:', error);
@@ -752,67 +770,6 @@ detectAPIType(context) {
     // 4. 默认使用OpenAI
     console.warn('⚠️ 无法确定API类型，默认使用OpenAI');
     return 'openai';
-}
-
-// 🔥 调用OpenAI API（改进版）
-async callOpenAI(prompt) {
-    const settings = window.oai_settings || {};
-    
-    // 读取API配置
-    let apiUrl = settings.reverse_proxy || 'https://api.openai.com/v1/chat/completions';
-    const apiKey = settings.api_key_openai;
-    
-    // 🔥 处理API URL（确保有正确的endpoint）
-    if (apiUrl && !apiUrl.includes('/chat/completions')) {
-        apiUrl = apiUrl.replace(/\/$/, '') + '/chat/completions';
-    }
-    
-    console.log('📤 [OpenAI] API地址:', apiUrl);
-    console.log('🔑 [OpenAI] 有API Key:', !!apiKey);
-    
-    if (!apiKey) {
-        throw new Error('未配置OpenAI API Key，请在酒馆设置中配置');
-    }
-
-    const requestBody = {
-        model: settings.openai_model || 'gpt-3.5-turbo',
-        messages: [
-            {
-                role: 'user',
-                content: prompt
-            }
-        ],
-        max_tokens: parseInt(settings.openai_max_tokens) || 500,
-        temperature: parseFloat(settings.temp_openai) || 0.9,
-        stream: false
-    };
-
-    console.log('📦 [OpenAI] 请求参数:', {
-        model: requestBody.model,
-        max_tokens: requestBody.max_tokens,
-        temperature: requestBody.temperature
-    });
-
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ [OpenAI] API错误响应:', errorText);
-        throw new Error(`OpenAI API错误 ${response.status}: ${errorText.substring(0, 200)}`);
-    }
-
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || '';
-    
-    console.log('✅ [OpenAI] 调用成功，回复长度:', aiResponse.length);
-    return aiResponse;
 }
 
 // 🔥 调用Claude API（改进版）
