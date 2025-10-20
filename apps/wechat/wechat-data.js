@@ -457,7 +457,7 @@ async sendToAI(prompt) {
     try {
         console.log('🚀 [手机AI调用] 开始静默调用...');
         
-        // 🔥 方法1：使用酒馆内部的 generateQuietPrompt
+        // 🔥 方法1：使用酒馆内置的 generateQuietPrompt（最优先）
         if (typeof generateQuietPrompt === 'function') {
             console.log('📡 使用 generateQuietPrompt...');
             const response = await generateQuietPrompt(prompt, false, false);
@@ -465,30 +465,19 @@ async sendToAI(prompt) {
             return response;
         }
         
-        // 🔥 方法2：使用 Generate 函数（酒馆内部）
-        if (typeof Generate === 'function') {
-            console.log('📡 使用 Generate 函数...');
-            const response = await Generate('normal', { 
-                quiet_prompt: prompt,
-                quiet_to_loud: false,
-                quietToLoud: false,
-                quiet_image: '',
-                quietImage: '',
-                force_name2: false
-            });
-            console.log('✅ [手机AI调用] 成功');
-            return response;
-        }
+        // ❌ 删除了原来的 Generate 函数调用（会显示在聊天窗口）
         
-        // 🔥 方法3：使用 callPopup + 隐藏（兜底）
-        console.warn('⚠️ 未找到静默生成函数，使用备用方案');
+        // 🔥 方法2：直接调用API（完全静默）
+        console.warn('⚠️ 未找到 generateQuietPrompt，使用直接API调用');
         
-        // 尝试通过 fetch 但携带当前会话的 token
+        // 获取CSRF Token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
         const response = await fetch('/api/backends/chat-completions/generate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                'X-CSRF-Token': csrfToken
             },
             credentials: 'same-origin', // 携带cookie
             body: JSON.stringify({
@@ -496,13 +485,17 @@ async sendToAI(prompt) {
                 max_tokens: 1000,
                 temperature: 0.9,
                 stream: false,
-                quiet: true
+                quiet: true, // 🔑 关键：标记为静默模式
+                bypass_message_queue: true // 🔑 关键：绕过消息队列
             })
         });
         
         if (response.ok) {
             const data = await response.json();
-            const aiResponse = data.choices?.[0]?.message?.content || data.response || '';
+            const aiResponse = data.choices?.[0]?.message?.content 
+                             || data.response 
+                             || data.content 
+                             || '';
             console.log('✅ [手机AI调用] HTTP成功');
             return aiResponse;
         }
