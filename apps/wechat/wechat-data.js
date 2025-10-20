@@ -479,13 +479,51 @@ async callOpenAI(prompt, context) {
         }
     }
     
-    // 获取API Key（兼容多种配置方式）
-    const apiKey = settings.api_key_openai || context?.api_key_openai || '';
+    // 🔥 增强：多方式获取API Key
+    let apiKey = '';
+    
+    // 1. 从 oai_settings 获取
+    if (settings.api_key_openai) {
+        apiKey = settings.api_key_openai;
+        console.log('✅ 从 oai_settings 获取到 API Key');
+    }
+    
+    // 2. 从 secret_state 获取（酒馆新版本）
+    if (!apiKey && window.secret_state?.api_key_openai) {
+        apiKey = window.secret_state.api_key_openai;
+        console.log('✅ 从 secret_state 获取到 API Key');
+    }
+    
+    // 3. 从上下文获取
+    if (!apiKey && context?.api_key_openai) {
+        apiKey = context.api_key_openai;
+        console.log('✅ 从 context 获取到 API Key');
+    }
+    
+    // 4. 尝试从DOM获取
+    if (!apiKey) {
+        const keyInput = document.getElementById('api_key_openai');
+        if (keyInput && keyInput.value) {
+            apiKey = keyInput.value;
+            console.log('✅ 从 DOM 获取到 API Key');
+        }
+    }
     
     console.log('📤 [联系人生成] 调用API:', apiUrl);
-    console.log('🔑 [联系人生成] API Key存在:', apiKey ? '是' : '否');
+    console.log('🔑 [联系人生成] API Key存在:', apiKey ? '是（长度' + apiKey.length + '）' : '否');
+    
+    // 🔥 如果自定义端口可能不需要API Key，尝试不带Key调用
+    const isCustomEndpoint = apiUrl.includes('localhost') || 
+                            apiUrl.includes('127.0.0.1') || 
+                            apiUrl.includes('192.168') || 
+                            apiUrl.includes('10.0') ||
+                            !apiUrl.includes('api.openai.com');
+    
+    if (!apiKey && !isCustomEndpoint) {
+        throw new Error('未找到OpenAI API Key。请在酒馆"API连接"→"Chat Completion (OpenAI)"中配置API Key');
+    }
 
-    const requestBody = {
+        const requestBody = {
         model: settings.openai_model || 'gpt-3.5-turbo',
         messages: [
             {
@@ -501,9 +539,11 @@ async callOpenAI(prompt, context) {
         'Content-Type': 'application/json'
     };
     
-    // 如果有API Key，添加Authorization头
+    // 🔥 修改：只有在有API Key的情况下才添加Authorization
     if (apiKey) {
         headers['Authorization'] = `Bearer ${apiKey}`;
+    } else if (!isCustomEndpoint) {
+        console.warn('⚠️ 没有API Key但不是自定义端点，可能会失败');
     }
 
     const response = await fetch(apiUrl, {
