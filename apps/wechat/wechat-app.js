@@ -1853,27 +1853,10 @@ showSettings() {
         }
     });
     
-    // 清空数据按钮
-    document.getElementById('clear-wechat-data')?.addEventListener('click', () => {
-        if (confirm('⚠️ 确定要清空当前角色的所有微信数据吗?\n\n此操作不可恢复!')) {
-            this.data.data = {
-                userInfo: {
-                    name: '我',
-                    wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
-                    avatar: '😊',
-                    signature: '',
-                    coverImage: null
-                },
-                chats: [],
-                contacts: [],
-                messages: {},
-                moments: []
-            };
-            this.data.saveData();
-            this.phoneShell.showNotification('已清空', '微信数据已重置', '✅');
-            setTimeout(() => this.render(), 1000);
-        }
-    });
+// 清空数据按钮
+document.getElementById('clear-wechat-data')?.addEventListener('click', () => {
+    this.showClearDataConfirm();
+});
 }
 
     // 📋 显示智能加载联系人确认界面
@@ -1956,6 +1939,94 @@ showLoadContactsConfirm() {
             this.phoneShell.showNotification('❌ 错误', error.message || '未知错误', '❌');
             setTimeout(() => this.render(), 2000);
         }
+    });
+}
+    // 🗑️ 显示清空数据确认界面
+showClearDataConfirm() {
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-clear">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">清空数据</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                <div style="background: #fff; border-radius: 12px; padding: 30px; text-align: center;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 64px; color: #ff3b30; margin-bottom: 20px;"></i>
+                    <div style="font-size: 20px; font-weight: 600; color: #000; margin-bottom: 15px;">确定要清空所有微信数据吗？</div>
+                    <div style="font-size: 14px; color: #999; margin-bottom: 10px; line-height: 1.6;">
+                        此操作将删除：<br>
+                        • 所有聊天记录<br>
+                        • 所有联系人<br>
+                        • 朋友圈内容<br>
+                    </div>
+                    <div style="font-size: 16px; color: #ff3b30; font-weight: 600; margin-bottom: 30px;">
+                        ⚠️ 此操作不可恢复！
+                    </div>
+                    
+                    <button id="confirm-clear-data" style="
+                        width: 100%;
+                        padding: 14px;
+                        background: #ff3b30;
+                        color: #fff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin-bottom: 10px;
+                    ">确定清空</button>
+                    
+                    <button id="cancel-clear-data" style="
+                        width: 100%;
+                        padding: 14px;
+                        background: #f0f0f0;
+                        color: #666;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        cursor: pointer;
+                    ">取消</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.phoneShell.setContent(html);
+    
+    document.getElementById('back-from-clear')?.addEventListener('click', () => {
+        this.showSettings();
+    });
+    
+    document.getElementById('cancel-clear-data')?.addEventListener('click', () => {
+        this.showSettings();
+    });
+    
+    document.getElementById('confirm-clear-data')?.addEventListener('click', () => {
+        this.data.data = {
+            userInfo: {
+                name: '我',
+                wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
+                avatar: '😊',
+                signature: '',
+                coverImage: null
+            },
+            chats: [],
+            contacts: [],
+            messages: {},
+            moments: []
+        };
+        this.data.saveData();
+        this.phoneShell.showNotification('已清空', '微信数据已重置', '✅');
+        setTimeout(() => {
+            this.currentView = 'chats';
+            this.render();
+        }, 1000);
     });
 }
 }
