@@ -1210,6 +1210,7 @@ export class WechatApp {
    ======================================== */
 
 .wechat-contacts {
+    position: relative;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -1327,14 +1328,15 @@ export class WechatApp {
 }
 
 .letter-index {
-    position: fixed;
-    right: 5px;
+    position: absolute;
+    right: 2px;
     top: 50%;
     transform: translateY(-50%);
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     z-index: 100;
+    padding: 4px 0;
 }
 
 .letter-item {
