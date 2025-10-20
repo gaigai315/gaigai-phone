@@ -10,11 +10,46 @@ export class ContactsView {
         const grouped = this.groupContacts(contacts);
         
         return `
-            <div class="wechat-contacts">
-                <!-- 搜索框 -->
-                <div class="contacts-search">
-                    <input type="text" placeholder="搜索" class="search-input" id="contacts-search">
+    <div class="wechat-contacts">
+        <div class="contacts-search">
+            <input type="text" class="search-input" placeholder="搜索" />
+        </div>
+        
+        <!-- 🔥 可滚动内容区 -->
+        <div class="contacts-scrollable">
+            <div class="contacts-functions">
+                <div class="function-item">
+                    <div class="function-icon" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f);">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <div class="function-name">新的朋友</div>
                 </div>
+                <div class="function-item">
+                    <div class="function-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="function-name">群聊</div>
+                </div>
+                <div class="function-item">
+                    <div class="function-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+                        <i class="fa-solid fa-tag"></i>
+                    </div>
+                    <div class="function-name">标签</div>
+                </div>
+                <div class="function-item">
+                    <div class="function-icon" style="background: linear-gradient(135deg, #fa709a, #fee140);">
+                        <i class="fa-solid fa-bullhorn"></i>
+                    </div>
+                    <div class="function-name">公众号</div>
+                </div>
+            </div>
+            
+            <div class="contacts-list">
+                ${this.renderContactList(contacts)}
+            </div>
+        </div>
+    </div>
+`;
                 
                 <!-- 功能入口 -->
                 <div class="contacts-functions">
