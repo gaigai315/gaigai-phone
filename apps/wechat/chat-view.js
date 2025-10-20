@@ -690,156 +690,63 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
     return finalPrompt;
 }
 
-// 🔧 完全静默调用AI（直接隐藏聊天容器）
+// 🔧 完全静默调用AI（直接调用API，不经过界面）
 async sendToAIHidden(prompt, context) {
-    return new Promise((resolve, reject) => {
-        try {
-            console.log('🚀 开始完全静默调用AI...');
-
-            const textarea = document.querySelector('#send_textarea');
-            if (!textarea) {
-                throw new Error('找不到聊天输入框');
-            }
-
-            const chatContainer = document.getElementById('chat');
-            if (!chatContainer) {
-                throw new Error('找不到聊天容器');
-            }
-
-            const originalValue = textarea.value;
-            
-            // 🔥 关键：直接隐藏整个聊天容器
-            const originalDisplay = chatContainer.style.display;
-            chatContainer.style.display = 'none';
-            
-            console.log('🙈 已隐藏聊天容器');
-
-            let responded = false;
-
-            const timeout = setTimeout(() => {
-                if (!responded) {
-                    responded = true;
-                    chatContainer.style.display = originalDisplay;
-                    textarea.value = originalValue;
-                    this.cleanupLeakedMessages(context);
-                    this.hideTypingStatus(); // 隐藏正在输入
-                    reject(new Error('AI响应超时（120秒）'));
-                }
-            }, 120000);
-
-            const messageHandler = () => {
-                if (responded) return;
-                
-                try {
-                    const chat = context.chat;
-                    if (!chat || chat.length < 2) return;
-
-                    const lastMsg = chat[chat.length - 1];
-                    if (lastMsg && !lastMsg.is_user) {
-                        responded = true;
-                        clearTimeout(timeout);
-
-                        const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
-
-                        // 从聊天数组删除
-                        chat.splice(chat.length - 2, 2);
-                        
-                        // 恢复聊天容器显示
-                        chatContainer.style.display = originalDisplay;
-
-                        // 恢复输入框
-                        textarea.value = originalValue;
-
-                        // 移除监听器
-                        context.eventSource.removeListener(
-                            context.event_types.CHARACTER_MESSAGE_RENDERED,
-                            messageHandler
-                        );
-
-                        console.log('✅ 静默调用成功');
-                        
-                        // 🔥 隐藏"正在输入"
-                        this.hideTypingStatus();
-                        
-                        resolve(aiText);
-                    }
-                } catch (e) {
-                    responded = true;
-                    clearTimeout(timeout);
-                    chatContainer.style.display = originalDisplay;
-                    textarea.value = originalValue;
-                    this.cleanupLeakedMessages(context);
-                    this.hideTypingStatus();
-                    reject(e);
-                }
-            };
-
-            context.eventSource.on(
-                context.event_types.CHARACTER_MESSAGE_RENDERED,
-                messageHandler
-            );
-
-            textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
-            setTimeout(() => {
-                if (!responded) {
-                    const sendBtn = document.querySelector('#send_but');
-                    if (sendBtn) {
-                        sendBtn.click();
-                        console.log('📤 已发送（聊天容器已隐藏）');
-                    } else {
-                        responded = true;
-                        clearTimeout(timeout);
-                        chatContainer.style.display = originalDisplay;
-                        textarea.value = originalValue;
-                        this.hideTypingStatus();
-                        reject(new Error('找不到发送按钮'));
-                    }
-                }
-            }, 200);
-
-        } catch (error) {
-            console.error('❌ 静默调用失败:', error);
-            this.hideTypingStatus();
-            reject(error);
-        }
-    });
-}
-
-// 🔧 清理泄露的消息
-cleanupLeakedMessages(context) {
     try {
-        if (context.chat && context.chat.length >= 2) {
-            context.chat.splice(context.chat.length - 2, 2);
-        }
-        document.querySelectorAll('.mes.phone-hidden-chat').forEach(el => el.remove());
-        document.getElementById('phone-silent-chat')?.remove();
-        console.log('🗑️ 已清理消息');
-    } catch (e) {
-        console.error('清理失败:', e);
-    }
-}
-
-// 🔧 清理泄露的消息（新增）
-cleanupLeakedMessages(context) {
-    try {
-        // 从数组删除
-        if (context.chat && context.chat.length >= 2) {
-            const beforeLen = context.chat.length;
-            context.chat.splice(context.chat.length - 2, 2);
-            console.log(`🗑️ 从数组删除2条消息（${beforeLen} → ${context.chat.length}）`);
+        console.log('🚀 开始静默API调用...');
+        
+        // 获取当前API设置
+        const apiUrl = '/api/chat/completions';
+        
+        // 构建请求体
+        const requestBody = {
+            messages: [
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            // 使用当前酒馆的API设置
+            max_tokens: 500,
+            temperature: 0.9,
+            stream: false
+        };
+        
+        console.log('📤 发送请求到:', apiUrl);
+        
+        // 发送请求
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API请求失败: ${response.status}`);
         }
         
-        // 从DOM删除
-        const allMessages = document.querySelectorAll('.mes');
-        if (allMessages.length >= 2) {
-            allMessages[allMessages.length - 2]?.remove();
-            allMessages[allMessages.length - 1]?.remove();
-            console.log('🗑️ 从DOM删除2条消息');
+        const data = await response.json();
+        
+        // 提取AI回复
+        let aiResponse = '';
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+            aiResponse = data.choices[0].message.content;
+        } else if (data.content) {
+            aiResponse = data.content;
+        } else {
+            console.warn('⚠️ API返回格式异常:', data);
+            aiResponse = JSON.stringify(data);
         }
-    } catch (e) {
-        console.error('清理失败:', e);
+        
+        console.log('✅ 静默API调用成功，回复长度:', aiResponse.length);
+        
+        return aiResponse;
+        
+    } catch (error) {
+        console.error('❌ 静默API调用失败:', error);
+        throw error;
     }
 }
     
