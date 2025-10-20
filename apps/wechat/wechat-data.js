@@ -222,21 +222,6 @@ export class WechatData {
                 });
             }
 
-            // ✅ 添加主角色联系人（如果不存在）
-const mainCharName = context.name2 || context.name;
-const mainCharExists = this.data.contacts.find(c => c.name === mainCharName);
-if (!mainCharExists && mainCharName) {
-    this.data.contacts.push({
-        id: `contact_main_${Date.now()}`,
-        name: mainCharName,
-        avatar: '⭐', // 主角色用星星标记
-        remark: '主要角色',
-        letter: this.getFirstLetter(mainCharName),
-        relation: '主角'
-    });
-    console.log('✅ 已添加主角色联系人:', mainCharName);
-}
-
 await this.saveData();
 
             
@@ -255,82 +240,64 @@ await this.saveData();
         }
     }
     
-// 🔧 构建联系人生成提示词（完整版，包含角色卡）
+// 🔧 构建联系人生成提示词（完整版：角色卡+记忆表格）
 buildContactPrompt(context) {
     const charName = context.name2 || context.name || '角色';
     const userName = context.name1 || '用户';
     
-    // ✅ 获取完整角色卡信息
-    let charDescription = '';
-    if (context.description) {
-        charDescription = context.description;
-    }
+    console.log('📝 [联系人生成] 开始构建提示词...');
     
+    // ========================================
+    // 1️⃣ 获取角色卡信息
+    // ========================================
     let charPersonality = '';
-    if (context.personality) {
-        charPersonality = context.personality;
-    }
-    
     let charScenario = '';
-    if (context.scenario) {
-        charScenario = context.scenario;
-    }
-
-    // ✅ 从世界书获取人物关系
-    let worldInfoText = '';
-    if (context.worldInfoData && Array.isArray(context.worldInfoData)) {
-        const relevantEntries = context.worldInfoData
-            .filter(entry => entry.content && entry.content.length > 0)
-            .slice(0, 15);
-        
-        if (relevantEntries.length > 0) {
-            worldInfoText = '\n**世界设定和人物关系：**\n' + 
-                relevantEntries
-                    .map(entry => `- ${entry.content}`)
-                    .join('\n')
-                    .substring(0, 3000); // 限制长度
-        }
-    }
-
     
-// ✅ 从记忆表格获取NPC信息（正确的API）
-let memoryTableData = '';
-if (typeof window.Gaigai !== 'undefined') {
-    try {
-        console.log('🔍 检测到记忆表格插件:', window.Gaigai);
+    if (context.characters && context.characterId !== undefined) {
+        const char = context.characters[context.characterId];
+        if (char) {
+            charPersonality = char.personality || '';
+            charScenario = char.scenario || '';
+            
+            console.log('✅ [联系人生成] 角色信息:', {
+                personality: charPersonality ? `${charPersonality.length}字` : '无',
+                scenario: charScenario ? `${charScenario.length}字` : '无'
+            });
+        }
+    }
+    
+    // ========================================
+    // 2️⃣ 获取记忆表格
+    // ========================================
+    let memoryTableData = '';
+    
+    if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
+        const memoryLines = [];
         
-        // 方法1：从m对象获取（这是记忆表格的主数据对象）
-        if (window.Gaigai.m && window.Gaigai.m.summary) {
-            memoryTableData = '\n**记忆总结（NPC和剧情）：**\n' + window.Gaigai.m.summary + '\n';
-            console.log('✅ [联系人生成] 从m.summary获取:', memoryTableData.length, '字符');
-        }
-        // 方法2：从data获取
-        else if (window.Gaigai.data && window.Gaigai.data.summary) {
-            memoryTableData = '\n**记忆总结：**\n' + window.Gaigai.data.summary + '\n';
-            console.log('✅ [联系人生成] 从data.summary获取');
-        }
-        // 方法3：从表格数据提取
-        else if (window.Gaigai.m && window.Gaigai.m.tbl && Array.isArray(window.Gaigai.m.tbl)) {
-            const tableRows = window.Gaigai.m.tbl
-                .filter(row => row && row.length > 0)
-                .slice(0, 20)
-                .map(row => row.join(' | '))
-                .join('\n');
-            if (tableRows) {
-                memoryTableData = '\n**记忆表格数据：**\n' + tableRows + '\n';
-                console.log('✅ [联系人生成] 从表格提取:', window.Gaigai.m.tbl.length, '行');
+        window.Gaigai.m.s.forEach((section) => {
+            if (Array.isArray(section.r) && section.r.length > 0) {
+                memoryLines.push(`## ${section.n}`);
+                
+                section.r.forEach((row) => {
+                    const values = Object.values(row).filter(v => v && typeof v === 'string');
+                    if (values.length > 0) {
+                        memoryLines.push(values.join(' | '));
+                    }
+                });
             }
-        }
+        });
         
-        if (!memoryTableData) {
-            console.warn('⚠️ 记忆表格无可用数据');
+        if (memoryLines.length > 0) {
+            memoryTableData = '\n**记忆表格（NPC和剧情）：**\n' + memoryLines.join('\n') + '\n';
+            console.log('✅ [联系人生成] 记忆表格:', memoryLines.length, '行');
         }
-    } catch (e) {
-        console.error('❌ 获取记忆表格失败:', e);
+    } else {
+        console.log('⚠️ [联系人生成] 未找到记忆表格');
     }
-}
     
-    // ✅ 从聊天记录提取（最近30条）
+    // ========================================
+    // 3️⃣ 获取聊天记录
+    // ========================================
     const chatHistory = [];
     if (context.chat && Array.isArray(context.chat)) {
         const recentChats = context.chat.slice(-30);
@@ -339,7 +306,7 @@ if (typeof window.Gaigai !== 'undefined') {
                 const speaker = msg.is_user ? userName : charName;
                 const content = msg.mes
                     .replace(/<[^>]*>/g, '')
-                    .replace(/\*\*.*?\*\*/g, '')
+                    .replace(/\*.*?\*/g, '')
                     .substring(0, 300);
                 
                 if (content.trim()) {
@@ -353,17 +320,19 @@ if (typeof window.Gaigai !== 'undefined') {
         ? chatHistory.join('\n')
         : '（暂无聊天记录）';
     
-    // ✅ 构建完整提示词
+    console.log('✅ [联系人生成] 聊天记录:', chatHistory.length, '条');
+    
+    // ========================================
+    // 4️⃣ 构建提示词
+    // ========================================
     return `你是一个数据生成助手。请根据以下信息，生成微信联系人列表。
 
 # 角色信息
 - **角色名：** ${charName}
 - **用户名：** ${userName}
 
-${charDescription ? `**角色描述：**\n${charDescription}\n` : ''}
-${charPersonality ? `**性格：**\n${charPersonality}\n` : ''}
+${charPersonality ? `**性格和背景：**\n${charPersonality}\n` : ''}
 ${charScenario ? `**场景：**\n${charScenario}\n` : ''}
-${worldInfoText}
 ${memoryTableData}
 
 # 聊天历史（最近30条）
@@ -374,21 +343,26 @@ ${chatText}
 # 任务要求
 根据上述信息，分析出**5-10个**可能存在的联系人（朋友、家人、同事等），以及**0-3个**可能的微信群聊。
 
+**重点**：
+- 从性格背景中提取关系人物
+- 从记忆表格中提取NPC
+- **必须添加主角色 ${charName} 作为联系人**
+
 # 输出格式（严格按此JSON格式，不要任何其他文字）
 \`\`\`json
 {
   "contacts": [
     {
+      "name": "${charName}",
+      "avatar": "⭐",
+      "relation": "主角",
+      "remark": "主要角色"
+    },
+    {
       "name": "张三",
       "avatar": "👨",
       "relation": "朋友",
       "remark": "好友"
-    },
-    {
-      "name": "李四",
-      "avatar": "👩",
-      "relation": "同事",
-      "remark": "公司同事"
     }
   ],
   "groups": [
@@ -404,13 +378,14 @@ ${chatText}
 **注意：**
 1. 只返回JSON，不要解释
 2. 联系人名字要符合角色背景
-3. 头像用emoji表情（👨👩👤👔等）
-4. relation字段写明关系（朋友/家人/同事等）
+3. 头像用emoji表情（👨👩👤👔⭐等）
+4. relation字段写明关系（朋友/家人/同事/主角等）
+5. **第一个联系人必须是 ${charName} 本人**
 
 现在请生成：`;
 }
     
-// 📤 完全静默调用AI（使用隐藏容器）
+// 📤 完全静默调用AI（MutationObserver拦截，120秒超时）
 async sendToAI(prompt) {
     return new Promise((resolve, reject) => {
         try {
@@ -419,7 +394,7 @@ async sendToAI(prompt) {
                 throw new Error('无法获取SillyTavern上下文');
             }
 
-            console.log('🚀 准备完全静默调用AI（不显示在页面）...');
+            console.log('🚀 [联系人生成] 开始完全静默调用AI...');
 
             const textarea = document.querySelector('#send_textarea');
             if (!textarea) {
@@ -433,11 +408,10 @@ async sendToAI(prompt) {
 
             const originalValue = textarea.value;
             
-            // 🔥 创建临时隐藏样式
             const hideStyle = document.createElement('style');
-            hideStyle.id = 'phone-silent-mode';
+            hideStyle.id = 'phone-silent-contact';
             hideStyle.textContent = `
-                .mes.phone-hidden { 
+                .mes.phone-hidden-contact { 
                     display: none !important; 
                     opacity: 0 !important;
                     position: absolute !important;
@@ -446,12 +420,11 @@ async sendToAI(prompt) {
             `;
             document.head.appendChild(hideStyle);
 
-            // 🔥 使用MutationObserver拦截新消息
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     mutation.addedNodes.forEach((node) => {
                         if (node.classList && node.classList.contains('mes')) {
-                            node.classList.add('phone-hidden');
+                            node.classList.add('phone-hidden-contact');
                         }
                     });
                 });
@@ -490,12 +463,10 @@ async sendToAI(prompt) {
 
                         const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
 
-                        // 🔥 从聊天数组删除
                         chat.splice(chat.length - 2, 2);
 
-                        // 🔥 从DOM删除
                         setTimeout(() => {
-                            document.querySelectorAll('.mes.phone-hidden').forEach(el => el.remove());
+                            document.querySelectorAll('.mes.phone-hidden-contact').forEach(el => el.remove());
                             hideStyle.remove();
                         }, 100);
 
@@ -506,7 +477,7 @@ async sendToAI(prompt) {
                             messageHandler
                         );
 
-                        console.log('✅ 静默调用成功，完全无痕迹');
+                        console.log('✅ [联系人生成] 静默调用成功');
                         resolve(aiText);
                     }
                 } catch (e) {
@@ -545,21 +516,21 @@ async sendToAI(prompt) {
             }, 200);
 
         } catch (error) {
-            console.error('❌ 静默调用失败:', error);
+            console.error('❌ [联系人生成] 静默调用失败:', error);
             reject(error);
         }
     });
 }
 
-// 🔧 清理静默消息（新增辅助方法）
+// 🔧 清理静默消息
 cleanupSilentMessages(context) {
     try {
         if (context.chat && context.chat.length >= 2) {
             context.chat.splice(context.chat.length - 2, 2);
         }
-        document.querySelectorAll('.mes.phone-hidden').forEach(el => el.remove());
-        document.getElementById('phone-silent-mode')?.remove();
-        console.log('🗑️ 已清理静默消息');
+        document.querySelectorAll('.mes.phone-hidden-contact').forEach(el => el.remove());
+        document.getElementById('phone-silent-contact')?.remove();
+        console.log('🗑️ [联系人生成] 已清理消息');
     } catch (e) {
         console.error('清理失败:', e);
     }
