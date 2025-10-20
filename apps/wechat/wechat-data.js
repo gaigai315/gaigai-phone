@@ -21,19 +21,20 @@ export class WechatData {
         }
         
         console.log('🆕 新用户，创建空数据');
-        return {
-            userInfo: {
-                name: '我',
-                wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
-                avatar: '😊',
-                signature: '',
-                coverImage: null
-            },
-            chats: [],
-            contacts: [],
-            messages: {},
-            moments: []
-        };
+    return {
+    userInfo: {
+        name: '我',
+        wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
+        avatar: '😊',
+        signature: '',
+        coverImage: null
+    },
+    chats: [],
+    contacts: [],
+    messages: {},
+    moments: [],
+    customEmojis: [] // ← 新增：自定义表情数组
+      };
     }
     
     getStorageKey() {
@@ -688,4 +689,51 @@ parseAIResponse(text) {
             this.saveData();
         }
     }
+    
+    // ========================================
+// 🎨 自定义表情管理
+// ========================================
+
+// 获取所有自定义表情
+getCustomEmojis() {
+    if (!this.data.customEmojis) {
+        this.data.customEmojis = [];
+    }
+    return this.data.customEmojis;
+}
+
+// 获取单个自定义表情
+getCustomEmoji(emojiId) {
+    return this.data.customEmojis?.find(e => e.id === emojiId);
+}
+
+// 添加自定义表情
+addCustomEmoji(emojiData) {
+    if (!this.data.customEmojis) {
+        this.data.customEmojis = [];
+    }
+    
+    const emoji = {
+        id: `emoji_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: emojiData.name,
+        image: emojiData.image,
+        createdAt: new Date().toISOString()
+    };
+    
+    this.data.customEmojis.push(emoji);
+    this.saveData();
+    
+    console.log('✅ 已添加自定义表情:', emoji.name);
+    return emoji;
+}
+
+// 删除自定义表情
+deleteCustomEmoji(emojiId) {
+    if (!this.data.customEmojis) return;
+    
+    this.data.customEmojis = this.data.customEmojis.filter(e => e.id !== emojiId);
+    this.saveData();
+    
+    console.log('🗑️ 已删除自定义表情:', emojiId);
+   }
 }
