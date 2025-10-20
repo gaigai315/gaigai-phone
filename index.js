@@ -31,6 +31,9 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
     
     const PHONE_TAG_REGEX = /<Phone>([\s\S]*?)<\/Phone>/gi;
     
+    // 🔥 新增：微信消息标签正则
+    const WECHAT_TAG_REGEX = /<wechat\s+chatId="([^"]+)"\s+from="([^"]+)">([\s\S]*?)<\/wechat>/gi;
+    
     // 创建顶部面板按钮
     function createTopPanel() {
         const topSettingsHolder = document.getElementById('top-settings-holder');
@@ -134,24 +137,43 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
         }
     }
     
-    // 解析手机指令
-    function parsePhoneCommands(text) {
+        // 🔥 新增：解析微信消息标签
+    function parseWechatMessages(text) {
         if (!text || !settings.enabled) return [];
-        const commands = [];
+        const messages = [];
         let match;
-        PHONE_TAG_REGEX.lastIndex = 0;
+        WECHAT_TAG_REGEX.lastIndex = 0;
         
-        while ((match = PHONE_TAG_REGEX.exec(text)) !== null) {
+        while ((match = WECHAT_TAG_REGEX.exec(text)) !== null) {
             try {
-                const jsonStr = match[1].trim();
-                const command = JSON.parse(jsonStr);
-                commands.push(command);
-                console.log('📱 解析到手机指令:', command);
+                messages.push({
+                    chatId: match[1],
+                    from: match[2],
+                    content: match[3].trim()
+                });
+                console.log('📱 解析到微信消息:', match[3].trim());
             } catch (e) {
-                console.error('❌ 手机指令解析失败:', e);
+                console.error('❌ 微信消息解析失败:', e);
             }
         }
-        return commands;
+        return messages;
+    }
+    
+    // 🔥 新增：隐藏微信标签
+    function hideWechatTags() {
+        $('.mes_text').each(function() {
+            const $this = $(this);
+            let html = $this.html();
+            if (!html) return;
+            
+            // 替换为"已发送到手机"提示（可选）
+            html = html.replace(WECHAT_TAG_REGEX, '<span style="color:#07c160;font-size:12px;">📱 已发送到微信</span>');
+            
+            // 或者完全隐藏（取消下面这行的注释）
+            // html = html.replace(WECHAT_TAG_REGEX, '<span style="display:none!important;">$&</span>');
+            
+            $this.html(html);
+        });
     }
     
     // 执行手机指令
@@ -298,9 +320,30 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
             
             commands.forEach(cmd => executePhoneCommand(cmd));
             
-            if (commands.length > 0) {
-                setTimeout(hidePhoneTags, 100);
-            }
+                    if (commands.length > 0) {
+            setTimeout(hidePhoneTags, 100);
+        }
+        
+        // 🔥 新增：解析微信消息标签
+        const wechatMessages = parseWechatMessages(text);
+        if (wechatMessages.length > 0) {
+            wechatMessages.forEach(msg => {
+                if (window.currentWechatApp) {
+                    window.currentWechatApp.receiveMessage({
+                        chatId: msg.chatId,
+                        from: msg.from,
+                        message: msg.content,
+                        timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+                    });
+                    console.log('📱 已同步微信消息到手机:', msg.content);
+                }
+            });
+            
+            // 在酒馆界面标注（可选）
+            setTimeout(() => hideWechatTags(), 100);
+        }
+        
+        // 隐藏用户消息中的手机模式标记
             
             // 隐藏用户消息中的手机模式标记
             setTimeout(() => {
