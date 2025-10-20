@@ -418,40 +418,79 @@ input?.addEventListener('input', (e) => {
     }
 }
 
-// 🔧 构建手机聊天提示词
-buildPhoneChatPrompt(charName, desc, personality, contactName, chatHistory, userMessage) {
-    const historyText = chatHistory.slice(-30).map(h => 
-        `${h.speaker}: ${h.message}`
-    ).join('\n');
+// 🔧 构建手机聊天提示词（完整版，包含角色卡全部信息）
+buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
+    const charName = context.name2 || context.name || '对方';
+    const userName = context.name1 || '用户';
     
-    return `
-# 场景：微信聊天
-你正在通过微信和用户聊天（不是面对面对话）
+    // ✅ 获取完整角色卡
+    const charDesc = context.description || '';
+    const personality = context.personality || '';
+    const scenario = context.scenario || '';
+    const firstMes = context.firstMes || '';
+    
+    // ✅ 获取示例对话
+    let exampleDialogue = '';
+    if (context.mesExamples) {
+        exampleDialogue = context.mesExamples
+            .replace(/<START>/g, '\n---\n')
+            .substring(0, 1000); // 限制长度
+    }
+    
+    // ✅ 获取世界书
+    let worldInfo = '';
+    if (context.worldInfoData && Array.isArray(context.worldInfoData)) {
+        const relevantEntries = context.worldInfoData
+            .filter(entry => entry.content && entry.content.length > 0)
+            .slice(0, 10);
+        
+        if (relevantEntries.length > 0) {
+            worldInfo = '\n**世界设定：**\n' + 
+                relevantEntries
+                    .map(entry => `- ${entry.content}`)
+                    .join('\n')
+                    .substring(0, 2000);
+        }
+    }
+    
+    // ✅ 整理聊天历史（最近40条，包含来源标记）
+    const recentHistory = chatHistory.slice(-40);
+    const historyText = recentHistory.map(h => {
+        const source = h.source === 'tavern' ? '(面对面)' : '(微信)';
+        return `${h.speaker}${source}: ${h.message}`;
+    }).join('\n');
+    
+    // ✅ 构建完整提示词
+    return `# 场景：微信聊天
+你正在通过微信和${userName}聊天（不是面对面对话，是手机文字聊天）。
 
 ## 角色信息
-- 你的名字：${charName}
-- 描述：${desc}
-- 性格：${personality}
-- 微信备注：${contactName}
+**你的名字：** ${charName}
+**微信备注名：** ${contactName}
 
-## 聊天历史（包含酒馆对话和微信记录）
+${charDesc ? `**角色描述：**\n${charDesc}\n` : ''}
+${personality ? `**性格特点：**\n${personality}\n` : ''}
+${scenario ? `**当前场景：**\n${scenario}\n` : ''}
+${worldInfo}
+${exampleDialogue ? `**对话风格参考：**\n${exampleDialogue}\n` : ''}
+
+## 完整聊天历史（包含面对面对话和微信记录）
 ${historyText}
 
-## 用户刚发来的微信消息
-用户: ${userMessage}
+## 用户刚通过微信发来的消息
+${userName}(微信): ${userMessage}
 
 ---
 
-## 回复要求
-1. **只返回你的微信回复内容**，不要任何旁白、场景描述
-2. 语气要符合微信聊天的风格（简洁、口语化）
-3. 可以使用emoji表情
-4. 可以发送多条消息（用换行分隔）
-5. 要考虑之前的聊天历史（包括在酒馆和微信的对话）
-6. **不要**输出任何JSON、标签或格式代码
+## 回复要求（重要！）
+1. **只返回你的微信回复文字内容**，不要任何旁白、动作、场景描述
+2. 语气要符合微信聊天风格（简洁、口语化、可以分段）
+3. 可以使用emoji表情 😊
+4. 如果要发多条消息，用 `|||` 分隔，例如：`好的|||我马上过来|||😊`
+5. 要考虑之前的所有对话历史（包括面对面和微信的）
+6. **禁止输出**：JSON、XML、标签、格式代码、旁白、动作描述
 
-现在回复用户的微信消息：
-`;
+现在请回复${userName}的微信消息（只回复文字内容）：`;
 }
 
     // 🔧 发送给AI并隐藏消息（静默API调用）
