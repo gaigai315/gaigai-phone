@@ -366,7 +366,7 @@ async sendToAI(prompt) {
 
             console.log('🚀 准备静默调用AI...');
 
-            // ✅ 方法1：使用textarea但立即拦截（最可靠）
+            // ✅ 使用textarea方法（最可靠）
             const textarea = document.querySelector('#send_textarea');
             if (!textarea) {
                 throw new Error('找不到聊天输入框，请确保在酒馆页面');
@@ -411,8 +411,8 @@ async sendToAI(prompt) {
                         setTimeout(() => {
                             const allMessages = document.querySelectorAll('.mes');
                             if (allMessages.length >= 2) {
-                                allMessages[allMessages.length - 2]?.remove(); // 删除用户消息
-                                allMessages[allMessages.length - 1]?.remove(); // 删除AI消息
+                                allMessages[allMessages.length - 2]?.remove();
+                                allMessages[allMessages.length - 1]?.remove();
                             }
                         }, 100);
 
