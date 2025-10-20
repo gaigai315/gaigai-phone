@@ -239,36 +239,54 @@ export class WechatData {
         }
     }
     
-// 🔧 构建AI提示词（完整版）
+// 🔧 构建联系人生成提示词（完整版，包含角色卡）
 buildContactPrompt(context) {
     const charName = context.name2 || context.name || '角色';
     const userName = context.name1 || '用户';
     
+    // ✅ 获取完整角色卡信息
+    let charDescription = '';
+    if (context.description) {
+        charDescription = context.description;
+    }
+    
+    let charPersonality = '';
+    if (context.personality) {
+        charPersonality = context.personality;
+    }
+    
+    let charScenario = '';
+    if (context.scenario) {
+        charScenario = context.scenario;
+    }
+
     // ✅ 从世界书获取人物关系
     let worldInfoText = '';
     if (context.worldInfoData && Array.isArray(context.worldInfoData)) {
         const relevantEntries = context.worldInfoData
             .filter(entry => entry.content && entry.content.length > 0)
-            .slice(0, 10); // 只取前10条
+            .slice(0, 15);
         
         if (relevantEntries.length > 0) {
-            worldInfoText = relevantEntries
-                .map(entry => entry.content)
-                .join('\n')
-                .substring(0, 2000); // 限制长度
+            worldInfoText = '\n**世界设定和人物关系：**\n' + 
+                relevantEntries
+                    .map(entry => `- ${entry.content}`)
+                    .join('\n')
+                    .substring(0, 3000); // 限制长度
         }
     }
     
-    // ✅ 从聊天记录提取
+    // ✅ 从聊天记录提取（最近30条）
     const chatHistory = [];
     if (context.chat && Array.isArray(context.chat)) {
-        const recentChats = context.chat.slice(-20); // 改为20条
+        const recentChats = context.chat.slice(-30);
         recentChats.forEach(msg => {
             if (msg.mes && msg.mes.trim()) {
                 const speaker = msg.is_user ? userName : charName;
                 const content = msg.mes
-                    .replace(/<[^>]*>/g, '') // 移除HTML标签
-                    .substring(0, 200);
+                    .replace(/<[^>]*>/g, '')
+                    .replace(/\*\*.*?\*\*/g, '')
+                    .substring(0, 300);
                 
                 if (content.trim()) {
                     chatHistory.push(`${speaker}: ${content}`);
@@ -281,99 +299,166 @@ buildContactPrompt(context) {
         ? chatHistory.join('\n')
         : '（暂无聊天记录）';
     
-    // ✅ 构建简洁的提示词
-    return `请根据以下信息，生成微信联系人列表（JSON格式）。
+    // ✅ 构建完整提示词
+    return `你是一个数据生成助手。请根据以下信息，生成微信联系人列表。
 
-**角色：** ${charName}
-**用户：** ${userName}
+# 角色信息
+- **角色名：** ${charName}
+- **用户名：** ${userName}
 
-**聊天记录：**
+${charDescription ? `**角色描述：**\n${charDescription}\n` : ''}
+${charPersonality ? `**性格：**\n${charPersonality}\n` : ''}
+${charScenario ? `**场景：**\n${charScenario}\n` : ''}
+${worldInfoText}
+
+# 聊天历史（最近30条）
 ${chatText}
-
-${worldInfoText ? `**世界设定：**\n${worldInfoText}\n` : ''}
 
 ---
 
-**任务：** 分析上述信息，生成5-10个联系人。
+# 任务要求
+根据上述信息，分析出**5-10个**可能存在的联系人（朋友、家人、同事等），以及**0-3个**可能的微信群聊。
 
-**严格按此格式返回（不要任何解释）：**
+# 输出格式（严格按此JSON格式，不要任何其他文字）
+\`\`\`json
 {
   "contacts": [
-    {"name": "张三", "avatar": "👨", "relation": "朋友"},
-    {"name": "李四", "avatar": "👩", "relation": "同事"}
+    {
+      "name": "张三",
+      "avatar": "👨",
+      "relation": "朋友",
+      "remark": "好友"
+    },
+    {
+      "name": "李四",
+      "avatar": "👩",
+      "relation": "同事",
+      "remark": "公司同事"
+    }
   ],
   "groups": [
-    {"name": "家庭群", "avatar": "👨‍👩‍👧", "members": ["妈妈", "爸爸"]}
+    {
+      "name": "家庭群",
+      "avatar": "👨‍👩‍👧",
+      "members": ["妈妈", "爸爸", "${charName}"]
+    }
   ]
 }
+\`\`\`
 
-只返回JSON，不要其他内容。`;
+**注意：**
+1. 只返回JSON，不要解释
+2. 联系人名字要符合角色背景
+3. 头像用emoji表情（👨👩👤👔等）
+4. relation字段写明关系（朋友/家人/同事等）
+
+现在请生成：`;
 }
     
-// 📤 直接调用Chat Completion API（不通过聊天窗口）
+// 📤 静默调用AI（不显示在聊天窗口）
 async sendToAI(prompt) {
-    try {
-        console.log('🚀 直接调用API...');
-        
-        const context = this.storage.getContext();
-        if (!context) {
-            throw new Error('无法获取上下文');
-        }
-        
-        // ✅ 构建最简单的messages（不包含任何角色扮演提示词）
-        const messages = [
-            {
-                role: 'system',
-                content: '你是一个数据分析助手，只返回JSON格式的数据，不要任何解释文字。'
-            },
-            {
-                role: 'user',
-                content: prompt
+    return new Promise((resolve, reject) => {
+        try {
+            const context = this.storage.getContext();
+            if (!context) {
+                throw new Error('无法获取SillyTavern上下文');
             }
-        ];
-        
-        console.log('📤 发送给API的messages:', messages);
-        
-        // ✅ 直接调用酒馆的generateRaw API
-        const response = await fetch('/api/backends/chat-completions/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                messages: messages,
-                model: context.model || 'gpt-4', // 使用当前模型
-                temperature: 0.7,
-                max_tokens: 1000
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`API调用失败: ${response.status} ${response.statusText}`);
+
+            console.log('🚀 准备静默调用AI...');
+
+            // ✅ 方法1：使用textarea但立即拦截（最可靠）
+            const textarea = document.querySelector('#send_textarea');
+            if (!textarea) {
+                throw new Error('找不到聊天输入框，请确保在酒馆页面');
+            }
+
+            // 保存原始内容
+            const originalValue = textarea.value;
+            
+            // 设置提示词
+            textarea.value = prompt;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+            // 监听AI回复
+            let responded = false;
+            const timeout = setTimeout(() => {
+                if (!responded) {
+                    responded = true;
+                    textarea.value = originalValue;
+                    reject(new Error('AI响应超时（30秒）'));
+                }
+            }, 30000);
+
+            const messageHandler = () => {
+                if (responded) return;
+                
+                try {
+                    const chat = context.chat;
+                    if (!chat || chat.length < 2) return;
+
+                    // 获取最后一条AI消息
+                    const lastMsg = chat[chat.length - 1];
+                    if (lastMsg && !lastMsg.is_user) {
+                        responded = true;
+                        clearTimeout(timeout);
+
+                        const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
+
+                        // 🔥 立即删除这两条消息（用户+AI）
+                        chat.splice(chat.length - 2, 2);
+                        
+                        // 🔥 立即隐藏界面上的消息
+                        setTimeout(() => {
+                            const allMessages = document.querySelectorAll('.mes');
+                            if (allMessages.length >= 2) {
+                                allMessages[allMessages.length - 2]?.remove(); // 删除用户消息
+                                allMessages[allMessages.length - 1]?.remove(); // 删除AI消息
+                            }
+                        }, 100);
+
+                        // 恢复输入框
+                        textarea.value = originalValue;
+
+                        // 移除监听器
+                        context.eventSource.removeListener(
+                            context.event_types.CHARACTER_MESSAGE_RENDERED,
+                            messageHandler
+                        );
+
+                        console.log('✅ 静默调用成功，已清理痕迹');
+                        resolve(aiText);
+                    }
+                } catch (e) {
+                    responded = true;
+                    clearTimeout(timeout);
+                    reject(e);
+                }
+            };
+
+            // 注册监听器
+            context.eventSource.on(
+                context.event_types.CHARACTER_MESSAGE_RENDERED,
+                messageHandler
+            );
+
+            // 延迟发送（确保监听器已注册）
+            setTimeout(() => {
+                const sendBtn = document.querySelector('#send_but');
+                if (sendBtn && !responded) {
+                    sendBtn.click();
+                } else if (!sendBtn) {
+                    responded = true;
+                    clearTimeout(timeout);
+                    textarea.value = originalValue;
+                    reject(new Error('找不到发送按钮'));
+                }
+            }, 200);
+
+        } catch (error) {
+            console.error('❌ 静默调用失败:', error);
+            reject(error);
         }
-        
-        const data = await response.json();
-        console.log('📥 API原始返回:', data);
-        
-        // ✅ 提取AI回复
-        let aiText = '';
-        if (data.choices && data.choices.length > 0) {
-            aiText = data.choices[0].message?.content || data.choices[0].text || '';
-        } else if (data.message) {
-            aiText = data.message;
-        } else if (data.content) {
-            aiText = data.content;
-        } else {
-            throw new Error('无法从API返回中提取内容');
-        }
-        
-        console.log('✅ AI返回成功，长度:', aiText.length);
-        return aiText;
-        
-    } catch (error) {
-        console.error('❌ API调用失败:', error);
-        throw error;
-    }
+    });
 }
     
 // 📥 解析AI返回（增强版）
