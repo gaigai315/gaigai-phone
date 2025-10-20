@@ -562,11 +562,6 @@ async fallbackGenerate(context, prompt) {
                         // 🔥 立即删除临时消息（用户消息 + AI回复）
                         context.chat.splice(originalLength, 2);
                         
-                        // 刷新界面（如果有保存函数）
-                        if (typeof saveChatConditional === 'function') {
-                            saveChatConditional();
-                        }
-                        
                         resolve(reply);
                         return;
                     }
@@ -583,14 +578,8 @@ async fallbackGenerate(context, prompt) {
                 setTimeout(checkForReply, 100);
             };
             
-            // 🔥 触发AI生成
-            if (context.generate) {
-                context.generate().catch(reject);
-            } else if (typeof Generate === 'function') {
-                Generate('normal');
-            } else {
-                reject(new Error('找不到生成函数'));
-            }
+            // 🔥 触发AI生成（调用 context.generate）
+            context.generate().catch(reject);
             
             // 延迟开始检查（给AI一点反应时间）
             setTimeout(checkForReply, 500);
