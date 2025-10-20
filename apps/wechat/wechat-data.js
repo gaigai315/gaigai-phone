@@ -386,122 +386,164 @@ ${chatText}
 现在请生成：`;
 }
     
-// 📤 使用酒馆内部Generate方法（静默）
+// 📤 完全静默调用AI（直接读取酒馆配置，不经过UI）
 async sendToAI(prompt) {
-    return new Promise((resolve, reject) => {
-        try {
-            console.log('🚀 [联系人生成] 开始静默生成...');
-
-            const context = this.storage.getContext();
-            if (!context) {
-                throw new Error('无法获取上下文');
-            }
-
-            const textarea = document.querySelector('#send_textarea');
-            const chatContainer = document.getElementById('chat');
-            
-            if (!textarea || !chatContainer) {
-                throw new Error('找不到必要元素');
-            }
-
-            const originalValue = textarea.value;
-            const originalChatLength = context.chat?.length || 0;
-            
-            let responded = false;
-            const timeout = setTimeout(() => {
-                if (!responded) {
-                    responded = true;
-                    textarea.value = originalValue;
-                    chatContainer.style.display = '';
-                    
-                    if (context.chat && context.chat.length > originalChatLength) {
-                        context.chat.splice(originalChatLength);
-                    }
-                    
-                    reject(new Error('AI响应超时'));
-                }
-            }, 120000);
-
-            const messageHandler = () => {
-                if (responded) return;
-                
-                try {
-                    if (!context.chat || context.chat.length <= originalChatLength) return;
-
-                    const lastMsg = context.chat[context.chat.length - 1];
-                    if (lastMsg && !lastMsg.is_user) {
-                        responded = true;
-                        clearTimeout(timeout);
-
-                        const aiText = lastMsg.mes || '';
-
-                        if (context.chat.length >= originalChatLength + 2) {
-                            context.chat.splice(originalChatLength, 2);
-                        }
-
-                        setTimeout(() => {
-                            const allMessages = document.querySelectorAll('#chat .mes');
-                            if (allMessages.length >= 2) {
-                                allMessages[allMessages.length - 2]?.remove();
-                                allMessages[allMessages.length - 1]?.remove();
-                            }
-                        }, 10);
-
-                        textarea.value = originalValue;
-                        chatContainer.style.display = '';
-
-                        context.eventSource?.removeListener?.(
-                            context.event_types?.CHARACTER_MESSAGE_RENDERED,
-                            messageHandler
-                        );
-
-                        console.log('✅ [联系人生成] 静默生成成功');
-                        resolve(aiText);
-                    }
-                } catch (e) {
-                    console.error('❌ 处理失败:', e);
-                    responded = true;
-                    clearTimeout(timeout);
-                    textarea.value = originalValue;
-                    chatContainer.style.display = '';
-                    reject(e);
-                }
-            };
-
-            if (context.eventSource && context.event_types) {
-                context.eventSource.on(
-                    context.event_types.CHARACTER_MESSAGE_RENDERED,
-                    messageHandler
-                );
-            } else {
-                throw new Error('无法注册监听器');
-            }
-
-            chatContainer.style.display = 'none';
-            textarea.value = prompt;
-            
-            setTimeout(() => {
-                if (!responded) {
-                    if (typeof Generate === 'function') {
-                        Generate();
-                        console.log('📤 [联系人生成] 已触发Generate');
-                    } else {
-                        const sendBtn = document.querySelector('#send_but');
-                        if (sendBtn) {
-                            sendBtn.click();
-                            console.log('📤 [联系人生成] 已点击发送');
-                        } else {
-                            throw new Error('无法触发生成');
-                        }
-                    }
-                }
-            }, 50);
-
-        } catch (error) {
-            console.error('❌ [联系人生成] 静默生成失败:', error);
-            reject(error);
+    try {
+        console.log('🚀 [联系人生成] 开始完全静默API调用...');
+        
+        const context = this.storage.getContext();
+        if (!context) {
+            throw new Error('无法获取上下文');
         }
+
+        // 🔥 读取酒馆的API配置
+        const main_api = context.main_api || window.main_api;
+        
+        if (main_api === 'openai') {
+            return await this.callOpenAI(prompt, context);
+        } else if (main_api === 'claude') {
+            return await this.callClaude(prompt, context);
+        } else if (main_api === 'textgenerationwebui' || main_api === 'kobold') {
+            return await this.callTextGen(prompt, context);
+        } else {
+            throw new Error(`不支持的API类型: ${main_api}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ [联系人生成] 静默调用失败:', error);
+        throw error;
+    }
+}
+
+// 🔥 调用OpenAI API
+async callOpenAI(prompt, context) {
+    const settings = window.oai_settings || {};
+    
+    const apiUrl = settings.reverse_proxy || 'https://api.openai.com/v1/chat/completions';
+    const apiKey = settings.api_key_openai || context.api_key_openai;
+    
+    if (!apiKey) {
+        throw new Error('未配置OpenAI API Key');
+    }
+
+    const requestBody = {
+        model: settings.openai_model || 'gpt-3.5-turbo',
+        messages: [
+            {
+                role: 'user',
+                content: prompt
+            }
+        ],
+        max_tokens: 1000,
+        temperature: settings.temp_openai || 0.9
+    };
+
+    console.log('📤 调用OpenAI API:', apiUrl);
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(requestBody)
     });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenAI API错误 ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const aiResponse = data.choices?.[0]?.message?.content || '';
+
+    console.log('✅ [联系人生成] OpenAI调用成功');
+    return aiResponse;
+}
+
+// 🔥 调用Claude API
+async callClaude(prompt, context) {
+    const settings = window.claude_settings || {};
+    
+    const apiUrl = settings.claude_reverse_proxy || 'https://api.anthropic.com/v1/messages';
+    const apiKey = settings.api_key_claude || context.api_key_claude;
+    
+    if (!apiKey) {
+        throw new Error('未配置Claude API Key');
+    }
+
+    const requestBody = {
+        model: settings.claude_model || 'claude-3-sonnet-20240229',
+        max_tokens: 1000,
+        messages: [
+            {
+                role: 'user',
+                content: prompt
+            }
+        ]
+    };
+
+    console.log('📤 调用Claude API:', apiUrl);
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Claude API错误 ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const aiResponse = data.content?.[0]?.text || '';
+
+    console.log('✅ [联系人生成] Claude调用成功');
+    return aiResponse;
+}
+
+// 🔥 调用Text Generation WebUI / KoboldAI
+async callTextGen(prompt, context) {
+    const settings = window.textgenerationwebui_settings || window.kai_settings || {};
+    
+    const apiUrl = settings.server_url || 'http://127.0.0.1:5000/v1/chat/completions';
+
+    const requestBody = {
+        messages: [
+            {
+                role: 'user',
+                content: prompt
+            }
+        ],
+        max_tokens: 1000,
+        temperature: settings.temp || 0.9
+    };
+
+    console.log('📤 调用TextGen API:', apiUrl);
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`TextGen API错误 ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const aiResponse = data.choices?.[0]?.message?.content || data.results?.[0]?.text || '';
+
+    console.log('✅ [联系人生成] TextGen调用成功');
+    return aiResponse;
 }
 
 // 🔧 清理静默消息
