@@ -386,56 +386,122 @@ ${chatText}
 现在请生成：`;
 }
     
-// 📤 完全静默调用AI（直接调用API）
+// 📤 使用酒馆内部Generate方法（静默）
 async sendToAI(prompt) {
-    try {
-        console.log('🚀 [联系人生成] 开始静默API调用...');
-        
-        const apiUrl = '/api/chat/completions';
-        
-        const requestBody = {
-            messages: [
-                {
-                    role: 'user',
-                    content: prompt
+    return new Promise((resolve, reject) => {
+        try {
+            console.log('🚀 [联系人生成] 开始静默生成...');
+
+            const context = this.storage.getContext();
+            if (!context) {
+                throw new Error('无法获取上下文');
+            }
+
+            const textarea = document.querySelector('#send_textarea');
+            const chatContainer = document.getElementById('chat');
+            
+            if (!textarea || !chatContainer) {
+                throw new Error('找不到必要元素');
+            }
+
+            const originalValue = textarea.value;
+            const originalChatLength = context.chat?.length || 0;
+            
+            let responded = false;
+            const timeout = setTimeout(() => {
+                if (!responded) {
+                    responded = true;
+                    textarea.value = originalValue;
+                    chatContainer.style.display = '';
+                    
+                    if (context.chat && context.chat.length > originalChatLength) {
+                        context.chat.splice(originalChatLength);
+                    }
+                    
+                    reject(new Error('AI响应超时'));
                 }
-            ],
-            max_tokens: 1000,
-            temperature: 0.7,
-            stream: false
-        };
-        
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        if (!response.ok) {
-            throw new Error(`API请求失败: ${response.status}`);
+            }, 120000);
+
+            const messageHandler = () => {
+                if (responded) return;
+                
+                try {
+                    if (!context.chat || context.chat.length <= originalChatLength) return;
+
+                    const lastMsg = context.chat[context.chat.length - 1];
+                    if (lastMsg && !lastMsg.is_user) {
+                        responded = true;
+                        clearTimeout(timeout);
+
+                        const aiText = lastMsg.mes || '';
+
+                        if (context.chat.length >= originalChatLength + 2) {
+                            context.chat.splice(originalChatLength, 2);
+                        }
+
+                        setTimeout(() => {
+                            const allMessages = document.querySelectorAll('#chat .mes');
+                            if (allMessages.length >= 2) {
+                                allMessages[allMessages.length - 2]?.remove();
+                                allMessages[allMessages.length - 1]?.remove();
+                            }
+                        }, 10);
+
+                        textarea.value = originalValue;
+                        chatContainer.style.display = '';
+
+                        context.eventSource?.removeListener?.(
+                            context.event_types?.CHARACTER_MESSAGE_RENDERED,
+                            messageHandler
+                        );
+
+                        console.log('✅ [联系人生成] 静默生成成功');
+                        resolve(aiText);
+                    }
+                } catch (e) {
+                    console.error('❌ 处理失败:', e);
+                    responded = true;
+                    clearTimeout(timeout);
+                    textarea.value = originalValue;
+                    chatContainer.style.display = '';
+                    reject(e);
+                }
+            };
+
+            if (context.eventSource && context.event_types) {
+                context.eventSource.on(
+                    context.event_types.CHARACTER_MESSAGE_RENDERED,
+                    messageHandler
+                );
+            } else {
+                throw new Error('无法注册监听器');
+            }
+
+            chatContainer.style.display = 'none';
+            textarea.value = prompt;
+            
+            setTimeout(() => {
+                if (!responded) {
+                    if (typeof Generate === 'function') {
+                        Generate();
+                        console.log('📤 [联系人生成] 已触发Generate');
+                    } else {
+                        const sendBtn = document.querySelector('#send_but');
+                        if (sendBtn) {
+                            sendBtn.click();
+                            console.log('📤 [联系人生成] 已点击发送');
+                        } else {
+                            throw new Error('无法触发生成');
+                        }
+                    }
+                }
+            }, 50);
+
+        } catch (error) {
+            console.error('❌ [联系人生成] 静默生成失败:', error);
+            reject(error);
         }
-        
-        const data = await response.json();
-        
-        let aiResponse = '';
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-            aiResponse = data.choices[0].message.content;
-        } else if (data.content) {
-            aiResponse = data.content;
-        } else {
-            aiResponse = JSON.stringify(data);
-        }
-        
-        console.log('✅ [联系人生成] 静默调用成功');
-        
-        return aiResponse;
-        
-    } catch (error) {
-        console.error('❌ [联系人生成] 静默调用失败:', error);
-        throw error;
-    }
+    });
 }
 
 // 🔧 清理静默消息
