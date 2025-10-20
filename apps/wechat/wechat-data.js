@@ -241,7 +241,7 @@ async loadContactsFromCharacter() {
     }
 }
     
-// 🔧 构建联系人生成提示词（完整版：角色卡+记忆表格+世界书）
+// 🔧 构建联系人生成提示词（智能版：只提取真正的人物）
 buildContactPrompt(context) {
     const charName = context.name2 || context.name || '角色';
     const userName = context.name1 || '用户';
@@ -253,6 +253,7 @@ buildContactPrompt(context) {
     // ========================================
     let charPersonality = '';
     let charScenario = '';
+    let extractedFromCard = [];  // 存储从角色卡提取的人名
     
     if (context.characters && context.characterId !== undefined) {
         const char = context.characters[context.characterId];
@@ -260,149 +261,168 @@ buildContactPrompt(context) {
             charPersonality = char.personality || '';
             charScenario = char.scenario || '';
             
-            console.log('✅ [联系人生成] 角色信息:', {
-                personality: charPersonality ? `${charPersonality.length}字` : '无',
-                scenario: charScenario ? `${charScenario.length}字` : '无'
+            // 🔥 从角色卡中提取人名（简单的正则匹配）
+            const cardText = (charPersonality + ' ' + charScenario).toLowerCase();
+            const namePatterns = [
+                /(?:妈妈|母亲|爸爸|父亲|哥哥|弟弟|姐姐|妹妹)/g,
+                /(?:老师|同学|朋友|同事|室友|邻居)/g,
+                /(?:老板|经理|主管|同事)/g
+            ];
+            
+            namePatterns.forEach(pattern => {
+                const matches = cardText.match(pattern);
+                if (matches) {
+                    extractedFromCard.push(...matches);
+                }
             });
+            
+            console.log('✅ [联系人生成] 角色卡提取:', extractedFromCard.length, '个关系');
         }
     }
     
     // ========================================
-// 2️⃣ 获取记忆表格（改进版：智能提取人物）
-// ========================================
-let memoryTableData = '';
-let extractedNPCs = [];  // 新增：存储提取的NPC
-
-if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
-    const memoryLines = [];
+    // 2️⃣ 智能提取记忆表格中的真实人物
+    // ========================================
+    let memoryNPCs = [];
     
-    window.Gaigai.m.s.forEach((section) => {
-        // 🔥 新增：只处理NPC相关的部分
-        if (section.n && section.n.includes('NPC')) {
+    if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
+        window.Gaigai.m.s.forEach((section) => {
             if (Array.isArray(section.r) && section.r.length > 0) {
-                memoryLines.push(`## ${section.n}`);
-                
                 section.r.forEach((row) => {
-                    // 🔥 智能提取：查找包含人名的字段
-                    const name = row['姓名'] || row['名字'] || row['Name'] || row['name'] || '';
-                    const relation = row['关系'] || row['身份'] || row['职业'] || '';
-                    
-                    if (name && name.trim() && 
-                        !name.includes('【') && 
-                        !name.includes('{') &&
-                        !['时代', '天气', '地点', '年龄', '待办'].some(keyword => name.includes(keyword))) {
-                        
-                        extractedNPCs.push({
-                            name: name.trim(),
-                            relation: relation.trim()
-                        });
-                        
-                        const values = Object.values(row).filter(v => v && typeof v === 'string');
-                        if (values.length > 0) {
-                            memoryLines.push(values.join(' | '));
+                    // 遍历每一行的值
+                    Object.values(row).forEach(value => {
+                        if (typeof value === 'string' && value.trim()) {
+                            const v = value.trim();
+                            
+                            // 🔥 智能判断：这是人名吗？
+                            if (
+                                v.length >= 2 && v.length <= 10 &&  // 合理的名字长度
+                                !v.includes('【') &&                 // 不包含特殊符号
+                                !v.includes('{') &&
+                                !v.includes('时') &&                 // 不包含时间相关
+                                !v.includes('天') &&                 // 不包含天气相关
+                                !v.includes('待办') &&               // 不是待办事项
+                                !v.includes('区域') &&               // 不是地点
+                                !v.includes('方位') &&
+                                !/^\d+$/.test(v) &&                 // 不是纯数字
+                                !/^[a-zA-Z]+$/.test(v) &&           // 不是纯英文
+                                (
+                                    /^[\u4e00-\u9fa5]{2,5}$/.test(v) || // 中文名（2-5个字）
+                                    /^[\u4e00-\u9fa5]+·[\u4e00-\u9fa5]+$/.test(v) || // 少数民族名字
+                                    ['妈妈', '爸爸', '老师', '同学', '朋友'].includes(v) // 称呼
+                                )
+                            ) {
+                                // 可能是人名，添加到列表
+                                if (!memoryNPCs.includes(v)) {
+                                    memoryNPCs.push(v);
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        });
+        
+        console.log('✅ [联系人生成] 记忆表格提取可能的人名:', memoryNPCs);
+    }
+    
+    // ========================================
+    // 3️⃣ 从世界书提取NPC
+    // ========================================
+    let worldBookNPCs = [];
+    
+    if (context?.worldInfoData && Array.isArray(context.worldInfoData)) {
+        context.worldInfoData.forEach(entry => {
+            // 从标题提取
+            if (entry.comment && entry.comment.trim()) {
+                const title = entry.comment.trim();
+                // 判断是否像人名
+                if (title.length >= 2 && title.length <= 10 && !title.includes('设定') && !title.includes('背景')) {
+                    worldBookNPCs.push(title);
+                }
+            }
+            
+            // 从内容提取人名（使用简单的规则）
+            if (entry.content && entry.content.trim()) {
+                const content = entry.content;
+                // 查找"名字："或"姓名："后面的内容
+                const nameMatch = content.match(/(?:名字|姓名|称呼)[：:]\s*([^\s，。,\.]+)/);
+                if (nameMatch && nameMatch[1]) {
+                    worldBookNPCs.push(nameMatch[1]);
+                }
+            }
+        });
+        
+        console.log('✅ [联系人生成] 世界书提取:', worldBookNPCs);
+    }
+    
+    // ========================================
+    // 4️⃣ 从聊天记录提取提到的人名
+    // ========================================
+    let chatMentionedNames = [];
+    
+    if (context.chat && Array.isArray(context.chat)) {
+        context.chat.slice(-30).forEach(msg => {
+            if (msg.mes && msg.mes.trim()) {
+                const text = msg.mes;
+                // 查找对话中提到的人（简单规则）
+                const patterns = [
+                    /(?:和|跟|与|给|找|叫|喊|通知|告诉)([^\s，。,\.]{2,4})(?:说|讲|聊|玩|去|来)/g,
+                    /([^\s，。,\.]{2,4})(?:老师|同学|朋友|哥|姐|弟|妹)/g
+                ];
+                
+                patterns.forEach(pattern => {
+                    let match;
+                    while ((match = pattern.exec(text)) !== null) {
+                        if (match[1] && !chatMentionedNames.includes(match[1])) {
+                            chatMentionedNames.push(match[1]);
                         }
                     }
                 });
             }
-        }
-    });
-    
-    if (memoryLines.length > 0) {
-        memoryTableData = '\n**记忆表格中的NPC：**\n' + memoryLines.join('\n') + '\n';
-        console.log('✅ [联系人生成] 提取到NPC:', extractedNPCs.length, '个');
-    }
-} else {
-    console.log('⚠️ [联系人生成] 未找到记忆表格');
-}
-
-    // ========================================
-    // 3️⃣ 获取世界书
-    // ========================================
-    let worldInfoData = '';
-    
-    // 🔑 修复：直接使用传入的context参数，不要重新定义！
-    if (context?.worldInfoData && Array.isArray(context.worldInfoData)) {
-        const worldInfoLines = [];
-        
-        context.worldInfoData.forEach(entry => {
-            if (entry.content && entry.content.trim()) {
-                const title = entry.comment || entry.key?.[0] || 'NPC';
-                worldInfoLines.push(`### ${title}`);
-                worldInfoLines.push(entry.content.trim());
-            }
         });
         
-        if (worldInfoLines.length > 0) {
-            worldInfoData = '\n**世界书（NPC和设定）：**\n' + worldInfoLines.join('\n') + '\n';
-            console.log('✅ [联系人生成] 世界书:', worldInfoLines.length / 2, '条');
-        }
-    } else {
-        console.log('⚠️ [联系人生成] 未找到世界书');
+        console.log('✅ [联系人生成] 聊天记录提取:', chatMentionedNames);
     }
     
     // ========================================
-    // 4️⃣ 获取聊天记录
+    // 5️⃣ 构建最终提示词
     // ========================================
-    const chatHistory = [];
-    if (context.chat && Array.isArray(context.chat)) {
-        const recentChats = context.chat.slice(-30);
-        recentChats.forEach(msg => {
-            if (msg.mes && msg.mes.trim()) {
-                const speaker = msg.is_user ? userName : charName;
-                const content = msg.mes
-                    .replace(/<[^>]*>/g, '')
-                    .replace(/\*.*?\*/g, '')
-                    .substring(0, 300);
-                
-                if (content.trim()) {
-                    chatHistory.push(`${speaker}: ${content}`);
-                }
-            }
-        });
-    }
     
-    const chatText = chatHistory.length > 0 
-        ? chatHistory.join('\n')
-        : '（暂无聊天记录）';
+    // 合并所有提取的人名
+    const allExtractedNames = [...new Set([
+        ...memoryNPCs,
+        ...worldBookNPCs,
+        ...chatMentionedNames
+    ])].filter(name => name && name !== charName && name !== userName);
     
-    console.log('✅ [联系人生成] 聊天记录:', chatHistory.length, '条');
+    console.log('📊 [联系人生成] 总共提取到:', allExtractedNames.length, '个可能的人名');
     
-    // ========================================
-    // 5️⃣ 构建提示词
-    // ========================================
-    return `你是一个数据生成助手。请根据以下信息，生成微信联系人列表。
+    return `你是一个微信联系人生成助手。
 
-# 角色信息
-- **角色名：** ${charName}
-- **用户名：** ${userName}
+# 当前角色
+- 角色名：${charName}
+- 用户名：${userName}
 
-${charPersonality ? `**性格和背景：**\n${charPersonality}\n` : ''}
-${charScenario ? `**场景：**\n${charScenario}\n` : ''}
-${worldInfoData}
-${memoryTableData}
+# 从数据中提取到的可能人物
+${allExtractedNames.length > 0 ? allExtractedNames.map(name => `- ${name}`).join('\n') : '（未提取到具体人名）'}
 
-# 聊天历史（最近30条）
-${chatText}
+# 角色背景（用于推测其他联系人）
+${charPersonality ? charPersonality.substring(0, 500) : '（无背景信息）'}
 
----
+# 任务
+生成5-10个微信联系人，包括：
+1. **必须**将 ${charName} 作为第一个联系人
+2. 如果上面提取到了人名，优先使用
+3. 如果人名不够，根据角色背景合理推测（如学生会有同学、老师；上班族会有同事、老板）
+4. 生成1-2个微信群聊
 
-# 任务要求
-根据上述信息，生成**5-10个**合理的联系人。
+# ⚠️ 重要规则
+- 只生成真实的"人名"或"称呼"
+- 不要使用这些词：时代、天气、地点、全局时间、待办、区域、方位、生理、物品、静态、动态、【、{、}
+- 如果没有具体信息，使用通用名字如：张伟、李娜、王强、陈静等
 
-**重要规则**：
-1. 只生成"人名"，不要把系统字段当成人名
-2. 忽略这些词：时代、天气、地点、年龄、全局时间、待办、区域、方位、生理、物品、静态、动态
-3. 忽略带有【】或{}的内容
-4. 生成符合角色背景的真实人名（如：张三、李明、王芳等）
-5. **第一个必须是 ${charName} 本人**
-
-**联系人来源优先级**：
-1. 从聊天记录中提到的人物
-2. 从角色背景中提到的关系人（家人、朋友、同事）
-3. 根据场景合理推测的人物（如学校背景就有同学、老师）
-4. 如果信息不足，生成通用联系人（朋友A、同事B等）
-
-# 输出格式（严格按此JSON格式，不要任何其他文字）
+# 输出格式
 \`\`\`json
 {
   "contacts": [
@@ -410,31 +430,24 @@ ${chatText}
       "name": "${charName}",
       "avatar": "⭐",
       "relation": "主角",
-      "remark": "主要角色"
+      "remark": ""
     },
     {
-      "name": "张三",
-      "avatar": "👨",
-      "relation": "朋友",
-      "remark": "好友"
+      "name": "真实的人名",
+      "avatar": "👨或👩或其他emoji",
+      "relation": "朋友/家人/同事等",
+      "remark": "可选备注"
     }
   ],
   "groups": [
     {
-      "name": "家庭群",
-      "avatar": "👨‍👩‍👧",
-      "members": ["妈妈", "爸爸", "${charName}"]
+      "name": "群名称",
+      "avatar": "👥",
+      "members": ["成员1", "成员2", "${charName}"]
     }
   ]
 }
 \`\`\`
-
-**注意：**
-1. 只返回JSON，不要解释
-2. 联系人名字要符合角色背景
-3. 头像用emoji表情（👨👩👤👔⭐等）
-4. relation字段写明关系（朋友/家人/同事/主角等）
-5. **第一个联系人必须是 ${charName} 本人**
 
 现在请生成：`;
 }
