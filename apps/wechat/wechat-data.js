@@ -268,33 +268,52 @@ buildContactPrompt(context) {
     }
     
     // ========================================
-    // 2️⃣ 获取记忆表格
-    // ========================================
-    let memoryTableData = '';
+// 2️⃣ 获取记忆表格（改进版：智能提取人物）
+// ========================================
+let memoryTableData = '';
+let extractedNPCs = [];  // 新增：存储提取的NPC
+
+if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
+    const memoryLines = [];
     
-    if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
-        const memoryLines = [];
-        
-        window.Gaigai.m.s.forEach((section) => {
+    window.Gaigai.m.s.forEach((section) => {
+        // 🔥 新增：只处理NPC相关的部分
+        if (section.n && section.n.includes('NPC')) {
             if (Array.isArray(section.r) && section.r.length > 0) {
                 memoryLines.push(`## ${section.n}`);
                 
                 section.r.forEach((row) => {
-                    const values = Object.values(row).filter(v => v && typeof v === 'string');
-                    if (values.length > 0) {
-                        memoryLines.push(values.join(' | '));
+                    // 🔥 智能提取：查找包含人名的字段
+                    const name = row['姓名'] || row['名字'] || row['Name'] || row['name'] || '';
+                    const relation = row['关系'] || row['身份'] || row['职业'] || '';
+                    
+                    if (name && name.trim() && 
+                        !name.includes('【') && 
+                        !name.includes('{') &&
+                        !['时代', '天气', '地点', '年龄', '待办'].some(keyword => name.includes(keyword))) {
+                        
+                        extractedNPCs.push({
+                            name: name.trim(),
+                            relation: relation.trim()
+                        });
+                        
+                        const values = Object.values(row).filter(v => v && typeof v === 'string');
+                        if (values.length > 0) {
+                            memoryLines.push(values.join(' | '));
+                        }
                     }
                 });
             }
-        });
-        
-        if (memoryLines.length > 0) {
-            memoryTableData = '\n**记忆表格（NPC和剧情）：**\n' + memoryLines.join('\n') + '\n';
-            console.log('✅ [联系人生成] 记忆表格:', memoryLines.length, '行');
         }
-    } else {
-        console.log('⚠️ [联系人生成] 未找到记忆表格');
+    });
+    
+    if (memoryLines.length > 0) {
+        memoryTableData = '\n**记忆表格中的NPC：**\n' + memoryLines.join('\n') + '\n';
+        console.log('✅ [联系人生成] 提取到NPC:', extractedNPCs.length, '个');
     }
+} else {
+    console.log('⚠️ [联系人生成] 未找到记忆表格');
+}
 
     // ========================================
     // 3️⃣ 获取世界书
@@ -368,13 +387,20 @@ ${chatText}
 ---
 
 # 任务要求
-根据上述信息，分析出**5-10个**可能存在的联系人（朋友、家人、同事等），以及**0-3个**可能的微信群聊。
+根据上述信息，生成**5-10个**合理的联系人。
 
-**重点**：
-- 从性格背景中提取关系人物
-- 从记忆表格中提取NPC
-- 从世界书中提取NPC
-- **必须添加主角色 ${charName} 作为联系人**
+**重要规则**：
+1. 只生成"人名"，不要把系统字段当成人名
+2. 忽略这些词：时代、天气、地点、年龄、全局时间、待办、区域、方位、生理、物品、静态、动态
+3. 忽略带有【】或{}的内容
+4. 生成符合角色背景的真实人名（如：张三、李明、王芳等）
+5. **第一个必须是 ${charName} 本人**
+
+**联系人来源优先级**：
+1. 从聊天记录中提到的人物
+2. 从角色背景中提到的关系人（家人、朋友、同事）
+3. 根据场景合理推测的人物（如学校背景就有同学、老师）
+4. 如果信息不足，生成通用联系人（朋友A、同事B等）
 
 # 输出格式（严格按此JSON格式，不要任何其他文字）
 \`\`\`json
