@@ -690,38 +690,88 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
     return finalPrompt;
 }
 
-// 🔧 完全静默调用AI（不使用UI）
+    // 🔧 完全静默调用AI（智能检测API类型）
 async sendToAIHidden(prompt, context) {
     try {
-        console.log('🚀 开始完全静默API调用...');
+        console.log('🚀 [手机聊天] 开始静默API调用...');
         
-        const main_api = context.main_api || window.main_api;
+        // 🔥 智能检测API类型
+        const apiType = this.detectAPIType(context);
+        console.log('📡 检测到API类型:', apiType);
         
-        if (main_api === 'openai') {
-            return await this.callOpenAI(prompt);
-        } else if (main_api === 'claude') {
-            return await this.callClaude(prompt);
-        } else if (main_api === 'textgenerationwebui' || main_api === 'kobold') {
-            return await this.callTextGen(prompt);
-        } else {
-            throw new Error(`不支持的API类型: ${main_api}`);
+        switch(apiType) {
+            case 'openai':
+                return await this.callOpenAI(prompt);
+            case 'claude':
+                return await this.callClaude(prompt);
+            case 'textgen':
+                return await this.callTextGen(prompt);
+            default:
+                throw new Error(`不支持的API类型: ${apiType}`);
         }
         
     } catch (error) {
-        console.error('❌ 静默调用失败:', error);
+        console.error('❌ [手机聊天] 静默调用失败:', error);
+        this.hideTypingStatus();
         throw error;
     }
 }
 
-// 🔥 调用OpenAI API
+// 🔥 智能检测API类型（新增方法）
+detectAPIType(context) {
+    // 1. 优先读取context中的main_api
+    const main_api = context?.main_api || window.main_api;
+    
+    console.log('🔍 main_api值:', main_api);
+    
+    // 2. 根据main_api判断
+    if (main_api === 'openai') {
+        return 'openai';
+    } else if (main_api === 'claude') {
+        return 'claude';
+    } else if (main_api === 'textgenerationwebui' || main_api === 'kobold' || main_api === 'ooba') {
+        return 'textgen';
+    }
+    
+    // 3. 如果main_api不明确，尝试检测配置
+    if (window.oai_settings?.api_key_openai || window.oai_settings?.reverse_proxy) {
+        console.log('✅ 检测到OpenAI配置');
+        return 'openai';
+    }
+    
+    if (window.claude_settings?.api_key_claude) {
+        console.log('✅ 检测到Claude配置');
+        return 'claude';
+    }
+    
+    if (window.textgenerationwebui_settings?.server_url || window.kai_settings?.server_urls) {
+        console.log('✅ 检测到本地API配置');
+        return 'textgen';
+    }
+    
+    // 4. 默认使用OpenAI
+    console.warn('⚠️ 无法确定API类型，默认使用OpenAI');
+    return 'openai';
+}
+
+// 🔥 调用OpenAI API（改进版）
 async callOpenAI(prompt) {
     const settings = window.oai_settings || {};
     
-    const apiUrl = settings.reverse_proxy || 'https://api.openai.com/v1/chat/completions';
+    // 读取API配置
+    let apiUrl = settings.reverse_proxy || 'https://api.openai.com/v1/chat/completions';
     const apiKey = settings.api_key_openai;
     
+    // 🔥 处理API URL（确保有正确的endpoint）
+    if (apiUrl && !apiUrl.includes('/chat/completions')) {
+        apiUrl = apiUrl.replace(/\/$/, '') + '/chat/completions';
+    }
+    
+    console.log('📤 [OpenAI] API地址:', apiUrl);
+    console.log('🔑 [OpenAI] 有API Key:', !!apiKey);
+    
     if (!apiKey) {
-        throw new Error('未配置OpenAI API Key');
+        throw new Error('未配置OpenAI API Key，请在酒馆设置中配置');
     }
 
     const requestBody = {
@@ -732,9 +782,16 @@ async callOpenAI(prompt) {
                 content: prompt
             }
         ],
-        max_tokens: 500,
-        temperature: settings.temp_openai || 0.9
+        max_tokens: parseInt(settings.openai_max_tokens) || 500,
+        temperature: parseFloat(settings.temp_openai) || 0.9,
+        stream: false
     };
+
+    console.log('📦 [OpenAI] 请求参数:', {
+        model: requestBody.model,
+        max_tokens: requestBody.max_tokens,
+        temperature: requestBody.temperature
+    });
 
     const response = await fetch(apiUrl, {
         method: 'POST',
@@ -747,19 +804,26 @@ async callOpenAI(prompt) {
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`OpenAI API错误 ${response.status}: ${errorText}`);
+        console.error('❌ [OpenAI] API错误响应:', errorText);
+        throw new Error(`OpenAI API错误 ${response.status}: ${errorText.substring(0, 200)}`);
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
+    const aiResponse = data.choices?.[0]?.message?.content || '';
+    
+    console.log('✅ [OpenAI] 调用成功，回复长度:', aiResponse.length);
+    return aiResponse;
 }
 
-// 🔥 调用Claude API
+// 🔥 调用Claude API（改进版）
 async callClaude(prompt) {
     const settings = window.claude_settings || {};
     
-    const apiUrl = settings.claude_reverse_proxy || 'https://api.anthropic.com/v1/messages';
+    let apiUrl = settings.claude_reverse_proxy || 'https://api.anthropic.com/v1/messages';
     const apiKey = settings.api_key_claude;
+    
+    console.log('📤 [Claude] API地址:', apiUrl);
+    console.log('🔑 [Claude] 有API Key:', !!apiKey);
     
     if (!apiKey) {
         throw new Error('未配置Claude API Key');
@@ -767,7 +831,7 @@ async callClaude(prompt) {
 
     const requestBody = {
         model: settings.claude_model || 'claude-3-sonnet-20240229',
-        max_tokens: 500,
+        max_tokens: parseInt(settings.claude_max_tokens) || 500,
         messages: [
             {
                 role: 'user',
@@ -775,6 +839,11 @@ async callClaude(prompt) {
             }
         ]
     };
+
+    console.log('📦 [Claude] 请求参数:', {
+        model: requestBody.model,
+        max_tokens: requestBody.max_tokens
+    });
 
     const response = await fetch(apiUrl, {
         method: 'POST',
@@ -788,18 +857,38 @@ async callClaude(prompt) {
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Claude API错误 ${response.status}: ${errorText}`);
+        console.error('❌ [Claude] API错误响应:', errorText);
+        throw new Error(`Claude API错误 ${response.status}: ${errorText.substring(0, 200)}`);
     }
 
     const data = await response.json();
-    return data.content?.[0]?.text || '';
+    const aiResponse = data.content?.[0]?.text || '';
+    
+    console.log('✅ [Claude] 调用成功，回复长度:', aiResponse.length);
+    return aiResponse;
 }
 
-// 🔥 调用Text Generation WebUI / KoboldAI
+// 🔥 调用Text Generation WebUI / KoboldAI（改进版）
 async callTextGen(prompt) {
     const settings = window.textgenerationwebui_settings || window.kai_settings || {};
     
-    const apiUrl = settings.server_url || 'http://127.0.0.1:5000/v1/chat/completions';
+    let apiUrl = settings.server_url;
+    
+    // 如果是Kobold，可能有多个URL
+    if (!apiUrl && settings.server_urls && Array.isArray(settings.server_urls)) {
+        apiUrl = settings.server_urls[0];
+    }
+    
+    if (!apiUrl) {
+        apiUrl = 'http://127.0.0.1:5000/v1/chat/completions';
+    }
+    
+    // 确保有正确的endpoint
+    if (!apiUrl.includes('/chat/completions') && !apiUrl.includes('/api/v1/generate')) {
+        apiUrl = apiUrl.replace(/\/$/, '') + '/v1/chat/completions';
+    }
+
+    console.log('📤 [TextGen] API地址:', apiUrl);
 
     const requestBody = {
         messages: [
@@ -808,9 +897,15 @@ async callTextGen(prompt) {
                 content: prompt
             }
         ],
-        max_tokens: 500,
-        temperature: settings.temp || 0.9
+        max_tokens: parseInt(settings.max_length) || 500,
+        temperature: parseFloat(settings.temp) || 0.9,
+        stream: false
     };
+
+    console.log('📦 [TextGen] 请求参数:', {
+        max_tokens: requestBody.max_tokens,
+        temperature: requestBody.temperature
+    });
 
     const response = await fetch(apiUrl, {
         method: 'POST',
@@ -822,11 +917,15 @@ async callTextGen(prompt) {
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`TextGen API错误 ${response.status}: ${errorText}`);
+        console.error('❌ [TextGen] API错误响应:', errorText);
+        throw new Error(`TextGen API错误 ${response.status}: ${errorText.substring(0, 200)}`);
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || data.results?.[0]?.text || '';
+    const aiResponse = data.choices?.[0]?.message?.content || data.results?.[0]?.text || '';
+    
+    console.log('✅ [TextGen] 调用成功，回复长度:', aiResponse.length);
+    return aiResponse;
 }
     
     handleMoreAction(action) {
