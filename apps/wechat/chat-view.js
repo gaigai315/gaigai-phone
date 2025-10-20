@@ -443,76 +443,156 @@ async sendToAI(message) {
     }
 }
 
-// 🔧 构建手机聊天提示词（完整版，包含角色卡全部信息）
+// 🔧 构建手机聊天提示词（完整版：主角+用户+NPC）
 buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
     const charName = context.name2 || context.name || '对方';
     const userName = context.name1 || '用户';
     
-    // ✅ 获取完整角色卡
-    const charDesc = context.description || '';
-    const personality = context.personality || '';
-    const scenario = context.scenario || '';
-    const firstMes = context.firstMes || '';
+    console.log('📝 开始构建提示词...');
     
-    // ✅ 获取示例对话
-    let exampleDialogue = '';
+    // ========================================
+    // 1️⃣ AI角色信息（主角）
+    // ========================================
+    const charDescription = context.description || '';
+    const charPersonality = context.personality || '';
+    const charScenario = context.scenario || '';
+    const charFirstMes = context.firstMes || '';
+    
+    console.log('✅ AI角色信息:', {
+        description: charDescription ? '有' : '无',
+        personality: charPersonality ? '有' : '无',
+        scenario: charScenario ? '有' : '无'
+    });
+    
+    // 示例对话
+    let charExamples = '';
     if (context.mesExamples) {
-        exampleDialogue = context.mesExamples
+        charExamples = context.mesExamples
             .replace(/<START>/g, '\n---\n')
             .substring(0, 1000);
+        console.log('✅ 示例对话:', charExamples.length, '字符');
     }
     
-    // ✅ 获取世界书
-    let worldInfo = '';
+    // ========================================
+    // 2️⃣ 用户信息
+    // ========================================
+    const userPersona = context.persona || '';
+    console.log('✅ 用户角色卡:', userPersona ? `有(${userPersona.length}字符)` : '无');
+    
+    // ========================================
+    // 3️⃣ NPC信息（世界书）
+    // ========================================
+    let worldBookNPCs = '';
     if (context.worldInfoData && Array.isArray(context.worldInfoData)) {
-        const relevantEntries = context.worldInfoData
+        const entries = context.worldInfoData
             .filter(entry => entry.content && entry.content.length > 0)
-            .slice(0, 10);
+            .slice(0, 20); // 增加到20条
         
-        if (relevantEntries.length > 0) {
-            worldInfo = '\n**世界设定：**\n' + 
-                relevantEntries
-                    .map(entry => `- ${entry.content}`)
-                    .join('\n')
-                    .substring(0, 2000);
+        if (entries.length > 0) {
+            worldBookNPCs = entries
+                .map(entry => `- ${entry.content}`)
+                .join('\n')
+                .substring(0, 4000); // 增加长度限制
+            console.log('✅ 世界书条目:', entries.length, '条');
         }
     }
     
-    // ✅ 整理聊天历史（最近40条，包含来源标记）
+    // ========================================
+    // 4️⃣ NPC信息（记忆表格）
+    // ========================================
+    let memoryTableData = '';
+    if (typeof window.Gaigai !== 'undefined') {
+        try {
+            // 方法1：getSummary()
+            if (typeof window.Gaigai.getSummary === 'function') {
+                const summary = window.Gaigai.getSummary();
+                if (summary && summary.trim()) {
+                    memoryTableData = summary;
+                    console.log('✅ 记忆表格总结:', summary.length, '字符');
+                }
+            }
+            // 方法2：直接访问data
+            else if (window.Gaigai.data) {
+                if (window.Gaigai.data.summary) {
+                    memoryTableData = window.Gaigai.data.summary;
+                } else if (window.Gaigai.data.table) {
+                    // 如果有表格数据，转换为文本
+                    memoryTableData = JSON.stringify(window.Gaigai.data.table);
+                }
+                console.log('✅ 记忆表格数据:', memoryTableData ? memoryTableData.length + '字符' : '无');
+            }
+        } catch (e) {
+            console.warn('⚠️ 无法获取记忆表格:', e);
+        }
+    } else {
+        console.log('⚠️ 记忆表格插件未加载');
+    }
+    
+    // ========================================
+    // 5️⃣ 聊天历史
+    // ========================================
     const recentHistory = chatHistory.slice(-40);
     const historyText = recentHistory.map(h => {
         const source = h.source === 'tavern' ? '(面对面)' : '(微信)';
         return `${h.speaker}${source}: ${h.message}`;
     }).join('\n');
     
-    // ✅ 构建完整提示词（修复版）
-    const promptText = [
+    console.log('✅ 聊天历史:', recentHistory.length, '条');
+    
+    // ========================================
+    // 构建最终提示词
+    // ========================================
+    const sections = [];
+    
+    sections.push(
         '# 场景：微信聊天',
         `你正在通过微信和${userName}聊天（不是面对面对话，是手机文字聊天）。`,
         '',
-        '## 角色信息',
-        `**你的名字：** ${charName}`,
-        `**微信备注名：** ${contactName}`,
-        ''
-    ];
+        '## 你的角色信息（AI角色）',
+        `**名字：** ${charName}`,
+        `**微信备注名：** ${contactName}`
+    );
     
-    if (charDesc) {
-        promptText.push(`**角色描述：**\n${charDesc}\n`);
-    }
-    if (personality) {
-        promptText.push(`**性格特点：**\n${personality}\n`);
-    }
-    if (scenario) {
-        promptText.push(`**当前场景：**\n${scenario}\n`);
-    }
-    if (worldInfo) {
-        promptText.push(worldInfo);
-    }
-    if (exampleDialogue) {
-        promptText.push(`**对话风格参考：**\n${exampleDialogue}\n`);
+    if (charDescription) {
+        sections.push('', `**角色描述：**`, charDescription);
     }
     
-    promptText.push(
+    if (charPersonality) {
+        sections.push('', `**性格：**`, charPersonality);
+    }
+    
+    if (charScenario) {
+        sections.push('', `**当前场景：**`, charScenario);
+    }
+    
+    if (charExamples) {
+        sections.push('', `**对话风格参考：**`, charExamples);
+    }
+    
+    // 用户信息
+    sections.push('', `## ${userName}的角色信息（用户）`);
+    if (userPersona) {
+        sections.push(userPersona);
+    } else {
+        sections.push('（无详细设定）');
+    }
+    
+    // NPC信息
+    if (worldBookNPCs || memoryTableData) {
+        sections.push('', '## NPC和剧情信息');
+        
+        if (memoryTableData) {
+            sections.push('', '**记忆总结（包含NPC和关键剧情）：**', memoryTableData);
+        }
+        
+        if (worldBookNPCs) {
+            sections.push('', '**世界书设定：**', worldBookNPCs);
+        }
+    }
+    
+    // 聊天历史
+    sections.push(
+        '',
         '## 完整聊天历史（包含面对面对话和微信记录）',
         historyText,
         '',
@@ -521,44 +601,75 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
         '',
         '---',
         '',
-        '## 回复要求（重要！）',
-        '1. **只返回你的微信回复文字内容**，不要任何旁白、动作、场景描述',
-        '2. 语气要符合微信聊天风格（简洁、口语化、可以分段）',
-        '3. 可以使用emoji表情 😊',
-        '4. 如果要发多条消息，用三个竖线分隔，例如：好的|||我马上过来|||😊',
-        '5. 要考虑之前的所有对话历史（包括面对面和微信的）',
-        '6. **禁止输出**：JSON、XML、标签、格式代码、旁白、动作描述',
+        '## 回复要求',
+        '1. 只返回你的微信回复文字，不要旁白、动作、场景描述',
+        '2. 语气符合微信聊天风格（简洁、口语化）',
+        '3. 可以使用emoji 😊',
+        '4. 多条消息用|||分隔，例如：好的|||我马上过来|||😊',
+        '5. 考虑所有对话历史（面对面+微信）',
+        '6. 考虑NPC信息和剧情发展',
+        '7. 禁止输出JSON、XML、标签、格式代码',
         '',
-        `现在请回复${userName}的微信消息（只回复文字内容）：`
+        `现在回复${userName}的微信消息：`
     );
     
-    return promptText.join('\n');
+    const finalPrompt = sections.join('\n');
+    console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
+    
+    return finalPrompt;
 }
 
-// 🔧 静默调用AI（不显示在聊天窗口）
+// 🔧 完全静默调用AI（使用MutationObserver拦截）
 async sendToAIHidden(prompt, context) {
     return new Promise((resolve, reject) => {
         try {
-            console.log('🚀 开始静默调用AI...');
+            console.log('🚀 开始完全静默调用AI...');
 
             const textarea = document.querySelector('#send_textarea');
             if (!textarea) {
                 throw new Error('找不到聊天输入框');
             }
 
-            // 保存原始内容
             const originalValue = textarea.value;
             
-            // 设置提示词
-            textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            // 🔥 关键：使用MutationObserver拦截新消息
+            const chatContainer = document.getElementById('chat');
+            if (!chatContainer) {
+                throw new Error('找不到聊天容器');
+            }
 
-            // 监听AI回复
+            let userMsgId = null;
+            let aiMsgId = null;
             let responded = false;
+
+            // 创建观察器，拦截所有新增的消息元素
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.classList && node.classList.contains('mes')) {
+                            // 立即隐藏新消息
+                            node.style.display = 'none';
+                            console.log('🚫 已拦截并隐藏新消息');
+                        }
+                    });
+                });
+            });
+
+            // 开始观察
+            observer.observe(chatContainer, {
+                childList: true,
+                subtree: true
+            });
+
             const timeout = setTimeout(() => {
                 if (!responded) {
                     responded = true;
+                    observer.disconnect();
                     textarea.value = originalValue;
+                    
+                    // 清理泄露的消息
+                    this.cleanupLeakedMessages(context);
+                    
                     reject(new Error('AI响应超时（30秒）'));
                 }
             }, 30000);
@@ -570,42 +681,52 @@ async sendToAIHidden(prompt, context) {
                     const chat = context.chat;
                     if (!chat || chat.length < 2) return;
 
-                    // 获取最后一条AI消息
                     const lastMsg = chat[chat.length - 1];
                     if (lastMsg && !lastMsg.is_user) {
                         responded = true;
                         clearTimeout(timeout);
+                        observer.disconnect();
 
                         const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
 
-                        // 🔥 立即从聊天记录中删除（用户消息+AI消息）
+                        // 🔥 从聊天数组删除
                         chat.splice(chat.length - 2, 2);
-                        
-                        // 🔥 立即隐藏DOM元素
+
+                        // 🔥 从DOM删除（双重保险）
                         setTimeout(() => {
                             const allMessages = document.querySelectorAll('.mes');
+                            const removed = [];
                             if (allMessages.length >= 2) {
-                                allMessages[allMessages.length - 2]?.remove();
-                                allMessages[allMessages.length - 1]?.remove();
+                                const userMsg = allMessages[allMessages.length - 2];
+                                const aiMsg = allMessages[allMessages.length - 1];
+                                if (userMsg) {
+                                    userMsg.remove();
+                                    removed.push('用户消息');
+                                }
+                                if (aiMsg) {
+                                    aiMsg.remove();
+                                    removed.push('AI消息');
+                                }
                             }
+                            console.log('🗑️ 已删除DOM元素:', removed.join(', '));
                         }, 50);
 
-                        // 恢复输入框
                         textarea.value = originalValue;
 
-                        // 移除监听器
                         context.eventSource.removeListener(
                             context.event_types.CHARACTER_MESSAGE_RENDERED,
                             messageHandler
                         );
 
-                        console.log('✅ 静默调用成功，已清理痕迹');
+                        console.log('✅ 静默调用成功，完全无痕迹');
                         resolve(aiText);
                     }
                 } catch (e) {
                     responded = true;
                     clearTimeout(timeout);
+                    observer.disconnect();
                     textarea.value = originalValue;
+                    this.cleanupLeakedMessages(context);
                     reject(e);
                 }
             };
@@ -616,15 +737,20 @@ async sendToAIHidden(prompt, context) {
                 messageHandler
             );
 
-            // 延迟发送
+            // 设置提示词并发送
+            textarea.value = prompt;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
             setTimeout(() => {
                 if (!responded) {
                     const sendBtn = document.querySelector('#send_but');
                     if (sendBtn) {
                         sendBtn.click();
+                        console.log('📤 已发送，观察器已拦截显示');
                     } else {
                         responded = true;
                         clearTimeout(timeout);
+                        observer.disconnect();
                         textarea.value = originalValue;
                         reject(new Error('找不到发送按钮'));
                     }
@@ -636,6 +762,28 @@ async sendToAIHidden(prompt, context) {
             reject(error);
         }
     });
+}
+
+// 🔧 清理泄露的消息（新增）
+cleanupLeakedMessages(context) {
+    try {
+        // 从数组删除
+        if (context.chat && context.chat.length >= 2) {
+            const beforeLen = context.chat.length;
+            context.chat.splice(context.chat.length - 2, 2);
+            console.log(`🗑️ 从数组删除2条消息（${beforeLen} → ${context.chat.length}）`);
+        }
+        
+        // 从DOM删除
+        const allMessages = document.querySelectorAll('.mes');
+        if (allMessages.length >= 2) {
+            allMessages[allMessages.length - 2]?.remove();
+            allMessages[allMessages.length - 1]?.remove();
+            console.log('🗑️ 从DOM删除2条消息');
+        }
+    } catch (e) {
+        console.error('清理失败:', e);
+    }
 }
     
     handleMoreAction(action) {
