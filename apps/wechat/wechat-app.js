@@ -6,11 +6,11 @@ import { WechatData } from './wechat-data.js';
 
 export class WechatApp {
     constructor(phoneShell, storage) {
-        this.phoneShell = phoneShell;
-        this.storage = storage;
-        this.data = new WechatData(storage);
-        this.currentView = 'chats'; // chats, contacts, discover, me
-        this.currentChat = null;
+    this.phoneShell = phoneShell;
+    this.storage = storage;
+    this.wechatData = new WechatData(storage);
+    this.currentView = 'chats';
+    this.currentChat = null;
         
         // 初始化视图
         this.chatView = new ChatView(this);
@@ -1422,7 +1422,7 @@ export class WechatApp {
 }
     
     render() {
-        const chatList = this.data.getChatList();
+        const chatList = this.wechatData.getChatList();
         const unreadCount = chatList.reduce((sum, chat) => sum + chat.unread, 0);
         
         const html = `
@@ -1508,7 +1508,7 @@ export class WechatApp {
     }
     
     renderChatList() {
-        const chats = this.data.getChatList();
+        const chats = this.wechatData.getChatList();
         
         if (chats.length === 0) {
             return `
@@ -1604,7 +1604,7 @@ export class WechatApp {
     }
     
     renderProfile() {
-    const userInfo = this.data.getUserInfo();
+    const userInfo = this.wechatData.getUserInfo();
     return `
         <div class="wechat-profile">
             <!-- 🎨 个人信息卡片 -->
@@ -1670,15 +1670,15 @@ export class WechatApp {
             <div class="profile-divider"></div>
             <div class="profile-stats">
                 <div class="stat-item">
-                    <div class="stat-number">${this.data.getContacts().length}</div>
+                    <div class="stat-number">${this.wechatData.getContacts().length}</div>
                     <div class="stat-label">联系人</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">${this.data.getChatList().length}</div>
+                    <div class="stat-number">${this.wechatData.getChatList().length}</div>
                     <div class="stat-label">聊天</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">${this.data.getMoments().length}</div>
+                    <div class="stat-number">${this.wechatData.getMoments().length}</div>
                     <div class="stat-label">朋友圈</div>
                 </div>
             </div>
@@ -1757,7 +1757,7 @@ bindEvents() {
 }
     
 openChat(chatId) {
-    const chat = this.data.getChat(chatId);
+    const chat = this.wechatData.getChat(chatId);
     if (chat) {
         chat.unread = 0; // 清空未读
         this.currentChat = chat;
@@ -1774,9 +1774,9 @@ openChat(chatId) {
         const chatId = data.chatId || data.from || 'ai_chat';
         
         // 确保聊天存在
-        let chat = this.data.getChat(chatId);
+        let chat = this.wechatData.getChat(chatId);
         if (!chat) {
-            chat = this.data.createChat({
+            chat = this.wechatData.createChat({
                 id: chatId,
                 name: data.from || 'AI助手',
                 type: 'single',
@@ -1787,7 +1787,7 @@ openChat(chatId) {
         // 添加消息
         if (data.messages && Array.isArray(data.messages)) {
             data.messages.forEach(msg => {
-                this.data.addMessage(chatId, {
+                this.wechatData.addMessage(chatId,{
                     from: data.from || 'AI',
                     content: msg.text || msg.message,
                     time: msg.timestamp || '刚刚',
@@ -1800,7 +1800,7 @@ openChat(chatId) {
                 chat.unread = (chat.unread || 0) + data.messages.length;
             }
         } else if (data.message) {
-            this.data.addMessage(chatId, {
+            this.wechatData.addMessage(chatId, {
                 from: data.from || 'AI',
                 content: data.message,
                 time: data.timestamp || '刚刚',
@@ -1817,12 +1817,12 @@ openChat(chatId) {
             this.render();
         }
         
-        this.data.saveData();
+        this.wechatData.saveData();
     }
 
 // ✅ 编辑个人资料（手机内部界面，不用弹窗）
 showEditProfile() {
-    const userInfo = this.data.getUserInfo();
+    this.wechatData.updateUserInfo({ avatar: e.target.result });
     
     const html = `
         <div class="wechat-app">
@@ -1937,7 +1937,7 @@ showEditProfile() {
             reader.onload = (e) => {
                 const preview = document.getElementById('user-avatar-preview');
                 preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">`;
-                this.data.updateUserInfo({ avatar: e.target.result });
+                this.wechatData.updateUserInfo({ avatar: e.target.result });
             };
             reader.readAsDataURL(file);
         }
@@ -1953,7 +1953,7 @@ showEditProfile() {
             return;
         }
         
-        this.data.updateUserInfo({
+       this.wechatData.updateUserInfo({
             name: newName,
             signature: newSignature
         });
@@ -2108,7 +2108,7 @@ showLoadContactsConfirm() {
         this.phoneShell.showNotification('AI分析中', '请稍候，正在生成联系人...', '⏳');
         
         try {
-            const result = await this.data.loadContactsFromCharacter();
+            const result = await this.wechatData.loadContactsFromCharacter();
             
             if (result.success) {
                 this.phoneShell.showNotification('✅ 生成成功', result.message, '✅');
@@ -2192,7 +2192,7 @@ showClearDataConfirm() {
     });
     
     document.getElementById('confirm-clear-data')?.addEventListener('click', () => {
-    this.data.data = {
+    this.wechatData.data = 
         userInfo: {
             name: '我',
             wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
@@ -2206,7 +2206,7 @@ showClearDataConfirm() {
         moments: [],
         customEmojis: [] // ← 新增
     };
-    this.data.saveData();
+    this.wechatData.saveData();
     this.phoneShell.showNotification('已清空', '微信数据已重置', '✅');
     setTimeout(() => {
         this.currentView = 'chats';
