@@ -221,8 +221,24 @@ export class WechatData {
                     }
                 });
             }
-            
-            await this.saveData();
+
+            // ✅ 添加主角色联系人（如果不存在）
+const mainCharName = context.name2 || context.name;
+const mainCharExists = this.data.contacts.find(c => c.name === mainCharName);
+if (!mainCharExists && mainCharName) {
+    this.data.contacts.push({
+        id: `contact_main_${Date.now()}`,
+        name: mainCharName,
+        avatar: '⭐', // 主角色用星星标记
+        remark: '主要角色',
+        letter: this.getFirstLetter(mainCharName),
+        relation: '主角'
+    });
+    console.log('✅ 已添加主角色联系人:', mainCharName);
+}
+
+await this.saveData();
+
             
             return {
                 success: true,
@@ -394,7 +410,7 @@ ${chatText}
 现在请生成：`;
 }
     
-// 📤 静默调用AI（不显示在聊天窗口）
+// 📤 完全静默调用AI（使用隐藏容器）
 async sendToAI(prompt) {
     return new Promise((resolve, reject) => {
         try {
@@ -403,27 +419,58 @@ async sendToAI(prompt) {
                 throw new Error('无法获取SillyTavern上下文');
             }
 
-            console.log('🚀 准备静默调用AI...');
+            console.log('🚀 准备完全静默调用AI（不显示在页面）...');
 
-            // ✅ 使用textarea方法（最可靠）
             const textarea = document.querySelector('#send_textarea');
             if (!textarea) {
-                throw new Error('找不到聊天输入框，请确保在酒馆页面');
+                throw new Error('找不到聊天输入框');
             }
 
-            // 保存原始内容
+            const chatContainer = document.getElementById('chat');
+            if (!chatContainer) {
+                throw new Error('找不到聊天容器');
+            }
+
             const originalValue = textarea.value;
             
-            // 设置提示词
-            textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            // 🔥 创建临时隐藏样式
+            const hideStyle = document.createElement('style');
+            hideStyle.id = 'phone-silent-mode';
+            hideStyle.textContent = `
+                .mes.phone-hidden { 
+                    display: none !important; 
+                    opacity: 0 !important;
+                    position: absolute !important;
+                    left: -9999px !important;
+                }
+            `;
+            document.head.appendChild(hideStyle);
 
-            // 监听AI回复
+            // 🔥 使用MutationObserver拦截新消息
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.classList && node.classList.contains('mes')) {
+                            node.classList.add('phone-hidden');
+                        }
+                    });
+                });
+            });
+
+            observer.observe(chatContainer, {
+                childList: true,
+                subtree: true
+            });
+
             let responded = false;
+
             const timeout = setTimeout(() => {
                 if (!responded) {
                     responded = true;
+                    observer.disconnect();
+                    hideStyle.remove();
                     textarea.value = originalValue;
+                    this.cleanupSilentMessages(context);
                     reject(new Error('AI响应超时（120秒）'));
                 }
             }, 120000);
@@ -435,61 +482,65 @@ async sendToAI(prompt) {
                     const chat = context.chat;
                     if (!chat || chat.length < 2) return;
 
-                    // 获取最后一条AI消息
                     const lastMsg = chat[chat.length - 1];
                     if (lastMsg && !lastMsg.is_user) {
                         responded = true;
                         clearTimeout(timeout);
+                        observer.disconnect();
 
                         const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
 
-                        // 🔥 立即删除这两条消息（用户+AI）
+                        // 🔥 从聊天数组删除
                         chat.splice(chat.length - 2, 2);
-                        
-                        // 🔥 立即隐藏界面上的消息
+
+                        // 🔥 从DOM删除
                         setTimeout(() => {
-                            const allMessages = document.querySelectorAll('.mes');
-                            if (allMessages.length >= 2) {
-                                allMessages[allMessages.length - 2]?.remove();
-                                allMessages[allMessages.length - 1]?.remove();
-                            }
+                            document.querySelectorAll('.mes.phone-hidden').forEach(el => el.remove());
+                            hideStyle.remove();
                         }, 100);
 
-                        // 恢复输入框
                         textarea.value = originalValue;
 
-                        // 移除监听器
                         context.eventSource.removeListener(
                             context.event_types.CHARACTER_MESSAGE_RENDERED,
                             messageHandler
                         );
 
-                        console.log('✅ 静默调用成功，已清理痕迹');
+                        console.log('✅ 静默调用成功，完全无痕迹');
                         resolve(aiText);
                     }
                 } catch (e) {
                     responded = true;
                     clearTimeout(timeout);
+                    observer.disconnect();
+                    hideStyle.remove();
+                    textarea.value = originalValue;
+                    this.cleanupSilentMessages(context);
                     reject(e);
                 }
             };
 
-            // 注册监听器
             context.eventSource.on(
                 context.event_types.CHARACTER_MESSAGE_RENDERED,
                 messageHandler
             );
 
-            // 延迟发送（确保监听器已注册）
+            textarea.value = prompt;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
             setTimeout(() => {
-                const sendBtn = document.querySelector('#send_but');
-                if (sendBtn && !responded) {
-                    sendBtn.click();
-                } else if (!sendBtn) {
-                    responded = true;
-                    clearTimeout(timeout);
-                    textarea.value = originalValue;
-                    reject(new Error('找不到发送按钮'));
+                if (!responded) {
+                    const sendBtn = document.querySelector('#send_but');
+                    if (sendBtn) {
+                        sendBtn.click();
+                    } else {
+                        responded = true;
+                        clearTimeout(timeout);
+                        observer.disconnect();
+                        hideStyle.remove();
+                        textarea.value = originalValue;
+                        reject(new Error('找不到发送按钮'));
+                    }
                 }
             }, 200);
 
@@ -498,6 +549,20 @@ async sendToAI(prompt) {
             reject(error);
         }
     });
+}
+
+// 🔧 清理静默消息（新增辅助方法）
+cleanupSilentMessages(context) {
+    try {
+        if (context.chat && context.chat.length >= 2) {
+            context.chat.splice(context.chat.length - 2, 2);
+        }
+        document.querySelectorAll('.mes.phone-hidden').forEach(el => el.remove());
+        document.getElementById('phone-silent-mode')?.remove();
+        console.log('🗑️ 已清理静默消息');
+    } catch (e) {
+        console.error('清理失败:', e);
+    }
 }
     
 // 📥 解析AI返回（增强版）
