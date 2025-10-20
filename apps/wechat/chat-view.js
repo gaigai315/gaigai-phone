@@ -582,7 +582,7 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
     return finalPrompt;
 }
 
-// 🔧 完全静默调用AI（MutationObserver拦截，120秒超时）
+// 🔧 完全静默调用AI（直接隐藏聊天容器）
 async sendToAIHidden(prompt, context) {
     return new Promise((resolve, reject) => {
         try {
@@ -600,42 +600,21 @@ async sendToAIHidden(prompt, context) {
 
             const originalValue = textarea.value;
             
-            const hideStyle = document.createElement('style');
-            hideStyle.id = 'phone-silent-chat';
-            hideStyle.textContent = `
-                .mes.phone-hidden-chat { 
-                    display: none !important; 
-                    opacity: 0 !important;
-                    position: absolute !important;
-                    left: -9999px !important;
-                }
-            `;
-            document.head.appendChild(hideStyle);
-
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.classList && node.classList.contains('mes')) {
-                            node.classList.add('phone-hidden-chat');
-                        }
-                    });
-                });
-            });
-
-            observer.observe(chatContainer, {
-                childList: true,
-                subtree: true
-            });
+            // 🔥 关键：直接隐藏整个聊天容器
+            const originalDisplay = chatContainer.style.display;
+            chatContainer.style.display = 'none';
+            
+            console.log('🙈 已隐藏聊天容器');
 
             let responded = false;
 
             const timeout = setTimeout(() => {
                 if (!responded) {
                     responded = true;
-                    observer.disconnect();
-                    hideStyle.remove();
+                    chatContainer.style.display = originalDisplay;
                     textarea.value = originalValue;
                     this.cleanupLeakedMessages(context);
+                    this.hideTypingStatus(); // 隐藏正在输入
                     reject(new Error('AI响应超时（120秒）'));
                 }
             }, 120000);
@@ -651,34 +630,38 @@ async sendToAIHidden(prompt, context) {
                     if (lastMsg && !lastMsg.is_user) {
                         responded = true;
                         clearTimeout(timeout);
-                        observer.disconnect();
 
                         const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
 
+                        // 从聊天数组删除
                         chat.splice(chat.length - 2, 2);
+                        
+                        // 恢复聊天容器显示
+                        chatContainer.style.display = originalDisplay;
 
-                        setTimeout(() => {
-                            document.querySelectorAll('.mes.phone-hidden-chat').forEach(el => el.remove());
-                            hideStyle.remove();
-                        }, 100);
-
+                        // 恢复输入框
                         textarea.value = originalValue;
 
+                        // 移除监听器
                         context.eventSource.removeListener(
                             context.event_types.CHARACTER_MESSAGE_RENDERED,
                             messageHandler
                         );
 
                         console.log('✅ 静默调用成功');
+                        
+                        // 🔥 隐藏"正在输入"
+                        this.hideTypingStatus();
+                        
                         resolve(aiText);
                     }
                 } catch (e) {
                     responded = true;
                     clearTimeout(timeout);
-                    observer.disconnect();
-                    hideStyle.remove();
+                    chatContainer.style.display = originalDisplay;
                     textarea.value = originalValue;
                     this.cleanupLeakedMessages(context);
+                    this.hideTypingStatus();
                     reject(e);
                 }
             };
@@ -696,12 +679,13 @@ async sendToAIHidden(prompt, context) {
                     const sendBtn = document.querySelector('#send_but');
                     if (sendBtn) {
                         sendBtn.click();
+                        console.log('📤 已发送（聊天容器已隐藏）');
                     } else {
                         responded = true;
                         clearTimeout(timeout);
-                        observer.disconnect();
-                        hideStyle.remove();
+                        chatContainer.style.display = originalDisplay;
                         textarea.value = originalValue;
+                        this.hideTypingStatus();
                         reject(new Error('找不到发送按钮'));
                     }
                 }
@@ -709,6 +693,7 @@ async sendToAIHidden(prompt, context) {
 
         } catch (error) {
             console.error('❌ 静默调用失败:', error);
+            this.hideTypingStatus();
             reject(error);
         }
     });
@@ -972,19 +957,48 @@ cleanupLeakedMessages(context) {
 }
     
     showTypingStatus() {
-        const header = document.querySelector('.wechat-header-title');
-        if (header && this.app.currentChat) {
-            const originalContent = header.innerHTML;
-            header.innerHTML = `
-                <div>${this.app.currentChat.name}</div>
-                <div style="font-size: 12px; color: #999; font-weight: normal; margin-top: 2px;">对方正在输入...</div>
-            `;
-            
-            setTimeout(() => {
-                header.innerHTML = originalContent;
-            }, 3000);
+    const header = document.querySelector('.wechat-header-title');
+    if (header && this.app.currentChat) {
+        // 保存原始内容
+        if (!this.originalHeaderContent) {
+            this.originalHeaderContent = header.innerHTML;
         }
+        
+        header.innerHTML = `
+            <div>${this.app.currentChat.name}</div>
+            <div style="font-size: 12px; color: #999; font-weight: normal; margin-top: 2px;">
+                对方正在输入<span class="typing-dots">...</span>
+            </div>
+        `;
+        
+        // 添加动画样式
+        if (!document.getElementById('typing-animation')) {
+            const style = document.createElement('style');
+            style.id = 'typing-animation';
+            style.textContent = `
+                .typing-dots {
+                    animation: typing-blink 1.4s infinite;
+                }
+                @keyframes typing-blink {
+                    0%, 60%, 100% { opacity: 1; }
+                    30% { opacity: 0.3; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        console.log('💬 显示"正在输入"状态');
     }
+}
+
+hideTypingStatus() {
+    const header = document.querySelector('.wechat-header-title');
+    if (header && this.originalHeaderContent) {
+        header.innerHTML = this.originalHeaderContent;
+        this.originalHeaderContent = null;
+        console.log('✅ 隐藏"正在输入"状态');
+    }
+}
         // 🔧 显示聊天设置菜单
     showChatMenu() {
         const html = `
