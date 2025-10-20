@@ -491,13 +491,22 @@ async directAPICall(prompt) {
     console.log('📡 [静默AI] 调用Chat Completion API...');
     
     try {
-        // 🔥 使用正确的 Chat Completion 端点
-        const response = await fetch('/api/backends/chat-completions/generate', {
+        // 🔥 获取正确的 CSRF Token（SillyTavern 的方式）
+        const token = typeof getRequestHeaders === 'function' 
+            ? getRequestHeaders()['X-CSRF-Token'] 
+            : window.token || '';
+        
+        console.log('🔑 CSRF Token:', token ? '已获取' : '⚠️ 未获取');
+        
+        // 使用 jQuery ajax（SillyTavern 标准方式）
+        const response = await $.ajax({
+            url: '/api/backends/chat-completions/generate',
             method: 'POST',
+            contentType: 'application/json',
             headers: {
-                'Content-Type': 'application/json',
+                'X-CSRF-Token': token
             },
-            body: JSON.stringify({
+            data: JSON.stringify({
                 messages: [
                     {
                         role: 'system',
@@ -505,7 +514,7 @@ async directAPICall(prompt) {
                     },
                     {
                         role: 'user',
-                        content: prompt  // 这里已经包含了所有上下文
+                        content: prompt
                     }
                 ],
                 max_tokens: 2000,
@@ -513,24 +522,17 @@ async directAPICall(prompt) {
             })
         });
         
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ API错误:', errorText);
-            throw new Error(`API请求失败: ${response.status}`);
-        }
+        console.log('📥 原始API响应:', response);
         
-        const data = await response.json();
-        console.log('📥 原始API响应:', data);
-        
-        // 提取响应内容（支持多种格式）
+        // 提取响应内容
         const result = 
-            data.choices?.[0]?.message?.content ||  // 标准格式
-            data.response ||                         // 某些代理
-            data.message?.content ||                 // 备选格式
+            response.choices?.[0]?.message?.content ||
+            response.response ||
+            response.message?.content ||
             '';
         
         if (!result) {
-            console.error('❌ AI返回为空，完整数据:', JSON.stringify(data));
+            console.error('❌ AI返回为空，完整数据:', JSON.stringify(response));
             throw new Error('AI返回为空');
         }
         
@@ -541,8 +543,7 @@ async directAPICall(prompt) {
         console.error('❌ [静默AI] 失败:', error);
         throw error;
     }
-}
-    
+}   
 // 📥 解析AI返回（增强版）
 parseAIResponse(text) {
     try {
