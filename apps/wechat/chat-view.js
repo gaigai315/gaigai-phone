@@ -1,11 +1,12 @@
 // 聊天界面视图
 export class ChatView {
     constructor(wechatApp) {
-        this.app = wechatApp;
-        this.inputText = '';
-        this.showEmoji = false;
-        this.showMore = false;
-    }
+    this.app = wechatApp;
+    this.inputText = '';
+    this.showEmoji = false;
+    this.showMore = false;
+    this.emojiTab = 'default'; // ← 新增：表情标签状态
+}
     
     renderChatRoom(chat) {
         const messages = this.app.data.getMessages(chat.id);
@@ -80,76 +81,99 @@ export class ChatView {
     }
     
     renderEmojiPanel() {
-        const emojis = ['😊', '😂', '🤣', '😍', '😘', '🥰', '😭', '😅', '😁', '🤔', '😒', '🙄', 
-                       '😤', '😡', '🥺', '😱', '😨', '😰', '😓', '🤗', '🤭', '🤫', '😏', '😌'];
-        
-        return `
-            <div class="emoji-panel">
-                <div class="emoji-grid">
+    const emojis = ['😊', '😂', '🤣', '😍', '😘', '🥰', '😭', '😅', '😁', '🤔', '😒', '🙄', 
+                   '😤', '😡', '🥺', '😱', '😨', '😰', '😓', '🤗', '🤭', '🤫', '😏', '😌'];
+    
+    const customEmojis = this.app.data.getCustomEmojis(); // ← 新增：获取自定义表情
+    
+    return `
+        <div class="emoji-panel">
+            <!-- 🔥 新增：表情标签 -->
+            <div class="emoji-tabs">
+                <div class="emoji-tab ${this.emojiTab !== 'custom' ? 'active' : ''}" data-tab="default">
+                    系统表情
+                </div>
+                <div class="emoji-tab ${this.emojiTab === 'custom' ? 'active' : ''}" data-tab="custom">
+                    我的表情
+                </div>
+            </div>
+            
+            <div class="emoji-grid">
+                ${this.emojiTab === 'custom' ? `
+                    <!-- 自定义表情 -->
+                    ${customEmojis.map(emoji => `
+                        <span class="emoji-item custom-emoji-item" data-emoji-type="custom" data-emoji-id="${emoji.id}" title="${emoji.name}">
+                            <img src="${emoji.image}" alt="${emoji.name}">
+                        </span>
+                    `).join('')}
+                    
+                    <!-- 添加表情按钮 -->
+                    <span class="emoji-item emoji-add" id="add-custom-emoji">
+                        <i class="fa-solid fa-plus"></i>
+                    </span>
+                ` : `
+                    <!-- 系统表情 -->
                     ${emojis.map(emoji => `
                         <span class="emoji-item" data-emoji="${emoji}">${emoji}</span>
                     `).join('')}
-                </div>
+                `}
             </div>
-        `;
-    }
+        </div>
+    `;
+}
     
     renderMorePanel() {
-        return `
-            <div class="more-panel">
-                <div class="more-grid">
-                    <div class="more-item" data-action="photo">
-                        <div class="more-icon">
-                            <i class="fa-solid fa-image"></i>
-                        </div>
-                        <div class="more-name">相册</div>
+    return `
+        <div class="more-panel">
+            <div class="more-grid">
+                <div class="more-item" data-action="photo">
+                    <div class="more-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none;">
+                        <i class="fa-solid fa-image"></i>
                     </div>
-                    <div class="more-item" data-action="camera">
-                        <div class="more-icon">
-                            <i class="fa-solid fa-camera"></i>
-                        </div>
-                        <div class="more-name">拍摄</div>
+                    <div class="more-name">相册</div>
+                </div>
+                
+                <div class="more-item" data-action="video">
+                    <div class="more-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff; border: none;">
+                        <i class="fa-solid fa-video"></i>
                     </div>
-                    <div class="more-item" data-action="video">
-                        <div class="more-icon">
-                            <i class="fa-solid fa-video"></i>
-                        </div>
-                        <div class="more-name">视频通话</div>
+                    <div class="more-name">视频通话</div>
+                </div>
+                
+                <div class="more-item" data-action="voice">
+                    <div class="more-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #fff; border: none;">
+                        <i class="fa-solid fa-phone"></i>
                     </div>
-                    <div class="more-item" data-action="location">
-                        <div class="more-icon">
-                            <i class="fa-solid fa-location-dot"></i>
-                        </div>
-                        <div class="more-name">位置</div>
+                    <div class="more-name">语音通话</div>
+                </div>
+                
+                <div class="more-item" data-action="location">
+                    <div class="more-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #fff; border: none;">
+                        <i class="fa-solid fa-location-dot"></i>
                     </div>
-                    <div class="more-item" data-action="transfer">
-                        <div class="more-icon">
-                            <i class="fa-solid fa-money-bill"></i>
-                        </div>
-                        <div class="more-name">转账</div>
+                    <div class="more-name">位置</div>
+                </div>
+                
+                <div class="more-item" data-action="transfer">
+                    <div class="more-icon" style="background: linear-gradient(135deg, #ff9500 0%, #ff8c00 100%); color: #fff; border: none;">
+                        <i class="fa-solid fa-money-bill"></i>
                     </div>
-                    <div class="more-item" data-action="redpacket">
-                        <div class="more-icon">
-                            <i class="fa-solid fa-gift"></i>
-                        </div>
-                        <div class="more-name">红包</div>
+                    <div class="more-name">转账</div>
+                </div>
+                
+                <div class="more-item" data-action="redpacket">
+                    <div class="more-icon" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: #fff; border: none;">
+                        <i class="fa-solid fa-gift"></i>
                     </div>
-                    <div class="more-item" data-action="file">
-                        <div class="more-icon">
-                            <i class="fa-solid fa-folder"></i>
-                        </div>
-                        <div class="more-name">文件</div>
-                    </div>
-                    <div class="more-item" data-action="contact">
-                        <div class="more-icon">
-                            <i class="fa-solid fa-user"></i>
-                        </div>
-                        <div class="more-name">名片</div>
-                    </div>
+                    <div class="more-name">红包</div>
                 </div>
             </div>
-        `;
-    }
+            
+            <!-- 🔥 隐藏的文件上传input -->
+            <input type="file" id="photo-upload-input" accept="image/*" capture="environment" style="display: none;">
+        </div>
+    `;
+}
     
     parseEmoji(text) {
         const emojiMap = {
@@ -265,6 +289,70 @@ input?.addEventListener('input', (e) => {
                 this.handleMoreAction(action);
             });
         });
+
+        // 🔥 新增：相册上传处理
+document.getElementById('photo-upload-input')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        if (file.size > 10 * 1024 * 1024) {
+            this.app.phoneShell.showNotification('提示', '图片太大，请选择小于10MB的图片', '⚠️');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            // 添加图片消息
+            this.app.data.addMessage(this.app.currentChat.id, {
+                from: 'me',
+                type: 'image',
+                content: e.target.result,
+                time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                avatar: this.app.data.getUserInfo().avatar
+            });
+            
+            this.app.render();
+            this.app.phoneShell.showNotification('发送成功', '图片已发送', '✅');
+            
+            // 🔥 如果开启在线模式，通知AI
+            if (window.VirtualPhone?.settings?.onlineMode) {
+                this.notifyAI('[图片]');
+            }
+        };
+        reader.readAsDataURL(file);
+        
+        // 清空input，允许重复选择同一文件
+        e.target.value = '';
+    }
+});
+
+// 🔥 新增：表情标签切换
+document.querySelectorAll('.emoji-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        this.emojiTab = tab.dataset.tab;
+        this.app.render();
+    });
+});
+
+// 🔥 新增：添加自定义表情
+document.getElementById('add-custom-emoji')?.addEventListener('click', () => {
+    this.showAddCustomEmojiDialog();
+});
+
+// 🔥 新增：选择自定义表情
+document.querySelectorAll('.custom-emoji-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const emojiId = item.dataset.emojiId;
+        const emoji = this.app.data.getCustomEmoji(emojiId);
+        if (emoji) {
+            this.inputText += `[${emoji.name}]`;
+            const input = document.getElementById('chat-input');
+            if (input) {
+                input.value = this.inputText;
+                input.focus();
+            }
+        }
+    });
+});
         
         // 添加头像点击事件
         document.querySelectorAll('.message-avatar').forEach(avatar => {
@@ -736,33 +824,27 @@ cleanupLeakedMessages(context) {
 }
     
     handleMoreAction(action) {
-        switch(action) {
-            case 'photo':
-                this.selectPhoto();
-                break;
-            case 'camera':
-                this.app.phoneShell.showNotification('相机', '打开相机...', '📸');
-                break;
-            case 'video':
-                this.startVideoCall();
-                break;
-            case 'location':
-                this.app.phoneShell.showNotification('位置', '正在获取位置...', '📍');
-                break;
-            case 'transfer':
-                this.showTransferDialog();
-                break;
-            case 'redpacket':
-                this.showRedPacketDialog();
-                break;
-            case 'file':
-                this.app.phoneShell.showNotification('文件', '选择文件...', '📁');
-                break;
-            case 'contact':
-                this.app.phoneShell.showNotification('名片', '选择联系人...', '👤');
-                break;
-        }
+    switch(action) {
+        case 'photo':
+            this.selectPhoto(); // ← 调用手机相册
+            break;
+        case 'video':
+            this.startVideoCall(); // ← 视频通话
+            break;
+        case 'voice':
+            this.startVoiceCall(); // ← 新增：语音通话
+            break;
+        case 'location':
+            this.app.phoneShell.showNotification('位置', '正在获取位置...', '📍');
+            break;
+        case 'transfer':
+            this.showTransferDialog();
+            break;
+        case 'redpacket':
+            this.showRedPacketDialog();
+            break;
     }
+}
     
     showTransferDialog() {
     // 🔥 改成手机内部界面
@@ -846,8 +928,15 @@ cleanupLeakedMessages(context) {
     }
     
     selectPhoto() {
-        this.app.phoneShell.showNotification('相册', '打开相册选择...', '📷');
+    const input = document.getElementById('photo-upload-input');
+    if (!input) {
+        console.error('找不到文件上传input');
+        return;
     }
+    
+    // 点击隐藏的input，触发相册选择
+    input.click();
+}
     
      showAvatarSettings(chat) {
     // 🔥 不用弹窗，在手机内部显示设置页面
