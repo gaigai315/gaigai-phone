@@ -452,91 +452,74 @@ detectAPIType(context) {
     return 'openai';
 }
     
-// 📤 调用酒馆的生成API（静默调用，不污染聊天窗口）
+// 📤 调用酒馆的生成API（使用内部方法，完全静默）
 async sendToAI(prompt) {
     try {
         console.log('🚀 [手机AI调用] 开始静默调用...');
         
-        // 🔥 方法1：使用标准API端点（推荐）
-        try {
-            const response = await fetch('/api/backends/chat-completions/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: prompt,
-                    max_tokens: 1000,
-                    temperature: 0.9,
-                    stream: false,
-                    quiet: true  // 静默模式
-                })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                const aiResponse = data.choices?.[0]?.message?.content || data.response || '';
-                console.log('✅ [手机AI调用] 成功，回复长度:', aiResponse.length);
-                return aiResponse;
-            } else {
-                console.warn(`⚠️ API返回 ${response.status}`);
-            }
-        } catch (e) {
-            console.warn('⚠️ 方法1失败:', e.message);
+        // 🔥 方法1：使用酒馆内部的 generateQuietPrompt
+        if (typeof generateQuietPrompt === 'function') {
+            console.log('📡 使用 generateQuietPrompt...');
+            const response = await generateQuietPrompt(prompt, false, false);
+            console.log('✅ [手机AI调用] 成功，回复长度:', response.length);
+            return response;
         }
         
-        // 🔥 方法2：尝试Chat Completions端点（兼容）
-        try {
-            const response = await fetch('/api/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [{ role: 'user', content: prompt }],
-                    max_tokens: 1000,
-                    temperature: 0.9,
-                    stream: false
-                })
+        // 🔥 方法2：使用 Generate 函数（酒馆内部）
+        if (typeof Generate === 'function') {
+            console.log('📡 使用 Generate 函数...');
+            const response = await Generate('normal', { 
+                quiet_prompt: prompt,
+                quiet_to_loud: false,
+                quietToLoud: false,
+                quiet_image: '',
+                quietImage: '',
+                force_name2: false
             });
-            
-            if (response.ok) {
-                const data = await response.json();
-                const aiResponse = data.choices?.[0]?.message?.content || '';
-                console.log('✅ [手机AI调用] Chat Completions成功');
-                return aiResponse;
-            } else {
-                console.warn(`⚠️ Chat Completions返回 ${response.status}`);
-            }
-        } catch (e) {
-            console.warn('⚠️ 方法2失败:', e.message);
+            console.log('✅ [手机AI调用] 成功');
+            return response;
         }
         
-        // 🔥 方法3：尝试旧版API（兼容旧酒馆）
-        try {
-            const response = await fetch('/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: prompt,
-                    max_length: 1000,
-                    temperature: 0.9,
-                    quiet: true
-                })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                const aiResponse = data.results?.[0]?.text || data.response || '';
-                console.log('✅ [手机AI调用] 旧版API成功');
-                return aiResponse;
-            }
-        } catch (e) {
-            console.warn('⚠️ 方法3失败:', e.message);
+        // 🔥 方法3：使用 callPopup + 隐藏（兜底）
+        console.warn('⚠️ 未找到静默生成函数，使用备用方案');
+        
+        // 尝试通过 fetch 但携带当前会话的 token
+        const response = await fetch('/api/backends/chat-completions/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+            },
+            credentials: 'same-origin', // 携带cookie
+            body: JSON.stringify({
+                prompt: prompt,
+                max_tokens: 1000,
+                temperature: 0.9,
+                stream: false,
+                quiet: true
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const aiResponse = data.choices?.[0]?.message?.content || data.response || '';
+            console.log('✅ [手机AI调用] HTTP成功');
+            return aiResponse;
         }
         
-        // ❌ 所有方法都失败
-        throw new Error('无法连接到AI服务，请检查酒馆API配置');
+        throw new Error(`API返回 ${response.status}: ${response.statusText}`);
         
     } catch (error) {
         console.error('❌ [手机AI调用] 失败:', error);
-        throw error;
+        
+        // 🎯 友好的错误提示
+        if (error.message.includes('403')) {
+            throw new Error('AI服务拒绝访问，可能需要配置API密钥');
+        } else if (error.message.includes('generateQuietPrompt')) {
+            throw new Error('你的酒馆版本可能不支持静默生成，请更新到最新版');
+        } else {
+            throw new Error('AI调用失败: ' + error.message);
+        }
     }
 }
     
