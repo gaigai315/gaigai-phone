@@ -142,104 +142,104 @@ export class WechatData {
         this.saveData();
     }
     
-    // ✅ 智能加载联系人（调用AI）
-    async loadContactsFromCharacter() {
-        try {
-            const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
-                ? SillyTavern.getContext() 
-                : null;
-            
-            if (!context) {
-                return { success: false, message: '❌ 无法获取SillyTavern上下文' };
+ // ✅ 智能加载联系人（调用AI）
+async loadContactsFromCharacter() {
+    try {
+        // 🔑 定义 context
+        const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
+            ? SillyTavern.getContext() 
+            : null;
+        
+        if (!context) {
+            return { success: false, message: '❌ 无法获取SillyTavern上下文' };
+        }
+        
+        console.log('📖 准备调用AI生成联系人...');
+        
+        // ✅ 构建AI提示词
+        const prompt = this.buildContactPrompt(context);
+        
+        console.log('📤 发送给AI的提示词长度:', prompt.length);
+        
+        // ✅ 调用AI
+        const aiResponse = await this.sendToAI(prompt);
+        
+        if (!aiResponse) {
+            throw new Error('AI未返回数据');
+        }
+        
+        console.log('📥 AI返回:', aiResponse);
+        
+        // ✅ 解析AI返回
+        const generatedData = this.parseAIResponse(aiResponse);
+        
+        if (!generatedData || !generatedData.contacts) {
+            throw new Error('AI返回的数据格式错误');
+        }
+        
+        // ✅ 添加联系人
+        let addedCount = 0;
+        generatedData.contacts.forEach(contact => {
+            const exists = this.data.contacts.find(c => c.name === contact.name);
+            if (!exists) {
+                this.data.contacts.push({
+                    id: `contact_${Date.now()}_${Math.random()}`,
+                    name: contact.name,
+                    avatar: contact.avatar || '👤',
+                    remark: contact.remark || '',
+                    letter: this.getFirstLetter(contact.name),
+                    relation: contact.relation || ''
+                });
+                addedCount++;
             }
-            
-            console.log('📖 准备调用AI生成联系人...');
-            
-            // ✅ 构建AI提示词
-            const prompt = this.buildContactPrompt(context);
-            
-            console.log('📤 发送给AI的提示词长度:', prompt.length);
-            
-            // ✅ 调用AI
-            const aiResponse = await this.sendToAI(prompt);
-            
-            if (!aiResponse) {
-                throw new Error('AI未返回数据');
-            }
-            
-            console.log('📥 AI返回:', aiResponse);
-            
-            // ✅ 解析AI返回
-            const generatedData = this.parseAIResponse(aiResponse);
-            
-            if (!generatedData || !generatedData.contacts) {
-                throw new Error('AI返回的数据格式错误');
-            }
-            
-            // ✅ 添加联系人
-            let addedCount = 0;
-            generatedData.contacts.forEach(contact => {
-                const exists = this.data.contacts.find(c => c.name === contact.name);
+        });
+        
+        // ✅ 添加群聊
+        if (generatedData.groups && generatedData.groups.length > 0) {
+            generatedData.groups.forEach(group => {
+                const exists = this.data.chats.find(c => c.name === group.name);
                 if (!exists) {
-                    this.data.contacts.push({
-                        id: `contact_${Date.now()}_${Math.random()}`,
-                        name: contact.name,
-                        avatar: contact.avatar || '👤',
-                        remark: contact.remark || '',
-                        letter: this.getFirstLetter(contact.name),
-                        relation: contact.relation || ''
+                    const chatId = `group_${Date.now()}_${Math.random()}`;
+                    this.data.chats.push({
+                        id: chatId,
+                        name: group.name,
+                        type: 'group',
+                        avatar: group.avatar || '👥',
+                        lastMessage: '',
+                        time: '刚刚',
+                        unread: 0,
+                        members: group.members || []
                     });
-                    addedCount++;
+                    
+                    if (group.lastMessage) {
+                        this.addMessage(chatId, {
+                            from: group.members?.[0] || '群成员',
+                            content: group.lastMessage,
+                            time: '刚刚',
+                            type: 'text',
+                            avatar: '👤'
+                        });
+                    }
                 }
             });
-            
-            // ✅ 添加群聊
-            if (generatedData.groups && generatedData.groups.length > 0) {
-                generatedData.groups.forEach(group => {
-                    const exists = this.data.chats.find(c => c.name === group.name);
-                    if (!exists) {
-                        const chatId = `group_${Date.now()}_${Math.random()}`;
-                        this.data.chats.push({
-                            id: chatId,
-                            name: group.name,
-                            type: 'group',
-                            avatar: group.avatar || '👥',
-                            lastMessage: '',
-                            time: '刚刚',
-                            unread: 0,
-                            members: group.members || []
-                        });
-                        
-                        if (group.lastMessage) {
-                            this.addMessage(chatId, {
-                                from: group.members?.[0] || '群成员',
-                                content: group.lastMessage,
-                                time: '刚刚',
-                                type: 'text',
-                                avatar: '👤'
-                            });
-                        }
-                    }
-                });
-            }
-
-await this.saveData();
-
-            
-            return {
-                success: true,
-                count: addedCount,
-                message: `✅ 成功生成${addedCount}个联系人`
-            };
-            
-        } catch (error) {
-            console.error('❌ AI生成失败:', error);
-            return {
-                success: false,
-                message: `生成失败: ${error.message}`
-            };
         }
+
+        await this.saveData();
+        
+        return {
+            success: true,
+            count: addedCount,
+            message: `✅ 成功生成${addedCount}个联系人`
+        };
+        
+    } catch (error) {
+        console.error('❌ AI生成失败:', error);
+        return {
+            success: false,
+            message: `生成失败: ${error.message}`
+        };
     }
+}
     
 // 🔧 构建联系人生成提示词（完整版：角色卡+记忆表格+世界书）
 buildContactPrompt(context) {
