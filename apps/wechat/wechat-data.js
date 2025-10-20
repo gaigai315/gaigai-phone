@@ -277,21 +277,40 @@ buildContactPrompt(context) {
     }
 
     
-// ✅ 从记忆表格获取NPC信息
+// ✅ 从记忆表格获取NPC信息（正确的API）
 let memoryTableData = '';
 if (typeof window.Gaigai !== 'undefined') {
     try {
-        if (typeof window.Gaigai.getSummary === 'function') {
-            const summary = window.Gaigai.getSummary();
-            if (summary && summary.trim()) {
-                memoryTableData = '\n**记忆总结（NPC和剧情）：**\n' + summary + '\n';
-                console.log('✅ [联系人生成] 已获取记忆表格');
-            }
-        } else if (window.Gaigai.data && window.Gaigai.data.summary) {
+        console.log('🔍 检测到记忆表格插件:', window.Gaigai);
+        
+        // 方法1：从m对象获取（这是记忆表格的主数据对象）
+        if (window.Gaigai.m && window.Gaigai.m.summary) {
+            memoryTableData = '\n**记忆总结（NPC和剧情）：**\n' + window.Gaigai.m.summary + '\n';
+            console.log('✅ [联系人生成] 从m.summary获取:', memoryTableData.length, '字符');
+        }
+        // 方法2：从data获取
+        else if (window.Gaigai.data && window.Gaigai.data.summary) {
             memoryTableData = '\n**记忆总结：**\n' + window.Gaigai.data.summary + '\n';
+            console.log('✅ [联系人生成] 从data.summary获取');
+        }
+        // 方法3：从表格数据提取
+        else if (window.Gaigai.m && window.Gaigai.m.tbl && Array.isArray(window.Gaigai.m.tbl)) {
+            const tableRows = window.Gaigai.m.tbl
+                .filter(row => row && row.length > 0)
+                .slice(0, 20)
+                .map(row => row.join(' | '))
+                .join('\n');
+            if (tableRows) {
+                memoryTableData = '\n**记忆表格数据：**\n' + tableRows + '\n';
+                console.log('✅ [联系人生成] 从表格提取:', window.Gaigai.m.tbl.length, '行');
+            }
+        }
+        
+        if (!memoryTableData) {
+            console.warn('⚠️ 记忆表格无可用数据');
         }
     } catch (e) {
-        console.warn('⚠️ 无法获取记忆表格:', e);
+        console.error('❌ 获取记忆表格失败:', e);
     }
 }
     
