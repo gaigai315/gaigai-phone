@@ -385,7 +385,7 @@ ${chatText}
 现在请生成：`;
 }
     
-// 📤 完全静默调用AI（MutationObserver拦截，120秒超时）
+// 📤 完全静默调用AI（直接隐藏聊天容器）
 async sendToAI(prompt) {
     return new Promise((resolve, reject) => {
         try {
@@ -408,40 +408,18 @@ async sendToAI(prompt) {
 
             const originalValue = textarea.value;
             
-            const hideStyle = document.createElement('style');
-            hideStyle.id = 'phone-silent-contact';
-            hideStyle.textContent = `
-                .mes.phone-hidden-contact { 
-                    display: none !important; 
-                    opacity: 0 !important;
-                    position: absolute !important;
-                    left: -9999px !important;
-                }
-            `;
-            document.head.appendChild(hideStyle);
-
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.classList && node.classList.contains('mes')) {
-                            node.classList.add('phone-hidden-contact');
-                        }
-                    });
-                });
-            });
-
-            observer.observe(chatContainer, {
-                childList: true,
-                subtree: true
-            });
+            // 🔥 直接隐藏整个聊天容器
+            const originalDisplay = chatContainer.style.display;
+            chatContainer.style.display = 'none';
+            
+            console.log('🙈 [联系人生成] 已隐藏聊天容器');
 
             let responded = false;
 
             const timeout = setTimeout(() => {
                 if (!responded) {
                     responded = true;
-                    observer.disconnect();
-                    hideStyle.remove();
+                    chatContainer.style.display = originalDisplay;
                     textarea.value = originalValue;
                     this.cleanupSilentMessages(context);
                     reject(new Error('AI响应超时（120秒）'));
@@ -459,17 +437,12 @@ async sendToAI(prompt) {
                     if (lastMsg && !lastMsg.is_user) {
                         responded = true;
                         clearTimeout(timeout);
-                        observer.disconnect();
 
                         const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
 
                         chat.splice(chat.length - 2, 2);
-
-                        setTimeout(() => {
-                            document.querySelectorAll('.mes.phone-hidden-contact').forEach(el => el.remove());
-                            hideStyle.remove();
-                        }, 100);
-
+                        
+                        chatContainer.style.display = originalDisplay;
                         textarea.value = originalValue;
 
                         context.eventSource.removeListener(
@@ -483,8 +456,7 @@ async sendToAI(prompt) {
                 } catch (e) {
                     responded = true;
                     clearTimeout(timeout);
-                    observer.disconnect();
-                    hideStyle.remove();
+                    chatContainer.style.display = originalDisplay;
                     textarea.value = originalValue;
                     this.cleanupSilentMessages(context);
                     reject(e);
@@ -504,11 +476,11 @@ async sendToAI(prompt) {
                     const sendBtn = document.querySelector('#send_but');
                     if (sendBtn) {
                         sendBtn.click();
+                        console.log('📤 [联系人生成] 已发送（聊天容器已隐藏）');
                     } else {
                         responded = true;
                         clearTimeout(timeout);
-                        observer.disconnect();
-                        hideStyle.remove();
+                        chatContainer.style.display = originalDisplay;
                         textarea.value = originalValue;
                         reject(new Error('找不到发送按钮'));
                     }
