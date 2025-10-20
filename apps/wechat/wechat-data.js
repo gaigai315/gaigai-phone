@@ -386,39 +386,44 @@ ${chatText}
 现在请生成：`;
 }
 
-// 🔥 智能检测API类型（新增方法）
+// 🔥 智能检测API类型（修复版）
 detectAPIType(context) {
-    const main_api = context?.main_api || window.main_api;
+    // 🔑 关键修复：正确获取选中的API类型
+    let main_api = document.getElementById('main_api')?.value;
     
-    console.log('🔍 [联系人生成] main_api值:', main_api);
+    console.log('🔍 [联系人生成] 当前选择的API:', main_api);
     
+    // 如果没有获取到，尝试从全局变量获取
+    if (!main_api && typeof window.main_api === 'string') {
+        main_api = window.main_api;
+    }
+    
+    // 如果还是没有，尝试从context获取
+    if (!main_api && context?.main_api) {
+        main_api = context.main_api;
+    }
+    
+    // 根据API类型返回
     if (main_api === 'openai') {
+        console.log('✅ [联系人生成] 使用OpenAI兼容接口');
         return 'openai';
     } else if (main_api === 'claude') {
+        console.log('✅ [联系人生成] 使用Claude');
         return 'claude';
     } else if (main_api === 'textgenerationwebui' || main_api === 'kobold' || main_api === 'ooba') {
+        console.log('✅ [联系人生成] 使用TextGen');
         return 'textgen';
     }
     
-    if (window.oai_settings?.api_key_openai || window.oai_settings?.reverse_proxy) {
-        console.log('✅ [联系人生成] 检测到OpenAI配置');
+    // 兜底检测：检查配置
+    if (window.oai_settings?.reverse_proxy || window.oai_settings?.api_url_scale) {
+        console.log('✅ [联系人生成] 检测到OpenAI兼容配置（反向代理）');
         return 'openai';
-    }
-    
-    if (window.claude_settings?.api_key_claude) {
-        console.log('✅ [联系人生成] 检测到Claude配置');
-        return 'claude';
-    }
-    
-    if (window.textgenerationwebui_settings?.server_url || window.kai_settings?.server_urls) {
-        console.log('✅ [联系人生成] 检测到本地API配置');
-        return 'textgen';
     }
     
     console.warn('⚠️ [联系人生成] 无法确定API类型，默认使用OpenAI');
     return 'openai';
-}
-    
+}  
 // 📤 完全静默调用AI（智能检测API类型）
 async sendToAI(prompt) {
     try {
@@ -450,16 +455,34 @@ async sendToAI(prompt) {
     }
 }
 
-// 🔥 调用OpenAI API
+// 🔥 调用OpenAI兼容API（支持自定义端口）
 async callOpenAI(prompt, context) {
     const settings = window.oai_settings || {};
     
-    const apiUrl = settings.reverse_proxy || 'https://api.openai.com/v1/chat/completions';
-    const apiKey = settings.api_key_openai || context.api_key_openai;
+    // 🔑 关键修复：优先使用反向代理/自定义端口
+    let apiUrl = settings.reverse_proxy || settings.api_url_scale;
     
-    if (!apiKey) {
-        throw new Error('未配置OpenAI API Key');
+    // 如果没有配置反向代理，使用默认官方地址
+    if (!apiUrl) {
+        apiUrl = 'https://api.openai.com/v1/chat/completions';
     }
+    
+    // 确保URL以 /chat/completions 结尾
+    if (!apiUrl.endsWith('/chat/completions')) {
+        if (apiUrl.endsWith('/v1')) {
+            apiUrl = apiUrl + '/chat/completions';
+        } else if (!apiUrl.endsWith('/')) {
+            apiUrl = apiUrl + '/v1/chat/completions';
+        } else {
+            apiUrl = apiUrl + 'v1/chat/completions';
+        }
+    }
+    
+    // 获取API Key（兼容多种配置方式）
+    const apiKey = settings.api_key_openai || context?.api_key_openai || '';
+    
+    console.log('📤 [联系人生成] 调用API:', apiUrl);
+    console.log('🔑 [联系人生成] API Key存在:', apiKey ? '是' : '否');
 
     const requestBody = {
         model: settings.openai_model || 'gpt-3.5-turbo',
@@ -469,30 +492,34 @@ async callOpenAI(prompt, context) {
                 content: prompt
             }
         ],
-        max_tokens: 1000,
+        max_tokens: 1500,
         temperature: settings.temp_openai || 0.9
     };
 
-    console.log('📤 调用OpenAI API:', apiUrl);
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    
+    // 如果有API Key，添加Authorization头
+    if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+    }
 
     const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
+        headers: headers,
         body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`OpenAI API错误 ${response.status}: ${errorText}`);
+        throw new Error(`API错误 ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content || '';
 
-    console.log('✅ [联系人生成] OpenAI调用成功');
+    console.log('✅ [联系人生成] API调用成功，返回长度:', aiResponse.length);
     return aiResponse;
 }
 
