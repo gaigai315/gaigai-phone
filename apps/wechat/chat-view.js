@@ -497,36 +497,41 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
         }
     }
     
-    // ========================================
-    // 4️⃣ NPC信息（记忆表格）
-    // ========================================
-    let memoryTableData = '';
-    if (typeof window.Gaigai !== 'undefined') {
-        try {
-            // 方法1：getSummary()
-            if (typeof window.Gaigai.getSummary === 'function') {
-                const summary = window.Gaigai.getSummary();
-                if (summary && summary.trim()) {
-                    memoryTableData = summary;
-                    console.log('✅ 记忆表格总结:', summary.length, '字符');
-                }
+ // ========================================
+// 4️⃣ NPC信息（记忆表格）- 正确的API
+// ========================================
+let memoryTableData = '';
+if (typeof window.Gaigai !== 'undefined') {
+    try {
+        console.log('🔍 检测到记忆表格插件');
+        
+        if (window.Gaigai.m && window.Gaigai.m.summary) {
+            memoryTableData = window.Gaigai.m.summary;
+            console.log('✅ 记忆表格总结:', memoryTableData.length, '字符');
+        } else if (window.Gaigai.data && window.Gaigai.data.summary) {
+            memoryTableData = window.Gaigai.data.summary;
+            console.log('✅ 从data获取记忆总结');
+        } else if (window.Gaigai.m && window.Gaigai.m.tbl && Array.isArray(window.Gaigai.m.tbl)) {
+            const tableRows = window.Gaigai.m.tbl
+                .filter(row => row && row.length > 0)
+                .slice(0, 20)
+                .map(row => row.join(' | '))
+                .join('\n');
+            if (tableRows) {
+                memoryTableData = '记忆表格:\n' + tableRows;
+                console.log('✅ 从表格提取:', window.Gaigai.m.tbl.length, '行');
             }
-            // 方法2：直接访问data
-            else if (window.Gaigai.data) {
-                if (window.Gaigai.data.summary) {
-                    memoryTableData = window.Gaigai.data.summary;
-                } else if (window.Gaigai.data.table) {
-                    // 如果有表格数据，转换为文本
-                    memoryTableData = JSON.stringify(window.Gaigai.data.table);
-                }
-                console.log('✅ 记忆表格数据:', memoryTableData ? memoryTableData.length + '字符' : '无');
-            }
-        } catch (e) {
-            console.warn('⚠️ 无法获取记忆表格:', e);
         }
-    } else {
-        console.log('⚠️ 记忆表格插件未加载');
+        
+        if (!memoryTableData) {
+            console.log('⚠️ 记忆表格无可用数据');
+        }
+    } catch (e) {
+        console.error('❌ 获取记忆表格失败:', e);
     }
+} else {
+    console.log('⚠️ 记忆表格插件未加载');
+}
     
     // ========================================
     // 5️⃣ 聊天历史
