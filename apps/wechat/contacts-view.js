@@ -61,13 +61,13 @@ export class ContactsView {
                         </div>
                     `).join('')}
                 </div>
-                
-                <!-- 字母索引 -->
-                <div class="letter-index">
-                    ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').map(letter => `
-                        <span class="letter-item" data-letter="${letter}">${letter}</span>
-                    `).join('')}
-                </div>
+            </div>
+            
+            <!-- ✅ 字母索引移到外面，成为固定元素 -->
+            <div class="letter-index">
+                ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').map(letter => `
+                    <span class="letter-item" data-letter="${letter}">${letter}</span>
+                `).join('')}
             </div>
         </div>
     `;
