@@ -385,28 +385,63 @@ ${chatText}
 
 现在请生成：`;
 }
+
+// 🔥 智能检测API类型（新增方法）
+detectAPIType(context) {
+    const main_api = context?.main_api || window.main_api;
     
-// 📤 完全静默调用AI（直接读取酒馆配置，不经过UI）
+    console.log('🔍 [联系人生成] main_api值:', main_api);
+    
+    if (main_api === 'openai') {
+        return 'openai';
+    } else if (main_api === 'claude') {
+        return 'claude';
+    } else if (main_api === 'textgenerationwebui' || main_api === 'kobold' || main_api === 'ooba') {
+        return 'textgen';
+    }
+    
+    if (window.oai_settings?.api_key_openai || window.oai_settings?.reverse_proxy) {
+        console.log('✅ [联系人生成] 检测到OpenAI配置');
+        return 'openai';
+    }
+    
+    if (window.claude_settings?.api_key_claude) {
+        console.log('✅ [联系人生成] 检测到Claude配置');
+        return 'claude';
+    }
+    
+    if (window.textgenerationwebui_settings?.server_url || window.kai_settings?.server_urls) {
+        console.log('✅ [联系人生成] 检测到本地API配置');
+        return 'textgen';
+    }
+    
+    console.warn('⚠️ [联系人生成] 无法确定API类型，默认使用OpenAI');
+    return 'openai';
+}
+    
+// 📤 完全静默调用AI（智能检测API类型）
 async sendToAI(prompt) {
     try {
-        console.log('🚀 [联系人生成] 开始完全静默API调用...');
+        console.log('🚀 [联系人生成] 开始静默API调用...');
         
         const context = this.storage.getContext();
         if (!context) {
             throw new Error('无法获取上下文');
         }
 
-        // 🔥 读取酒馆的API配置
-        const main_api = context.main_api || window.main_api;
+        // 🔥 智能检测API类型
+        const apiType = this.detectAPIType(context);
+        console.log('📡 [联系人生成] 检测到API类型:', apiType);
         
-        if (main_api === 'openai') {
-            return await this.callOpenAI(prompt, context);
-        } else if (main_api === 'claude') {
-            return await this.callClaude(prompt, context);
-        } else if (main_api === 'textgenerationwebui' || main_api === 'kobold') {
-            return await this.callTextGen(prompt, context);
-        } else {
-            throw new Error(`不支持的API类型: ${main_api}`);
+        switch(apiType) {
+            case 'openai':
+                return await this.callOpenAI(prompt, context);
+            case 'claude':
+                return await this.callClaude(prompt, context);
+            case 'textgen':
+                return await this.callTextGen(prompt, context);
+            default:
+                throw new Error(`不支持的API类型: ${apiType}`);
         }
         
     } catch (error) {
