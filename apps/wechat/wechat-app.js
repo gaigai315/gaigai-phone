@@ -1822,7 +1822,7 @@ openChat(chatId) {
 
 // ✅ 编辑个人资料（手机内部界面，不用弹窗）
 showEditProfile() {
-    this.wechatData.updateUserInfo({ avatar: e.target.result });
+    const userInfo = this.wechatData.getUserInfo();
     
     const html = `
         <div class="wechat-app">
@@ -2191,8 +2191,8 @@ showClearDataConfirm() {
         this.showSettings();
     });
     
-    document.getElementById('confirm-clear-data')?.addEventListener('click', () => {
-    this.wechatData.data = 
+   document.getElementById('confirm-clear-data')?.addEventListener('click', () => {
+    this.wechatData.data = {
         userInfo: {
             name: '我',
             wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
