@@ -459,7 +459,7 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
     if (context.mesExamples) {
         exampleDialogue = context.mesExamples
             .replace(/<START>/g, '\n---\n')
-            .substring(0, 1000); // 限制长度
+            .substring(0, 1000);
     }
     
     // ✅ 获取世界书
@@ -485,37 +485,54 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
         return `${h.speaker}${source}: ${h.message}`;
     }).join('\n');
     
-    // ✅ 构建完整提示词
-    return `# 场景：微信聊天
-你正在通过微信和${userName}聊天（不是面对面对话，是手机文字聊天）。
-
-## 角色信息
-**你的名字：** ${charName}
-**微信备注名：** ${contactName}
-
-${charDesc ? `**角色描述：**\n${charDesc}\n` : ''}
-${personality ? `**性格特点：**\n${personality}\n` : ''}
-${scenario ? `**当前场景：**\n${scenario}\n` : ''}
-${worldInfo}
-${exampleDialogue ? `**对话风格参考：**\n${exampleDialogue}\n` : ''}
-
-## 完整聊天历史（包含面对面对话和微信记录）
-${historyText}
-
-## 用户刚通过微信发来的消息
-${userName}(微信): ${userMessage}
-
----
-
-## 回复要求（重要！）
-1. **只返回你的微信回复文字内容**，不要任何旁白、动作、场景描述
-2. 语气要符合微信聊天风格（简洁、口语化、可以分段）
-3. 可以使用emoji表情 😊
-4. 如果要发多条消息，用 `|||` 分隔，例如：`好的|||我马上过来|||😊`
-5. 要考虑之前的所有对话历史（包括面对面和微信的）
-6. **禁止输出**：JSON、XML、标签、格式代码、旁白、动作描述
-
-现在请回复${userName}的微信消息（只回复文字内容）：`;
+    // ✅ 构建完整提示词（修复版）
+    const promptText = [
+        '# 场景：微信聊天',
+        `你正在通过微信和${userName}聊天（不是面对面对话，是手机文字聊天）。`,
+        '',
+        '## 角色信息',
+        `**你的名字：** ${charName}`,
+        `**微信备注名：** ${contactName}`,
+        ''
+    ];
+    
+    if (charDesc) {
+        promptText.push(`**角色描述：**\n${charDesc}\n`);
+    }
+    if (personality) {
+        promptText.push(`**性格特点：**\n${personality}\n`);
+    }
+    if (scenario) {
+        promptText.push(`**当前场景：**\n${scenario}\n`);
+    }
+    if (worldInfo) {
+        promptText.push(worldInfo);
+    }
+    if (exampleDialogue) {
+        promptText.push(`**对话风格参考：**\n${exampleDialogue}\n`);
+    }
+    
+    promptText.push(
+        '## 完整聊天历史（包含面对面对话和微信记录）',
+        historyText,
+        '',
+        '## 用户刚通过微信发来的消息',
+        `${userName}(微信): ${userMessage}`,
+        '',
+        '---',
+        '',
+        '## 回复要求（重要！）',
+        '1. **只返回你的微信回复文字内容**，不要任何旁白、动作、场景描述',
+        '2. 语气要符合微信聊天风格（简洁、口语化、可以分段）',
+        '3. 可以使用emoji表情 😊',
+        '4. 如果要发多条消息，用三个竖线分隔，例如：好的|||我马上过来|||😊',
+        '5. 要考虑之前的所有对话历史（包括面对面和微信的）',
+        '6. **禁止输出**：JSON、XML、标签、格式代码、旁白、动作描述',
+        '',
+        `现在请回复${userName}的微信消息（只回复文字内容）：`
+    );
+    
+    return promptText.join('\n');
 }
 
 // 🔧 静默调用AI（不显示在聊天窗口）
