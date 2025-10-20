@@ -1820,7 +1820,7 @@ openChat(chatId) {
         this.wechatData.saveData();
     }
 
-// ✅ 编辑个人资料（手机内部界面，不用弹窗）
+/// ✅ 编辑个人资料（手机内部界面，不用弹窗）
 showEditProfile() {
     const userInfo = this.wechatData.getUserInfo();
     
