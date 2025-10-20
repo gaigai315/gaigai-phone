@@ -312,18 +312,20 @@ input?.addEventListener('input', (e) => {
         });
     }
     
-    async sendMessage() {
+async sendMessage() {
     if (!this.inputText.trim()) return;
     
-    const userInfo = this.app.data.getUserInfo();
+    const context = window.SillyTavern?.getContext?.();
+    const userName = context?.name1 || '我';
+    const userAvatar = this.app.data.getUserInfo().avatar;
     
-    // 添加消息到数据
+    // 添加用户消息到微信
     this.app.data.addMessage(this.app.currentChat.id, {
         from: 'me',
         content: this.inputText,
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
         type: 'text',
-        avatar: userInfo.avatar
+        avatar: userAvatar
     });
     
     const messageToSend = this.inputText;
@@ -335,10 +337,12 @@ input?.addEventListener('input', (e) => {
     // 如果开启了在线模式，发送到AI
     if (window.VirtualPhone?.settings?.onlineMode) {
         await this.sendToAI(messageToSend);
+    } else {
+        console.log('💬 离线模式，消息仅保存在手机本地');
     }
 }
     
-   async sendToAI(message) {
+async sendToAI(message) {
     const settings = window.VirtualPhone?.settings;
     
     if (!settings?.onlineMode) {
@@ -356,59 +360,80 @@ input?.addEventListener('input', (e) => {
             throw new Error('无法获取酒馆上下文');
         }
         
-        // 2️⃣ 获取角色信息
-        const charName = context.name2 || context.name || '对方';
-        const charDesc = context.description || '';
-        const personality = context.personality || '';
-        
-        // 3️⃣ 获取完整聊天记录（酒馆历史 + 手机微信记录）
+        // 2️⃣ 获取完整聊天记录（酒馆历史 + 手机微信记录）
         const chatHistory = [];
         
         // 酒馆聊天记录
         if (context.chat && Array.isArray(context.chat)) {
             context.chat.forEach(msg => {
-                chatHistory.push({
-                    speaker: msg.is_user ? '用户' : charName,
-                    message: msg.mes || '',
-                    source: 'tavern'
-                });
+                if (msg.mes && msg.mes.trim()) {
+                    const speaker = msg.is_user ? (context.name1 || '用户') : (context.name2 || '角色');
+                    const content = msg.mes
+                        .replace(/<[^>]*>/g, '') // 移除HTML
+                        .replace(/\*.*?\*/g, '') // 移除动作
+                        .substring(0, 500);
+                    
+                    if (content.trim()) {
+                        chatHistory.push({
+                            speaker: speaker,
+                            message: content,
+                            source: 'tavern'
+                        });
+                    }
+                }
             });
         }
         
         // 当前微信聊天记录
         const wechatMessages = this.app.data.getMessages(this.app.currentChat.id);
         wechatMessages.forEach(msg => {
+            const speaker = msg.from === 'me' 
+                ? (context.name1 || '用户') 
+                : (context.name2 || this.app.currentChat.name);
+            
             chatHistory.push({
-                speaker: msg.from === 'me' ? '用户' : charName,
+                speaker: speaker,
                 message: msg.content || '',
                 source: 'wechat'
             });
         });
         
-        // 4️⃣ 构建手机聊天专用提示词
+        // 3️⃣ 构建手机聊天专用提示词
         const phonePrompt = this.buildPhoneChatPrompt(
-            charName, 
-            charDesc, 
-            personality, 
+            context,
             this.app.currentChat.name,
             chatHistory, 
             message
         );
         
-        // 5️⃣ 发送给AI并隐藏消息
-        const aiResponse = await this.sendToAIHidden(phonePrompt);
+        console.log('📤 发送给AI的提示词长度:', phonePrompt.length);
         
-        // 6️⃣ 将AI回复添加到微信界面
-        this.app.data.addMessage(this.app.currentChat.id, {
-            from: charName,
-            content: aiResponse,
-            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-            type: 'text',
-            avatar: this.app.currentChat.avatar
+        // 4️⃣ 静默发送给AI
+        const aiResponse = await this.sendToAIHidden(phonePrompt, context);
+        
+        // 5️⃣ 解析AI回复（支持多条消息）
+        const messages = aiResponse.includes('|||') 
+            ? aiResponse.split('|||').map(m => m.trim()).filter(m => m)
+            : [aiResponse.trim()];
+        
+        // 6️⃣ 将AI回复添加到微信界面（可能多条）
+        const charName = context.name2 || this.app.currentChat.name;
+        messages.forEach((msgText, index) => {
+            setTimeout(() => {
+                this.app.data.addMessage(this.app.currentChat.id, {
+                    from: charName,
+                    content: msgText,
+                    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                    type: 'text',
+                    avatar: this.app.currentChat.avatar
+                });
+                
+                // 最后一条消息时刷新界面
+                if (index === messages.length - 1) {
+                    this.app.render();
+                }
+            }, index * 800); // 每条消息间隔800ms
         });
-        
-        // 7️⃣ 刷新界面
-        this.app.render();
         
         console.log('✅ 手机消息发送成功');
         
@@ -493,132 +518,106 @@ ${userName}(微信): ${userMessage}
 现在请回复${userName}的微信消息（只回复文字内容）：`;
 }
 
-    // 🔧 发送给AI并隐藏消息（静默API调用）
-async sendToAIHidden(prompt) {
-    return new Promise(async (resolve, reject) => {
+// 🔧 静默调用AI（不显示在聊天窗口）
+async sendToAIHidden(prompt, context) {
+    return new Promise((resolve, reject) => {
         try {
-            const context = window.SillyTavern?.getContext?.();
-            if (!context) {
-                throw new Error('无法获取酒馆上下文');
+            console.log('🚀 开始静默调用AI...');
+
+            const textarea = document.querySelector('#send_textarea');
+            if (!textarea) {
+                throw new Error('找不到聊天输入框');
             }
 
-            // 🚀 直接调用酒馆API，不通过界面
-            const response = await fetch('/api/chats/send', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_input: prompt,
-                    // 添加静默标记
-                    quiet_mode: true,
-                    // 阻止界面更新
-                    prevent_display: true
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`API请求失败: ${response.status}`);
-            }
-
-            const data = await response.json();
+            // 保存原始内容
+            const originalValue = textarea.value;
             
-            // 提取AI回复（兼容不同接口格式）
-            const aiReply = data.response || 
-                           data.message || 
-                           data.output || 
-                           (data.choices?.[0]?.message?.content) || 
-                           '';
+            // 设置提示词
+            textarea.value = prompt;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
 
-            if (!aiReply) {
-                throw new Error('AI返回空消息');
-            }
+            // 监听AI回复
+            let responded = false;
+            const timeout = setTimeout(() => {
+                if (!responded) {
+                    responded = true;
+                    textarea.value = originalValue;
+                    reject(new Error('AI响应超时（30秒）'));
+                }
+            }, 30000);
 
-            console.log('✅ 静默API调用成功');
-            resolve(aiReply);
+            const messageHandler = () => {
+                if (responded) return;
+                
+                try {
+                    const chat = context.chat;
+                    if (!chat || chat.length < 2) return;
+
+                    // 获取最后一条AI消息
+                    const lastMsg = chat[chat.length - 1];
+                    if (lastMsg && !lastMsg.is_user) {
+                        responded = true;
+                        clearTimeout(timeout);
+
+                        const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
+
+                        // 🔥 立即从聊天记录中删除（用户消息+AI消息）
+                        chat.splice(chat.length - 2, 2);
+                        
+                        // 🔥 立即隐藏DOM元素
+                        setTimeout(() => {
+                            const allMessages = document.querySelectorAll('.mes');
+                            if (allMessages.length >= 2) {
+                                allMessages[allMessages.length - 2]?.remove();
+                                allMessages[allMessages.length - 1]?.remove();
+                            }
+                        }, 50);
+
+                        // 恢复输入框
+                        textarea.value = originalValue;
+
+                        // 移除监听器
+                        context.eventSource.removeListener(
+                            context.event_types.CHARACTER_MESSAGE_RENDERED,
+                            messageHandler
+                        );
+
+                        console.log('✅ 静默调用成功，已清理痕迹');
+                        resolve(aiText);
+                    }
+                } catch (e) {
+                    responded = true;
+                    clearTimeout(timeout);
+                    textarea.value = originalValue;
+                    reject(e);
+                }
+            };
+
+            // 注册监听器
+            context.eventSource.on(
+                context.event_types.CHARACTER_MESSAGE_RENDERED,
+                messageHandler
+            );
+
+            // 延迟发送
+            setTimeout(() => {
+                if (!responded) {
+                    const sendBtn = document.querySelector('#send_but');
+                    if (sendBtn) {
+                        sendBtn.click();
+                    } else {
+                        responded = true;
+                        clearTimeout(timeout);
+                        textarea.value = originalValue;
+                        reject(new Error('找不到发送按钮'));
+                    }
+                }
+            }, 200);
 
         } catch (error) {
-            console.error('❌ 静默API调用失败:', error);
-            
-            // 🔄 降级方案：使用原方法但增强隐藏
-            this.fallbackSend(prompt)
-                .then(resolve)
-                .catch(reject);
+            console.error('❌ 静默调用失败:', error);
+            reject(error);
         }
-    });
-}
-
-// 🔄 降级方案（当API调用失败时）
-async fallbackSend(prompt) {
-    return new Promise((resolve, reject) => {
-        const textarea = document.querySelector('#send_textarea');
-        if (!textarea) {
-            reject(new Error('找不到聊天输入框'));
-            return;
-        }
-
-        const originalValue = textarea.value;
-        textarea.value = prompt;
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
-        const context = window.SillyTavern?.getContext?.();
-        let responded = false;
-
-        const handler = (messageId) => {
-            if (responded) return;
-            responded = true;
-
-            try {
-                const chat = context.chat;
-                const lastMsg = chat[chat.length - 1];
-
-                if (lastMsg && !lastMsg.is_user) {
-                    const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
-
-                    // 🔥 立即隐藏用户消息和AI消息
-                    requestAnimationFrame(() => {
-                        const msgs = document.querySelectorAll('.mes');
-                        if (msgs.length >= 2) {
-                            msgs[msgs.length - 2].style.display = 'none'; // 用户消息
-                            msgs[msgs.length - 1].style.display = 'none'; // AI消息
-                        }
-                    });
-
-                    textarea.value = originalValue;
-
-                    context.eventSource.removeListener(
-                        context.event_types.CHARACTER_MESSAGE_RENDERED,
-                        handler
-                    );
-
-                    resolve(aiText);
-                }
-            } catch (e) {
-                reject(e);
-            }
-        };
-
-        context.eventSource.on(
-            context.event_types.CHARACTER_MESSAGE_RENDERED,
-            handler
-        );
-
-        setTimeout(() => {
-            const sendBtn = document.querySelector('#send_but');
-            if (sendBtn) {
-                sendBtn.click();
-            } else {
-                reject(new Error('找不到发送按钮'));
-            }
-        }, 100);
-
-        setTimeout(() => {
-            if (!responded) {
-                responded = true;
-                textarea.value = originalValue;
-                reject(new Error('AI响应超时'));
-            }
-        }, 30000);
     });
 }
     
