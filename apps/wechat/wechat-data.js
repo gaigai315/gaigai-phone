@@ -505,7 +505,7 @@ isPossibleName(str) {
     if (/^\d+$/.test(s)) return false;
     
     // 排除包含特殊符号的
-    if (/[【】\{\}```math
+if (/[【】\{\}```math
 ```<>\/\```/.test(s)) return false;
     
     // 中文名字规则（2-4个汉字）
