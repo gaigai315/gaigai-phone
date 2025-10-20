@@ -468,15 +468,16 @@ function init() {
                 const settingsApp = new SettingsApp(phoneShell, storage, settings);
                 settingsApp.render();
             } else if (appId === 'wechat') {
-                import('./apps/wechat/wechat-app.js').then(module => {
-                    const wechatApp = new module.WechatApp(phoneShell, storage);
-                    window.currentWechatApp = wechatApp;
-                    wechatApp.render();
-                }).catch(err => {
-                    console.error('加载微信APP失败:', err);
-                    phoneShell?.showNotification('错误', '微信加载失败', '❌');
-                });
-            } else {
+    import('./apps/wechat/wechat-app.js').then(module => {
+        const wechatApp = new module.WechatApp(phoneShell, storage);
+        window.currentWechatApp = wechatApp;
+        window.VirtualPhone.wechatApp = wechatApp;  // ← 新增：同时挂载到 VirtualPhone
+        wechatApp.render();
+    }).catch(err => {
+        console.error('加载微信APP失败:', err);
+        phoneShell?.showNotification('错误', '微信加载失败', '❌');
+    });
+} else {
                 phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
             }
         });
@@ -549,13 +550,14 @@ function init() {
     setTimeout(init, 1000);
     
     window.VirtualPhone = {
-        phone: phoneShell,
-        home: homeScreen,
-        storage: storage,
-        settings: settings,
-        imageManager: new ImageUploadManager(storage),
-        version: '1.0.0'
-    };
+    phone: phoneShell,
+    home: homeScreen,
+    storage: storage,
+    settings: settings,
+    imageManager: new ImageUploadManager(storage),
+    wechatApp: null,
+    version: '1.0.0'
+};
     
     window.ImageUploadManager = ImageUploadManager;
     
