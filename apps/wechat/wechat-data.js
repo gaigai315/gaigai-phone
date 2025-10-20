@@ -488,156 +488,57 @@ async sendToAI(prompt) {
 
 // 🔧 直接 API 调用方法（不经过聊天系统）
 async directAPICall(prompt) {
-    console.log('📡 [手机AI调用] 使用直接API调用...');
+    console.log('📡 [静默AI] 调用Chat Completion API...');
     
     try {
-        // 🔥 使用酒馆的 generate 接口，但完全绕过聊天记录
-        const apiUrl = '/api/backends/chat-completions/generate';
-        
-        const requestBody = {
-            messages: [
-                {
-                    role: 'system',
-                    content: '你是一个JSON数据生成助手。只返回纯JSON格式，不要角色扮演，不要剧情对话。'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
-            temperature: 0.7,
-            max_tokens: 1500,
-            stream: false
-        };
-        
-        console.log('📤 [手机AI调用] 发送API请求...');
-        
-        const response = await fetch(apiUrl, {
+        // 🔥 使用正确的 Chat Completion 端点
+        const response = await fetch('/api/backends/chat-completions/generate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify({
+                messages: [
+                    {
+                        role: 'system',
+                        content: '你是一个数据分析助手。严格按要求返回JSON格式数据。'
+                    },
+                    {
+                        role: 'user',
+                        content: prompt  // 这里已经包含了所有上下文
+                    }
+                ],
+                max_tokens: 2000,
+                temperature: 0.7
+            })
         });
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('API错误响应:', errorText);
+            console.error('❌ API错误:', errorText);
             throw new Error(`API请求失败: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('📥 API返回数据:', data);
+        console.log('📥 原始API响应:', data);
         
-        // 尝试多种可能的响应格式
-        const content = 
-            data.choices?.[0]?.message?.content ||  // OpenAI 格式
-            data.content ||                         // 简化格式
-            data.response ||                        // 某些代理格式
-            data.text ||                            // TextGen 格式
+        // 提取响应内容（支持多种格式）
+        const result = 
+            data.choices?.[0]?.message?.content ||  // 标准格式
+            data.response ||                         // 某些代理
+            data.message?.content ||                 // 备选格式
             '';
         
-        if (!content) {
-            console.warn('⚠️ AI返回为空，完整响应:', data);
+        if (!result) {
+            console.error('❌ AI返回为空，完整数据:', JSON.stringify(data));
+            throw new Error('AI返回为空');
         }
         
-        console.log('✅ [手机AI调用] API调用成功，长度:', content.length);
-        return content;
+        console.log('✅ [静默AI] 成功，长度:', result.length);
+        return result;
         
     } catch (error) {
-        console.error('❌ [手机AI调用] API调用失败:', error);
-        
-        // 🔥 如果 API 调用失败，尝试备用方案
-        console.warn('⚠️ 尝试使用备用方案（临时消息法）...');
-        return await this.fallbackGenerate(SillyTavern.getContext(), prompt);
-    }
-}
-
-// 🔧 备用生成方法（当 context.generate 失败时使用）
-async fallbackGenerate(context, prompt) {
-    console.log('📡 使用备用方案：临时消息法...');
-    
-    if (!context.chat || !Array.isArray(context.chat)) {
-        throw new Error('当前没有活跃的聊天，请先发送一条消息');
-    }
-    
-    // 保存当前聊天长度
-    const originalLength = context.chat.length;
-    
-    // 添加临时用户消息
-    const tempMessage = {
-        name: context.name1 || '用户',
-        is_user: true,
-        mes: prompt,
-        send_date: Date.now(),
-        extra: {
-            isQuiet: true,
-            isTemporary: true
-        }
-    };
-    
-    context.chat.push(tempMessage);
-    
-    try {
-        // 等待AI回复
-        const aiResponse = await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('AI生成超时（30秒）'));
-            }, 30000);
-            
-            let checkCount = 0;
-            const maxChecks = 300; // 最多检查30秒
-            
-            const checkForReply = () => {
-                checkCount++;
-                
-                // 检查是否有新消息
-                if (context.chat.length > originalLength + 1) {
-                    const lastMsg = context.chat[context.chat.length - 1];
-                    
-                    // 确认是AI的回复
-                    if (!lastMsg.is_user) {
-                        clearTimeout(timeout);
-                        
-                        // 提取回复内容
-                        const reply = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
-                        
-                        // 🔥 立即删除临时消息（用户消息 + AI回复）
-                        context.chat.splice(originalLength, 2);
-                        
-                        resolve(reply);
-                        return;
-                    }
-                }
-                
-                // 超过最大检查次数
-                if (checkCount >= maxChecks) {
-                    clearTimeout(timeout);
-                    reject(new Error('AI生成超时'));
-                    return;
-                }
-                
-                // 继续检查
-                setTimeout(checkForReply, 100);
-            };
-            
-            // 🔥 触发AI生成（调用 context.generate）
-            context.generate().catch(reject);
-            
-            // 延迟开始检查（给AI一点反应时间）
-            setTimeout(checkForReply, 500);
-        });
-        
-        console.log('✅ [备用方案] 生成成功');
-        return aiResponse;
-        
-    } catch (error) {
-        // 🧹 清理：如果失败，删除临时消息
-        if (context.chat.length > originalLength) {
-            context.chat.splice(originalLength);
-        }
-        
+        console.error('❌ [静默AI] 失败:', error);
         throw error;
     }
 }
