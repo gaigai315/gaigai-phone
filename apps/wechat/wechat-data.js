@@ -452,157 +452,160 @@ detectAPIType(context) {
     return 'openai';
 }
     
-// 📤 调用酒馆的生成API（使用内部方法，完全静默）
+// 📤 调用酒馆的生成API（适配新版酒馆）
 async sendToAI(prompt) {
     try {
         console.log('🚀 [手机AI调用] 开始静默调用...');
         
-        // ========================================
-        // 方法1：generateQuietPrompt（最推荐）
-        // ========================================
-        if (typeof generateQuietPrompt === 'function') {
-            console.log('📡 使用 generateQuietPrompt...');
-            try {
-                const response = await generateQuietPrompt(prompt, false, false);
-                console.log('✅ [手机AI调用] 成功，回复长度:', response.length);
-                return response;
-            } catch (e) {
-                console.warn('⚠️ generateQuietPrompt 失败:', e.message);
-            }
-        }
-        
-        // ========================================
-        // 方法2：使用 callPopup + 隐藏（兼容方案）
-        // ========================================
-        if (typeof callPopup === 'function' && typeof window.generateQuietPrompt === 'undefined') {
-            console.log('📡 使用 callPopup 备用方案...');
-            
-            // 临时注入一个静默生成函数
-            const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
-                ? SillyTavern.getContext() 
-                : null;
-            
-            if (!context) {
-                throw new Error('无法获取SillyTavern上下文');
-            }
-            
-            // 使用聊天上下文的生成函数
-            if (context.generate) {
-                console.log('📡 使用 context.generate...');
-                const response = await context.generate(prompt, {
-                    quiet: true,
-                    force_name2: false
-                });
-                console.log('✅ [手机AI调用] 成功');
-                return response;
-            }
-        }
-        
-        // ========================================
-        // 方法3：临时消息法（最后的备用方案）
-        // ========================================
-        console.log('📡 使用临时消息备用方案...');
-        
+        // 获取上下文
         const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
             ? SillyTavern.getContext() 
             : null;
         
         if (!context) {
-            throw new Error('无法获取SillyTavern上下文');
+            throw new Error('无法获取SillyTavern上下文，请确保在聊天界面');
         }
         
-        // 保存当前聊天长度
-        const originalChatLength = context.chat ? context.chat.length : 0;
-        
-        // 临时添加用户消息
-        const tempMessage = {
-            name: context.name1 || '用户',
-            is_user: true,
-            mes: prompt,
-            send_date: Date.now()
-        };
-        
-        if (!context.chat) {
-            throw new Error('当前没有活跃的聊天');
-        }
-        
-        context.chat.push(tempMessage);
-        
-        try {
-            // 触发AI生成
-            let aiResponse = '';
+        // ========================================
+        // 🔥 使用 context.generate（新版酒馆标准方法）
+        // ========================================
+        if (typeof context.generate === 'function') {
+            console.log('📡 使用 context.generate（新版酒馆）...');
             
-            // 尝试使用 Generate 函数（但监听结果后立即删除消息）
-            if (typeof Generate === 'function') {
-                const generatePromise = new Promise((resolve, reject) => {
-                    // 监听消息渲染事件
-                    const handler = (messageId) => {
-                        try {
-                            const newMessage = context.chat[context.chat.length - 1];
-                            if (newMessage && !newMessage.is_user) {
-                                aiResponse = newMessage.mes || '';
-                                
-                                // 立即删除临时消息（用户消息和AI回复）
-                                context.chat.splice(originalChatLength);
-                                
-                                // 刷新界面（隐藏消息）
-                                if (typeof saveChatConditional === 'function') {
-                                    saveChatConditional();
-                                }
-                                
-                                context.eventSource?.removeListener(
-                                    context.event_types.CHARACTER_MESSAGE_RENDERED,
-                                    handler
-                                );
-                                
-                                resolve(aiResponse);
-                            }
-                        } catch (e) {
-                            reject(e);
-                        }
-                    };
-                    
-                    if (context.eventSource) {
-                        context.eventSource.on(
-                            context.event_types.CHARACTER_MESSAGE_RENDERED,
-                            handler
-                        );
-                    }
-                    
-                    // 设置超时
-                    setTimeout(() => reject(new Error('AI生成超时')), 30000);
+            try {
+                // 调用静默生成
+                const response = await context.generate(prompt, {
+                    quiet: true,           // 静默模式
+                    quietToLoud: false,    // 不转为正常消息
+                    skipWIAN: false,       // 不跳过世界书
+                    force_name2: false,    // 不强制角色名
+                    isQuiet: true          // 额外的静默标记
                 });
                 
-                // 触发生成
-                Generate('normal');
+                console.log('✅ [手机AI调用] 成功，回复长度:', response?.length || 0);
+                return response || '';
                 
-                aiResponse = await generatePromise;
+            } catch (genError) {
+                console.warn('⚠️ context.generate 失败，尝试备用方案:', genError.message);
                 
-                console.log('✅ [手机AI调用] 临时消息法成功');
-                return aiResponse;
+                // 🔧 备用方案：临时消息法
+                return await this.fallbackGenerate(context, prompt);
             }
-            
-            throw new Error('找不到可用的生成函数');
-            
-        } catch (error) {
-            // 如果失败，清理临时消息
-            if (context.chat && context.chat.length > originalChatLength) {
-                context.chat.splice(originalChatLength);
-            }
-            throw error;
         }
+        
+        // 如果连 context.generate 都没有，抛出错误
+        throw new Error('当前酒馆版本不支持AI生成，请更新到最新版');
         
     } catch (error) {
         console.error('❌ [手机AI调用] 失败:', error);
         
         // 🎯 友好的错误提示
-        if (error.message.includes('403')) {
-            throw new Error('AI服务拒绝访问，请检查API配置');
-        } else if (error.message.includes('上下文')) {
+        if (error.message.includes('上下文')) {
             throw new Error('请先选择一个角色并开始聊天');
+        } else if (error.message.includes('不支持')) {
+            throw new Error(error.message);
         } else {
             throw new Error('AI调用失败: ' + error.message);
         }
+    }
+}
+
+// 🔧 备用生成方法（当 context.generate 失败时使用）
+async fallbackGenerate(context, prompt) {
+    console.log('📡 使用备用方案：临时消息法...');
+    
+    if (!context.chat || !Array.isArray(context.chat)) {
+        throw new Error('当前没有活跃的聊天，请先发送一条消息');
+    }
+    
+    // 保存当前聊天长度
+    const originalLength = context.chat.length;
+    
+    // 添加临时用户消息
+    const tempMessage = {
+        name: context.name1 || '用户',
+        is_user: true,
+        mes: prompt,
+        send_date: Date.now(),
+        extra: {
+            isQuiet: true,
+            isTemporary: true
+        }
+    };
+    
+    context.chat.push(tempMessage);
+    
+    try {
+        // 等待AI回复
+        const aiResponse = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('AI生成超时（30秒）'));
+            }, 30000);
+            
+            let checkCount = 0;
+            const maxChecks = 300; // 最多检查30秒
+            
+            const checkForReply = () => {
+                checkCount++;
+                
+                // 检查是否有新消息
+                if (context.chat.length > originalLength + 1) {
+                    const lastMsg = context.chat[context.chat.length - 1];
+                    
+                    // 确认是AI的回复
+                    if (!lastMsg.is_user) {
+                        clearTimeout(timeout);
+                        
+                        // 提取回复内容
+                        const reply = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
+                        
+                        // 🔥 立即删除临时消息（用户消息 + AI回复）
+                        context.chat.splice(originalLength, 2);
+                        
+                        // 刷新界面（如果有保存函数）
+                        if (typeof saveChatConditional === 'function') {
+                            saveChatConditional();
+                        }
+                        
+                        resolve(reply);
+                        return;
+                    }
+                }
+                
+                // 超过最大检查次数
+                if (checkCount >= maxChecks) {
+                    clearTimeout(timeout);
+                    reject(new Error('AI生成超时'));
+                    return;
+                }
+                
+                // 继续检查
+                setTimeout(checkForReply, 100);
+            };
+            
+            // 🔥 触发AI生成
+            if (context.generate) {
+                context.generate().catch(reject);
+            } else if (typeof Generate === 'function') {
+                Generate('normal');
+            } else {
+                reject(new Error('找不到生成函数'));
+            }
+            
+            // 延迟开始检查（给AI一点反应时间）
+            setTimeout(checkForReply, 500);
+        });
+        
+        console.log('✅ [备用方案] 生成成功');
+        return aiResponse;
+        
+    } catch (error) {
+        // 🧹 清理：如果失败，删除临时消息
+        if (context.chat.length > originalLength) {
+            context.chat.splice(originalLength);
+        }
+        
+        throw error;
     }
 }
     
