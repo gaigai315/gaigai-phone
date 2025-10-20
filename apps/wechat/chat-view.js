@@ -510,7 +510,6 @@ async sendToAI(message) {
         const phonePrompt = this.buildPhoneChatPrompt(
             context,
             this.app.currentChat.name,
-            chatHistory, 
             message
         );
         
@@ -552,7 +551,7 @@ async sendToAI(message) {
 }
 
 // 🔧 构建手机聊天提示词（完整版：角色卡+用户卡+记忆表格）
-buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
+buildPhoneChatPrompt(context, contactName, userMessage) {
     const userName = context.name1 || '用户';
     
     console.log('📝 开始构建手机聊天提示词...');
@@ -754,6 +753,7 @@ const finalPrompt = sections.join('\n');
 console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
 
 return finalPrompt;
+}
 
 // 🔧 完全静默调用AI（使用酒馆API）
 async sendToAIHidden(prompt, context) {
