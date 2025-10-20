@@ -5,75 +5,41 @@ export class ContactsView {
         this.searchText = '';
     }
     
-    render() {
-        const contacts = this.app.data.getContacts();
-        const grouped = this.groupContacts(contacts);
-        
-        return `
-    <div class="wechat-contacts">
-        <div class="contacts-search">
-            <input type="text" class="search-input" placeholder="搜索" />
-        </div>
-        
-        <!-- 🔥 可滚动内容区 -->
-        <div class="contacts-scrollable">
-            <div class="contacts-functions">
-                <div class="function-item">
-                    <div class="function-icon" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f);">
-                        <i class="fa-solid fa-user-plus"></i>
-                    </div>
-                    <div class="function-name">新的朋友</div>
-                </div>
-                <div class="function-item">
-                    <div class="function-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
-                    <div class="function-name">群聊</div>
-                </div>
-                <div class="function-item">
-                    <div class="function-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
-                        <i class="fa-solid fa-tag"></i>
-                    </div>
-                    <div class="function-name">标签</div>
-                </div>
-                <div class="function-item">
-                    <div class="function-icon" style="background: linear-gradient(135deg, #fa709a, #fee140);">
-                        <i class="fa-solid fa-bullhorn"></i>
-                    </div>
-                    <div class="function-name">公众号</div>
-                </div>
+ render() {
+    const contacts = this.app.data.getContacts();
+    const grouped = this.groupContacts(contacts);
+    
+    return `
+        <div class="wechat-contacts">
+            <div class="contacts-search">
+                <input type="text" class="search-input" placeholder="搜索" />
             </div>
             
-            <div class="contacts-list">
-                ${this.renderContactList(contacts)}
-            </div>
-        </div>
-    </div>
-`;
-                
+            <!-- 🔥 可滚动内容区 -->
+            <div class="contacts-scrollable">
                 <!-- 功能入口 -->
                 <div class="contacts-functions">
                     <div class="function-item" data-func="new-friends">
-                        <div class="function-icon" style="background: #ffa502;">
+                        <div class="function-icon" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f);">
                             <i class="fa-solid fa-user-plus"></i>
                         </div>
                         <div class="function-name">新的朋友</div>
                     </div>
                     <div class="function-item" data-func="groups">
-                        <div class="function-icon" style="background: #2ed573;">
+                        <div class="function-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
                             <i class="fa-solid fa-users"></i>
                         </div>
                         <div class="function-name">群聊</div>
                     </div>
                     <div class="function-item" data-func="tags">
-                        <div class="function-icon" style="background: #5f9fd8;">
-                            <i class="fa-solid fa-tags"></i>
+                        <div class="function-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+                            <i class="fa-solid fa-tag"></i>
                         </div>
                         <div class="function-name">标签</div>
                     </div>
                     <div class="function-item" data-func="official">
-                        <div class="function-icon" style="background: #00b894;">
-                            <i class="fa-solid fa-newspaper"></i>
+                        <div class="function-icon" style="background: linear-gradient(135deg, #fa709a, #fee140);">
+                            <i class="fa-solid fa-bullhorn"></i>
                         </div>
                         <div class="function-name">公众号</div>
                     </div>
@@ -103,8 +69,9 @@ export class ContactsView {
                     `).join('')}
                 </div>
             </div>
-        `;
-    }
+        </div>
+    `;
+}
     
     groupContacts(contacts) {
         const grouped = {};
