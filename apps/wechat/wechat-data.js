@@ -386,113 +386,56 @@ ${chatText}
 现在请生成：`;
 }
     
-// 📤 完全静默调用AI（直接隐藏聊天容器）
+// 📤 完全静默调用AI（直接调用API）
 async sendToAI(prompt) {
-    return new Promise((resolve, reject) => {
-        try {
-            const context = this.storage.getContext();
-            if (!context) {
-                throw new Error('无法获取SillyTavern上下文');
-            }
-
-            console.log('🚀 [联系人生成] 开始完全静默调用AI...');
-
-            const textarea = document.querySelector('#send_textarea');
-            if (!textarea) {
-                throw new Error('找不到聊天输入框');
-            }
-
-            const chatContainer = document.getElementById('chat');
-            if (!chatContainer) {
-                throw new Error('找不到聊天容器');
-            }
-
-            const originalValue = textarea.value;
-            
-            // 🔥 直接隐藏整个聊天容器
-            const originalDisplay = chatContainer.style.display;
-            chatContainer.style.display = 'none';
-            
-            console.log('🙈 [联系人生成] 已隐藏聊天容器');
-
-            let responded = false;
-
-            const timeout = setTimeout(() => {
-                if (!responded) {
-                    responded = true;
-                    chatContainer.style.display = originalDisplay;
-                    textarea.value = originalValue;
-                    this.cleanupSilentMessages(context);
-                    reject(new Error('AI响应超时（120秒）'));
+    try {
+        console.log('🚀 [联系人生成] 开始静默API调用...');
+        
+        const apiUrl = '/api/chat/completions';
+        
+        const requestBody = {
+            messages: [
+                {
+                    role: 'user',
+                    content: prompt
                 }
-            }, 120000);
-
-            const messageHandler = () => {
-                if (responded) return;
-                
-                try {
-                    const chat = context.chat;
-                    if (!chat || chat.length < 2) return;
-
-                    const lastMsg = chat[chat.length - 1];
-                    if (lastMsg && !lastMsg.is_user) {
-                        responded = true;
-                        clearTimeout(timeout);
-
-                        const aiText = lastMsg.mes || lastMsg.swipes?.[lastMsg.swipe_id || 0] || '';
-
-                        chat.splice(chat.length - 2, 2);
-                        
-                        chatContainer.style.display = originalDisplay;
-                        textarea.value = originalValue;
-
-                        context.eventSource.removeListener(
-                            context.event_types.CHARACTER_MESSAGE_RENDERED,
-                            messageHandler
-                        );
-
-                        console.log('✅ [联系人生成] 静默调用成功');
-                        resolve(aiText);
-                    }
-                } catch (e) {
-                    responded = true;
-                    clearTimeout(timeout);
-                    chatContainer.style.display = originalDisplay;
-                    textarea.value = originalValue;
-                    this.cleanupSilentMessages(context);
-                    reject(e);
-                }
-            };
-
-            context.eventSource.on(
-                context.event_types.CHARACTER_MESSAGE_RENDERED,
-                messageHandler
-            );
-
-            textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
-            setTimeout(() => {
-                if (!responded) {
-                    const sendBtn = document.querySelector('#send_but');
-                    if (sendBtn) {
-                        sendBtn.click();
-                        console.log('📤 [联系人生成] 已发送（聊天容器已隐藏）');
-                    } else {
-                        responded = true;
-                        clearTimeout(timeout);
-                        chatContainer.style.display = originalDisplay;
-                        textarea.value = originalValue;
-                        reject(new Error('找不到发送按钮'));
-                    }
-                }
-            }, 200);
-
-        } catch (error) {
-            console.error('❌ [联系人生成] 静默调用失败:', error);
-            reject(error);
+            ],
+            max_tokens: 1000,
+            temperature: 0.7,
+            stream: false
+        };
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API请求失败: ${response.status}`);
         }
-    });
+        
+        const data = await response.json();
+        
+        let aiResponse = '';
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+            aiResponse = data.choices[0].message.content;
+        } else if (data.content) {
+            aiResponse = data.content;
+        } else {
+            aiResponse = JSON.stringify(data);
+        }
+        
+        console.log('✅ [联系人生成] 静默调用成功');
+        
+        return aiResponse;
+        
+    } catch (error) {
+        console.error('❌ [联系人生成] 静默调用失败:', error);
+        throw error;
+    }
 }
 
 // 🔧 清理静默消息
