@@ -504,9 +504,8 @@ isPossibleName(str) {
     // 排除纯数字
     if (/^\d+$/.test(s)) return false;
     
-    // 排除包含特殊符号的（就是这一行！）
-    if (/[【】\{\}```math
-```<>\/\```/.test(s)) return false;
+    // 排除包含特殊符号的
+    if (/[【】\{\}\[\]<>\/\\]/.test(s)) return false;
     
     // 中文名字规则（2-4个汉字）
     if (/^[\u4e00-\u9fa5]{2,4}$/.test(s)) return true;
