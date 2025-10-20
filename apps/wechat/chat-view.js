@@ -56,23 +56,29 @@ export class ChatView {
                 ${!isMe ? `<div class="message-avatar">${msg.avatar || '👤'}</div>` : ''}
                 <div class="message-content">
                     ${msg.type === 'image' ? `
-                        <img src="${msg.content}" class="message-image">
-                    ` : msg.type === 'voice' ? `
-                        <div class="message-voice">
-                            <i class="fa-solid fa-volume-high"></i>
-                            <span>${msg.duration || '3"'}</span>
-                        </div>
-                    ` : msg.type === 'transfer' ? `
-                        <div class="message-transfer">
-                            <div class="transfer-icon">💰</div>
-                            <div class="transfer-info">
-                                <div class="transfer-amount">¥${msg.amount}</div>
-                                <div class="transfer-desc">${msg.desc || '转账'}</div>
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="message-text">${this.parseEmoji(msg.content)}</div>
-                    `}
+    <img src="${msg.content}" class="message-image">
+` : msg.type === 'voice' ? `
+    <div class="message-voice">
+        <i class="fa-solid fa-volume-high"></i>
+        <span>${msg.duration || '3"'}</span>
+    </div>
+` : msg.type === 'transfer' ? `
+    <div class="message-transfer">
+        <div class="transfer-icon">💰</div>
+        <div class="transfer-info">
+            <div class="transfer-amount">¥${msg.amount}</div>
+            <div class="transfer-desc">${msg.desc || '转账'}</div>
+        </div>
+    </div>
+` : msg.type === 'redpacket' ? `
+    <div class="message-redpacket">
+        <div class="redpacket-icon">🧧</div>
+        <div class="redpacket-wish">${msg.wish || '恭喜发财，大吉大利'}</div>
+        <div class="redpacket-amount">¥${msg.amount}</div>
+    </div>
+` : `
+    <div class="message-text">${this.parseEmoji(msg.content)}</div>
+`}
                     <div class="message-time">${msg.time}</div>
                 </div>
                 ${isMe ? `<div class="message-avatar">${userInfo.avatar || '😊'}</div>` : ''}
@@ -176,35 +182,49 @@ export class ChatView {
 }
     
     parseEmoji(text) {
-        const emojiMap = {
-            '[微笑]': '😊',
-            '[撇嘴]': '😥',
-            '[色]': '😍',
-            '[发呆]': '😳',
-            '[得意]': '😏',
-            '[流泪]': '😭',
-            '[害羞]': '😊',
-            '[闭嘴]': '🤐',
-            '[睡]': '😴',
-            '[大哭]': '😭',
-            '[尴尬]': '😅',
-            '[发怒]': '😠',
-            '[调皮]': '😜',
-            '[呲牙]': '😁',
-            '[惊讶]': '😮',
-            '[难过]': '😔',
-            '[酷]': '😎',
-            '[冷汗]': '😰',
-            '[抓狂]': '😤',
-            '[吐]': '🤮'
-        };
-        
-        let result = text;
-        for (let emoji in emojiMap) {
-            result = result.split(emoji).join(emojiMap[emoji]);
-        }
-        return result;
+    const emojiMap = {
+        '[微笑]': '😊',
+        '[撇嘴]': '😥',
+        '[色]': '😍',
+        '[发呆]': '😳',
+        '[得意]': '😏',
+        '[流泪]': '😭',
+        '[害羞]': '😊',
+        '[闭嘴]': '🤐',
+        '[睡]': '😴',
+        '[大哭]': '😭',
+        '[尴尬]': '😅',
+        '[发怒]': '😠',
+        '[调皮]': '😜',
+        '[呲牙]': '😁',
+        '[惊讶]': '😮',
+        '[难过]': '😔',
+        '[酷]': '😎',
+        '[冷汗]': '😰',
+        '[抓狂]': '😤',
+        '[吐]': '🤮'
+    };
+    
+    let result = text;
+    
+    // 1️⃣ 替换系统表情
+    for (let emoji in emojiMap) {
+        result = result.split(emoji).join(emojiMap[emoji]);
     }
+    
+    // 2️⃣ 替换自定义表情
+    const customEmojis = this.app.data.getCustomEmojis();
+    customEmojis.forEach(emoji => {
+        const pattern = `[${emoji.name}]`;
+        if (result.includes(pattern)) {
+            result = result.split(pattern).join(
+                `<img src="${emoji.image}" style="width:24px;height:24px;vertical-align:middle;border-radius:4px;" alt="${emoji.name}" title="${emoji.name}">`
+            );
+        }
+    });
+    
+    return result;
+}
     
          bindEvents() {
         const input = document.getElementById('chat-input');
