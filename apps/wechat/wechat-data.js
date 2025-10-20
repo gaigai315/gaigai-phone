@@ -425,143 +425,101 @@ detectAPIType(context) {
     return 'openai';
 }
     
-// 📤 完全静默调用AI（智能检测API类型）
+// 📤 调用酒馆的API（复用酒馆自己的生成逻辑）
 async sendToAI(prompt) {
     try {
-        console.log('🚀 [联系人生成] 开始静默API调用...');
+        console.log('🚀 [联系人生成] 开始调用酒馆API...');
         
-        const context = this.storage.getContext();
-        if (!context) {
-            throw new Error('无法获取上下文');
+        // 方法1：通过酒馆的生成函数（推荐）
+        if (typeof generateQuietPrompt === 'function') {
+            console.log('✅ 找到 generateQuietPrompt 函数');
+            const response = await generateQuietPrompt(prompt, false, false);
+            return response;
         }
-
-        // 🔥 智能检测API类型
-        const apiType = this.detectAPIType(context);
-        console.log('📡 [联系人生成] 检测到API类型:', apiType);
         
-        switch(apiType) {
-            case 'openai':
-                return await this.callOpenAI(prompt, context);
-            case 'claude':
-                return await this.callClaude(prompt, context);
-            case 'textgen':
-                return await this.callTextGen(prompt, context);
-            default:
-                throw new Error(`不支持的API类型: ${apiType}`);
+        // 方法2：通过酒馆的主生成函数
+        if (typeof Generate === 'function') {
+            console.log('✅ 找到 Generate 函数，使用静默模式');
+            
+            // 临时保存当前聊天
+            const originalChat = [...(SillyTavern.getContext().chat || [])];
+            
+            // 创建临时消息
+            const tempMessage = {
+                mes: prompt,
+                is_user: true,
+                name: 'System',
+                send_date: Date.now()
+            };
+            
+            // 静默调用
+            const response = await new Promise((resolve, reject) => {
+                // 监听生成完成事件
+                const handler = (data) => {
+                    console.log('📥 收到生成结果');
+                    document.removeEventListener('generationComplete', handler);
+                    resolve(data.detail || data);
+                };
+                document.addEventListener('generationComplete', handler);
+                
+                // 调用生成（静默模式）
+                Generate('quiet_prompt', { 
+                    quiet_prompt: prompt,
+                    max_length: 1000
+                });
+                
+                // 超时处理
+                setTimeout(() => {
+                    document.removeEventListener('generationComplete', handler);
+                    reject(new Error('生成超时'));
+                }, 30000);
+            });
+            
+            // 恢复原始聊天
+            if (SillyTavern.getContext().chat) {
+                SillyTavern.getContext().chat = originalChat;
+            }
+            
+            return response;
         }
+        
+        // 方法3：通过酒馆的内部API调用
+        if (window.main_api && typeof window.generateRaw === 'function') {
+            console.log('✅ 找到 generateRaw 函数');
+            const response = await window.generateRaw(prompt, 'openai');
+            return response;
+        }
+        
+        // 方法4：直接调用酒馆的后端API
+        console.log('⚠️ 尝试直接调用后端API');
+        const response = await fetch('/api/backends/chat-completions/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                messages: [{
+                    role: 'user',
+                    content: prompt
+                }],
+                max_tokens: 1000,
+                temperature: 0.9,
+                stream: false,
+                quiet: true  // 静默模式
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API错误: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content || data.response || '';
         
     } catch (error) {
-        console.error('❌ [联系人生成] 静默调用失败:', error);
+        console.error('❌ [联系人生成] 调用失败:', error);
         throw error;
     }
-}
-
-// 🔥 调用OpenAI兼容API（支持自定义端口）
-async callOpenAI(prompt, context) {
-    const settings = window.oai_settings || {};
-    
-    // 🔑 关键修复：优先使用反向代理/自定义端口
-    let apiUrl = settings.reverse_proxy || settings.api_url_scale;
-    
-    // 如果没有配置反向代理，使用默认官方地址
-    if (!apiUrl) {
-        apiUrl = 'https://api.openai.com/v1/chat/completions';
-    }
-    
-    // 确保URL以 /chat/completions 结尾
-    if (!apiUrl.endsWith('/chat/completions')) {
-        if (apiUrl.endsWith('/v1')) {
-            apiUrl = apiUrl + '/chat/completions';
-        } else if (!apiUrl.endsWith('/')) {
-            apiUrl = apiUrl + 'v1/chat/completions';
-        } else {
-            apiUrl = apiUrl + 'v1/chat/completions';
-        }
-    }
-    
-    // 🔥 增强：多方式获取API Key
-    let apiKey = '';
-    
-    // 1. 从 oai_settings 获取
-    if (settings.api_key_openai) {
-        apiKey = settings.api_key_openai;
-        console.log('✅ 从 oai_settings 获取到 API Key');
-    }
-    
-    // 2. 从 secret_state 获取（酒馆新版本）
-    if (!apiKey && window.secret_state?.api_key_openai) {
-        apiKey = window.secret_state.api_key_openai;
-        console.log('✅ 从 secret_state 获取到 API Key');
-    }
-    
-    // 3. 从上下文获取
-    if (!apiKey && context?.api_key_openai) {
-        apiKey = context.api_key_openai;
-        console.log('✅ 从 context 获取到 API Key');
-    }
-    
-    // 4. 尝试从DOM获取
-    if (!apiKey) {
-        const keyInput = document.getElementById('api_key_openai');
-        if (keyInput && keyInput.value) {
-            apiKey = keyInput.value;
-            console.log('✅ 从 DOM 获取到 API Key');
-        }
-    }
-    
-    console.log('📤 [联系人生成] 调用API:', apiUrl);
-    console.log('🔑 [联系人生成] API Key存在:', apiKey ? '是（长度' + apiKey.length + '）' : '否');
-    
-    // 🔥 如果自定义端口可能不需要API Key，尝试不带Key调用
-    const isCustomEndpoint = apiUrl.includes('localhost') || 
-                            apiUrl.includes('127.0.0.1') || 
-                            apiUrl.includes('192.168') || 
-                            apiUrl.includes('10.0') ||
-                            !apiUrl.includes('api.openai.com');
-    
-    if (!apiKey && !isCustomEndpoint) {
-        throw new Error('未找到OpenAI API Key。请在酒馆"API连接"→"Chat Completion (OpenAI)"中配置API Key');
-    }
-
-        const requestBody = {
-        model: settings.openai_model || 'gpt-3.5-turbo',
-        messages: [
-            {
-                role: 'user',
-                content: prompt
-            }
-        ],
-        max_tokens: 1500,
-        temperature: settings.temp_openai || 0.9
-    };
-
-    const headers = {
-        'Content-Type': 'application/json'
-    };
-    
-    // 🔥 修改：只有在有API Key的情况下才添加Authorization
-    if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-    } else if (!isCustomEndpoint) {
-        console.warn('⚠️ 没有API Key但不是自定义端点，可能会失败');
-    }
-
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API错误 ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || '';
-
-    console.log('✅ [联系人生成] API调用成功，返回长度:', aiResponse.length);
-    return aiResponse;
 }
 
 // 🔥 调用Claude API
