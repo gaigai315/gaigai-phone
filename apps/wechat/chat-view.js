@@ -592,103 +592,168 @@ buildPhoneChatPrompt(context, contactName, chatHistory, userMessage) {
     }
     
     // ========================================
-    // 3️⃣ 记忆表格（从 Gaigai.m.s[i].r）
-    // ========================================
-    let memoryData = '';
+// 3️⃣ 记忆表格（从 Gaigai.m.s[i].r）
+// ========================================
+let memoryData = '';
+
+if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
+    const memoryLines = [];
     
-    if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
-        const memoryLines = [];
-        
-        window.Gaigai.m.s.forEach((section, idx) => {
-            // section.r 是数据数组
-            if (Array.isArray(section.r) && section.r.length > 0) {
-                memoryLines.push(`## ${section.n}`);
-                
-                section.r.forEach((row, rowIdx) => {
-                    // row 是对象 {0: 'xxx', 1: 'yyy', ...}
-                    const values = Object.values(row).filter(v => v && typeof v === 'string');
-                    if (values.length > 0) {
-                        memoryLines.push(values.join(' | '));
-                    }
+    window.Gaigai.m.s.forEach((section, idx) => {
+        if (Array.isArray(section.r) && section.r.length > 0) {
+            memoryLines.push(`## ${section.n}`);
+            
+            section.r.forEach((row, rowIdx) => {
+                const values = Object.values(row).filter(v => v && typeof v === 'string');
+                if (values.length > 0) {
+                    memoryLines.push(values.join(' | '));
+                }
+            });
+        }
+    });
+    
+    if (memoryLines.length > 0) {
+        memoryData = memoryLines.join('\n');
+        console.log('✅ 记忆表格:', memoryLines.length, '行');
+    } else {
+        console.log('⚠️ 记忆表格为空');
+    }
+} else {
+    console.log('⚠️ 未找到记忆表格');
+}
+
+// ========================================
+// 🔥 新增：4️⃣ 世界书（World Info）
+// ========================================
+let worldInfoData = '';
+
+if (context.worldInfoData && Array.isArray(context.worldInfoData)) {
+    const worldInfoLines = [];
+    
+    context.worldInfoData.forEach(entry => {
+        if (entry.content && entry.content.trim()) {
+            const title = entry.comment || entry.key?.[0] || '信息';
+            worldInfoLines.push(`### ${title}`);
+            worldInfoLines.push(entry.content.trim());
+        }
+    });
+    
+    if (worldInfoLines.length > 0) {
+        worldInfoData = '\n**世界书（NPC和设定）：**\n' + worldInfoLines.join('\n') + '\n';
+        console.log('✅ 世界书:', worldInfoLines.length / 2, '条');
+    }
+} else {
+    console.log('⚠️ 未找到世界书');
+}
+
+// ========================================
+// 5️⃣ 聊天历史（手机+酒馆）
+// ========================================
+const chatHistory = [];
+
+// 酒馆聊天记录
+if (context.chat && Array.isArray(context.chat)) {
+    context.chat.forEach(msg => {
+        if (msg.mes && msg.mes.trim()) {
+            const speaker = msg.is_user ? (context.name1 || '用户') : (context.name2 || '角色');
+            const content = msg.mes
+                .replace(/<[^>]*>/g, '')
+                .replace(/\*.*?\*/g, '')
+                .substring(0, 500);
+            
+            if (content.trim()) {
+                chatHistory.push({
+                    speaker: speaker,
+                    message: content,
+                    source: 'tavern'
                 });
             }
-        });
-        
-        if (memoryLines.length > 0) {
-            memoryData = memoryLines.join('\n');
-            console.log('✅ 记忆表格:', memoryLines.length, '行');
-        } else {
-            console.log('⚠️ 记忆表格为空');
         }
-    } else {
-        console.log('⚠️ 未找到记忆表格');
-    }
-    
-    // ========================================
-    // 4️⃣ 聊天历史
-    // ========================================
-    const recentHistory = chatHistory.slice(-40);
-    const historyText = recentHistory.map(h => {
-        const source = h.source === 'tavern' ? '(面对面)' : '(微信)';
-        return `${h.speaker}${source}: ${h.message}`;
-    }).join('\n');
-    
-    console.log('✅ 聊天历史:', recentHistory.length, '条');
-    
-    // ========================================
-    // 5️⃣ 构建最终提示词
-    // ========================================
-    const sections = [
-        '# 场景：微信聊天',
-        `你正在通过微信和${userName}聊天（不是面对面对话，是手机文字聊天）。`,
-        '',
-        '## 你的角色信息',
-        `**名字：** ${charName}`,
-        `**微信备注名：** ${contactName}`,
-        ''
-    ];
-    
-    if (charPersonality) {
-        sections.push(`**性格和背景：**`, charPersonality, '');
-    }
-    
-    if (charScenario) {
-        sections.push(`**当前场景：**`, charScenario, '');
-    }
-    
-    if (userPersona) {
-        sections.push(`## ${userName}的角色信息`, userPersona, '');
-    }
-    
-    if (memoryData) {
-        sections.push('## 记忆表格（重要剧情和人物关系）', memoryData, '');
-    }
-    
-    sections.push(
-        '## 完整聊天历史（包含面对面对话和微信记录）',
-        historyText,
-        '',
-        '## 用户刚通过微信发来的消息',
-        `${userName}(微信): ${userMessage}`,
-        '',
-        '---',
-        '',
-        '## 回复要求',
-        '1. 只返回你的微信回复文字，不要旁白、动作、场景描述',
-        '2. 语气符合微信聊天风格（简洁、口语化）',
-        '3. 可以使用emoji 😊',
-        '4. 多条消息用|||分隔，例如：好的|||我马上过来|||😊',
-        '5. 考虑所有对话历史（面对面+微信）和记忆表格',
-        '6. 保持角色性格一致',
-        '',
-        `现在回复${userName}的微信消息：`
-    );
-    
-    const finalPrompt = sections.join('\n');
-    console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
-    
-    return finalPrompt;
+    });
 }
+
+// 🔥 当前微信聊天记录
+const wechatMessages = this.app.data.getMessages(this.app.currentChat.id);
+wechatMessages.forEach(msg => {
+    const speaker = msg.from === 'me' 
+        ? (context.name1 || '用户') 
+        : (context.name2 || this.app.currentChat.name);
+    
+    chatHistory.push({
+        speaker: speaker,
+        message: msg.content || '',
+        source: 'wechat'
+    });
+});
+
+    // ========================================
+// 6️⃣ 构建最终提示词
+// ========================================
+const sections = [
+    '# 场景：微信聊天',
+    `你正在通过微信和${userName}聊天（不是面对面对话，是手机文字聊天）。`,
+    '',
+    '## 你的角色信息',
+    `**名字：** ${charName}`,
+    `**微信备注名：** ${contactName}`,
+    ''
+];
+
+if (charPersonality) {
+    sections.push(`**性格和背景：**`, charPersonality, '');
+}
+
+if (charScenario) {
+    sections.push(`**当前场景：**`, charScenario, '');
+}
+
+if (userPersona) {
+    sections.push(`## ${userName}的角色信息`, userPersona, '');
+}
+
+// 🔥 添加世界书
+if (worldInfoData) {
+    sections.push(worldInfoData);
+}
+
+// 添加记忆表格
+if (memoryData) {
+    sections.push('## 记忆表格（重要剧情和人物关系）', memoryData, '');
+}
+
+// 🔥 修改聊天历史部分，区分手机和酒馆
+const recentHistory = chatHistory.slice(-40);
+const historyText = recentHistory.map(h => {
+    const source = h.source === 'tavern' ? '(面对面)' : '(微信)';
+    return `${h.speaker}${source}: ${h.message}`;
+}).join('\n');
+
+console.log('✅ 聊天历史:', recentHistory.length, '条');
+
+sections.push(
+    '## 完整聊天历史（包含面对面对话和微信记录）',
+    historyText,
+    '',
+    '## 用户刚通过微信发来的消息',
+    `${userName}(微信): ${userMessage}`,
+    '',
+    '---',
+    '',
+    '## 回复要求',
+    '1. 只返回你的微信回复文字，不要旁白、动作、场景描述',
+    '2. 语气符合微信聊天风格（简洁、口语化）',
+    '3. 可以使用emoji 😊',
+    '4. 多条消息用|||分隔，例如：好的|||我马上过来|||😊',
+    '5. 考虑所有对话历史（面对面+微信）、记忆表格和世界书',
+    '6. 保持角色性格一致',
+    '',
+    `现在回复${userName}的微信消息：`
+);
+
+const finalPrompt = sections.join('\n');
+console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
+
+return finalPrompt;
 
 // 🔧 完全静默调用AI（使用酒馆API）
 async sendToAIHidden(prompt, context) {
