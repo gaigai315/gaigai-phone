@@ -460,6 +460,8 @@ export class WechatApp {
 
 .chat-input {
     flex: 1;
+    max-width: calc(100% - 180px); /* ← 新增：限制最大宽度，确保按钮可见 */
+    min-width: 120px; /* ← 新增：最小宽度 */
     background: #fff;
     border: 0.5px solid #ddd;
     border-radius: 4px;
@@ -467,6 +469,13 @@ export class WechatApp {
     font-size: 15px;
     outline: none;
     transition: border-color 0.2s;
+}
+
+@media (max-width: 500px) {
+    .chat-input {
+        max-width: calc(100% - 150px);
+        font-size: 16px; /* 防止iOS自动缩放 */
+    }
 }
 
 .chat-input:focus {
@@ -529,6 +538,69 @@ export class WechatApp {
     gap: 5px;
 }
 
+/* ======================================== 
+   表情面板标签样式（新增）
+   ======================================== */
+
+.emoji-tabs {
+    display: flex;
+    border-bottom: 1px solid #e5e5e5;
+    margin-bottom: 10px;
+}
+
+.emoji-tab {
+    flex: 1;
+    padding: 8px;
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+}
+
+.emoji-tab.active {
+    color: #07c160;
+    border-bottom-color: #07c160;
+    font-weight: 600;
+}
+
+.emoji-tab:hover {
+    background: #f8f8f8;
+}
+
+/* 自定义表情样式 */
+.custom-emoji-item {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.custom-emoji-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.emoji-add {
+    border: 2px dashed #ccc;
+    color: #999;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.emoji-add:hover {
+    border-color: #07c160;
+    color: #07c160;
+    background: #f0f9f4;
+}
+
 .emoji-item {
     font-size: 26px;
     text-align: center;
@@ -551,36 +623,41 @@ export class WechatApp {
    ======================================== */
 
 .more-panel {
-    padding: 15px;
+    padding: 12px; /* ← 缩小内边距 */
     background: #fff;
     border-top: 0.5px solid #ddd;
+    max-height: 250px; /* ← 新增：限制高度 */
+    overflow-y: auto;
 }
 
 .more-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
+    grid-template-columns: repeat(4, 1fr); /* ← 固定4列 */
+    gap: 10px; /* ← 缩小间距 */
+    max-width: 100%;
 }
+
 
 .more-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     cursor: pointer;
+    padding: 5px; /* ← 新增 */
 }
 
 .more-icon {
-    width: 60px;
-    height: 60px;
+    width: 50px; /* ← 缩小 10px */
+    height: 50px;
     background: #fff;
     border: 0.5px solid #e5e5e5;
-    border-radius: 12px;
+    border-radius: 10px; /* ← 缩小圆角 */
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 26px;
+    font-size: 22px; /* ← 缩小字体 */
     color: #666;
-    margin-bottom: 5px;
+    margin-bottom: 4px; /* ← 缩小间距 */
     transition: all 0.2s;
 }
 
@@ -595,10 +672,27 @@ export class WechatApp {
 }
 
 .more-name {
-    font-size: 12px;
+    font-size: 11px; /* ← 缩小字体 */
     color: #666;
+    text-align: center;
+    line-height: 1.2;
 }
 
+@media (max-width: 500px) {
+    .more-grid {
+        gap: 8px;
+    }
+    
+    .more-icon {
+        width: 46px;
+        height: 46px;
+        font-size: 20px;
+    }
+    
+    .more-name {
+        font-size: 10px;
+    }
+}
 /* ========================================
    头像设置弹窗
    ======================================== */
