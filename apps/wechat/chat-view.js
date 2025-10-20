@@ -897,26 +897,32 @@ cleanupLeakedMessages(context) {
         this.app.render();
     });
     
-    document.getElementById('confirm-transfer')?.addEventListener('click', () => {
-        const amount = document.getElementById('transfer-amount').value;
-        const desc = document.getElementById('transfer-desc').value || '转账给你';
-        
-        if (!amount || isNaN(amount) || amount <= 0) {
-            this.app.phoneShell.showNotification('提示', '请输入正确的金额', '⚠️');
-            return;
-        }
-        
-        this.app.data.addMessage(this.app.currentChat.id, {
-            from: 'me',
-            type: 'transfer',
-            amount: amount,
-            desc: desc,
-            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-        });
-        
-        this.app.phoneShell.showNotification('转账成功', `已向${this.app.currentChat.name}转账¥${amount}`, '✅');
-        setTimeout(() => this.app.render(), 1000);
+ document.getElementById('confirm-transfer')?.addEventListener('click', async () => {
+    const amount = document.getElementById('transfer-amount').value;
+    const desc = document.getElementById('transfer-desc').value || '转账给你';
+    
+    if (!amount || isNaN(amount) || amount <= 0) {
+        this.app.phoneShell.showNotification('提示', '请输入正确的金额', '⚠️');
+        return;
+    }
+    
+    this.app.data.addMessage(this.app.currentChat.id, {
+        from: 'me',
+        type: 'transfer',
+        amount: amount,
+        desc: desc,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     });
+    
+    this.app.phoneShell.showNotification('转账成功', `已向${this.app.currentChat.name}转账¥${amount}`, '✅');
+    
+    // 🔥 新增：通知AI
+    if (window.VirtualPhone?.settings?.onlineMode) {
+        await this.notifyAI(`通过微信向你转账了¥${amount}，备注：${desc}`);
+    }
+    
+    setTimeout(() => this.app.render(), 1000);
+});
 }
     
     showRedPacketDialog() {
@@ -1540,4 +1546,551 @@ document.getElementById('block-contact-btn')?.addEventListener('click', () => {
             setTimeout(() => this.app.render(), 1000);
         });
     }
+
+    // ========================================
+// 🆕 新增功能方法
+// ========================================
+
+// 📞 语音通话界面
+startVoiceCall() {
+    const contact = this.app.currentChat;
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header" style="background: #1a1a1a;">
+                <div class="wechat-header-left"></div>
+                <div class="wechat-header-title" style="color: #fff;">语音通话</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px;">
+                <!-- 对方头像 -->
+                <div style="width: 120px; height: 120px; border-radius: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 60px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);">
+                    ${contact.avatar || '👤'}
+                </div>
+                
+                <!-- 对方名字 -->
+                <div style="font-size: 26px; font-weight: 600; color: #fff; margin-bottom: 10px;">
+                    ${contact.name}
+                </div>
+                
+                <!-- 通话状态 -->
+                <div id="call-status" style="font-size: 16px; color: rgba(255, 255, 255, 0.7); margin-bottom: 60px;">
+                    正在呼叫...
+                </div>
+                
+                <!-- 控制按钮 -->
+                <div style="display: flex; gap: 40px; margin-top: 40px;">
+                    <!-- 静音按钮 -->
+                    <div style="text-align: center;">
+                        <button id="mute-btn" style="
+                            width: 60px;
+                            height: 60px;
+                            border-radius: 30px;
+                            background: rgba(255, 255, 255, 0.2);
+                            border: none;
+                            color: #fff;
+                            font-size: 24px;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                        ">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;">静音</div>
+                    </div>
+                    
+                    <!-- 挂断按钮 -->
+                    <div style="text-align: center;">
+                        <button id="hangup-btn" style="
+                            width: 70px;
+                            height: 70px;
+                            border-radius: 35px;
+                            background: #ff3b30;
+                            border: none;
+                            color: #fff;
+                            font-size: 28px;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            box-shadow: 0 6px 20px rgba(255, 59, 48, 0.5);
+                        ">
+                            <i class="fa-solid fa-phone-slash"></i>
+                        </button>
+                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;">挂断</div>
+                    </div>
+                    
+                    <!-- 免提按钮 -->
+                    <div style="text-align: center;">
+                        <button id="speaker-btn" style="
+                            width: 60px;
+                            height: 60px;
+                            border-radius: 30px;
+                            background: rgba(255, 255, 255, 0.2);
+                            border: none;
+                            color: #fff;
+                            font-size: 24px;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                        ">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </button>
+                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;">免提</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.app.phoneShell.setContent(html);
+    
+    // 模拟接通
+    let callDuration = 0;
+    const callTimer = setTimeout(() => {
+        const statusDiv = document.getElementById('call-status');
+        if (statusDiv) {
+            statusDiv.textContent = '00:00';
+            
+            // 开始计时
+            const timer = setInterval(() => {
+                callDuration++;
+                const minutes = Math.floor(callDuration / 60).toString().padStart(2, '0');
+                const seconds = (callDuration % 60).toString().padStart(2, '0');
+                if (statusDiv) {
+                    statusDiv.textContent = `${minutes}:${seconds}`;
+                }
+            }, 1000);
+            
+            // 存储timer以便清理
+            statusDiv.dataset.timer = timer;
+        }
+    }, 2000);
+    
+    // 挂断按钮
+    document.getElementById('hangup-btn')?.addEventListener('click', () => {
+        clearTimeout(callTimer);
+        const statusDiv = document.getElementById('call-status');
+        if (statusDiv?.dataset.timer) {
+            clearInterval(parseInt(statusDiv.dataset.timer));
+        }
+        
+        this.app.phoneShell.showNotification('通话结束', `通话时长 ${Math.floor(callDuration / 60)}分${callDuration % 60}秒`, '📞');
+        
+        // 🔥 如果开启在线模式，通知AI
+        if (window.VirtualPhone?.settings?.onlineMode && callDuration > 0) {
+            this.notifyAI(`[语音通话 ${Math.floor(callDuration / 60)}分${callDuration % 60}秒]`);
+        }
+        
+        setTimeout(() => this.app.render(), 1000);
+    });
+    
+    // 静音按钮
+    let isMuted = false;
+    document.getElementById('mute-btn')?.addEventListener('click', (e) => {
+        isMuted = !isMuted;
+        e.currentTarget.style.background = isMuted ? '#07c160' : 'rgba(255, 255, 255, 0.2)';
+        e.currentTarget.querySelector('i').className = isMuted ? 'fa-solid fa-microphone-slash' : 'fa-solid fa-microphone';
+    });
+    
+    // 免提按钮
+    let isSpeaker = false;
+    document.getElementById('speaker-btn')?.addEventListener('click', (e) => {
+        isSpeaker = !isSpeaker;
+        e.currentTarget.style.background = isSpeaker ? '#07c160' : 'rgba(255, 255, 255, 0.2)';
+    });
+}
+
+// 📹 视频通话界面
+startVideoCall() {
+    const contact = this.app.currentChat;
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header" style="background: transparent; position: absolute; z-index: 10; border: none;">
+                <div class="wechat-header-left"></div>
+                <div class="wechat-header-title" style="color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">视频通话</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: #000; display: flex; flex-direction: column; position: relative; overflow: hidden;">
+                <!-- 对方视频区域（占满） -->
+                <div style="flex: 1; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; align-items: center; justify-content: center; position: relative;">
+                    <div style="text-align: center;">
+                        <div style="width: 150px; height: 150px; border-radius: 75px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 80px; margin: 0 auto 20px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);">
+                            ${contact.avatar || '👤'}
+                        </div>
+                        <div style="font-size: 24px; font-weight: 600; color: #fff;">
+                            ${contact.name}
+                        </div>
+                        <div id="video-status" style="font-size: 14px; color: rgba(255, 255, 255, 0.7); margin-top: 10px;">
+                            正在呼叫...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 小窗口（自己） -->
+                <div style="position: absolute; top: 60px; right: 15px; width: 100px; height: 140px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: center; font-size: 40px;">
+                    ${this.app.data.getUserInfo().avatar || '😊'}
+                </div>
+                
+                <!-- 底部控制栏 -->
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 30px 20px; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);">
+                    <div style="display: flex; justify-content: center; gap: 30px;">
+                        <!-- 切换摄像头 -->
+                        <div style="text-align: center;">
+                            <button id="camera-switch-btn" style="
+                                width: 55px;
+                                height: 55px;
+                                border-radius: 28px;
+                                background: rgba(255, 255, 255, 0.2);
+                                backdrop-filter: blur(10px);
+                                border: none;
+                                color: #fff;
+                                font-size: 20px;
+                                cursor: pointer;
+                            ">
+                                <i class="fa-solid fa-camera-rotate"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- 静音 -->
+                        <div style="text-align: center;">
+                            <button id="video-mute-btn" style="
+                                width: 55px;
+                                height: 55px;
+                                border-radius: 28px;
+                                background: rgba(255, 255, 255, 0.2);
+                                backdrop-filter: blur(10px);
+                                border: none;
+                                color: #fff;
+                                font-size: 20px;
+                                cursor: pointer;
+                            ">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- 挂断 -->
+                        <div style="text-align: center;">
+                            <button id="video-hangup-btn" style="
+                                width: 65px;
+                                height: 65px;
+                                border-radius: 33px;
+                                background: #ff3b30;
+                                border: none;
+                                color: #fff;
+                                font-size: 26px;
+                                cursor: pointer;
+                                box-shadow: 0 6px 20px rgba(255, 59, 48, 0.6);
+                            ">
+                                <i class="fa-solid fa-phone-slash"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- 关闭摄像头 -->
+                        <div style="text-align: center;">
+                            <button id="camera-off-btn" style="
+                                width: 55px;
+                                height: 55px;
+                                border-radius: 28px;
+                                background: rgba(255, 255, 255, 0.2);
+                                backdrop-filter: blur(10px);
+                                border: none;
+                                color: #fff;
+                                font-size: 20px;
+                                cursor: pointer;
+                            ">
+                                <i class="fa-solid fa-video"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.app.phoneShell.setContent(html);
+    
+    // 模拟接通
+    let videoDuration = 0;
+    const videoTimer = setTimeout(() => {
+        const statusDiv = document.getElementById('video-status');
+        if (statusDiv) {
+            statusDiv.textContent = '00:00';
+            
+            const timer = setInterval(() => {
+                videoDuration++;
+                const minutes = Math.floor(videoDuration / 60).toString().padStart(2, '0');
+                const seconds = (videoDuration % 60).toString().padStart(2, '0');
+                if (statusDiv) {
+                    statusDiv.textContent = `${minutes}:${seconds}`;
+                }
+            }, 1000);
+            
+            statusDiv.dataset.timer = timer;
+        }
+    }, 2000);
+    
+    // 挂断
+    document.getElementById('video-hangup-btn')?.addEventListener('click', () => {
+        clearTimeout(videoTimer);
+        const statusDiv = document.getElementById('video-status');
+        if (statusDiv?.dataset.timer) {
+            clearInterval(parseInt(statusDiv.dataset.timer));
+        }
+        
+        this.app.phoneShell.showNotification('通话结束', `视频通话 ${Math.floor(videoDuration / 60)}分${videoDuration % 60}秒`, '📹');
+        
+        // 🔥 如果开启在线模式，通知AI
+        if (window.VirtualPhone?.settings?.onlineMode && videoDuration > 0) {
+            this.notifyAI(`[视频通话 ${Math.floor(videoDuration / 60)}分${videoDuration % 60}秒]`);
+        }
+        
+        setTimeout(() => this.app.render(), 1000);
+    });
+    
+    // 静音
+    let isVideoMuted = false;
+    document.getElementById('video-mute-btn')?.addEventListener('click', (e) => {
+        isVideoMuted = !isVideoMuted;
+        e.currentTarget.style.background = isVideoMuted ? '#ff3b30' : 'rgba(255, 255, 255, 0.2)';
+        e.currentTarget.querySelector('i').className = isVideoMuted ? 'fa-solid fa-microphone-slash' : 'fa-solid fa-microphone';
+    });
+    
+    // 关闭摄像头
+    let isCameraOff = false;
+    document.getElementById('camera-off-btn')?.addEventListener('click', (e) => {
+        isCameraOff = !isCameraOff;
+        e.currentTarget.style.background = isCameraOff ? '#ff3b30' : 'rgba(255, 255, 255, 0.2)';
+        e.currentTarget.querySelector('i').className = isCameraOff ? 'fa-solid fa-video-slash' : 'fa-solid fa-video';
+    });
+}
+
+// 💰 转账后通知AI
+async notifyTransfer(amount, desc) {
+    if (!window.VirtualPhone?.settings?.onlineMode) return;
+    
+    const message = `用户通过微信向你转账了¥${amount}，备注：${desc}`;
+    await this.notifyAI(message);
+}
+
+// 🧧 红包后通知AI（待实现）
+showRedPacketDialog() {
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-redpacket">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">发红包</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); padding: 20px;">
+                <div style="background: rgba(255, 255, 255, 0.95); border-radius: 12px; padding: 30px; text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🧧</div>
+                    <div style="font-size: 14px; color: #999; margin-bottom: 20px;">红包金额</div>
+                    <div style="font-size: 48px; font-weight: bold; margin-bottom: 20px; color: #ff3b30;">
+                        ¥ <input type="number" id="redpacket-amount" 
+                                 placeholder="0.00" 
+                                 step="0.01"
+                                 style="border:none; font-size:48px; width:150px; text-align:center; font-weight:bold; color: #ff3b30;">
+                    </div>
+                    <input type="text" id="redpacket-wish" placeholder="恭喜发财，大吉大利" maxlength="20" style="
+                        width: 100%;
+                        padding: 12px;
+                        border: 1px solid #e5e5e5;
+                        border-radius: 8px;
+                        box-sizing: border-box;
+                        margin-bottom: 25px;
+                        text-align: center;
+                    ">
+                    <button id="confirm-redpacket" style="
+                        width: 100%;
+                        padding: 14px;
+                        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+                        color: #fff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4);
+                    ">塞钱进红包</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.app.phoneShell.setContent(html);
+    
+    document.getElementById('back-from-redpacket')?.addEventListener('click', () => {
+        this.app.render();
+    });
+    
+    document.getElementById('confirm-redpacket')?.addEventListener('click', async () => {
+        const amount = document.getElementById('redpacket-amount').value;
+        const wish = document.getElementById('redpacket-wish').value || '恭喜发财，大吉大利';
+        
+        if (!amount || isNaN(amount) || amount <= 0) {
+            this.app.phoneShell.showNotification('提示', '请输入正确的金额', '⚠️');
+            return;
+        }
+        
+        this.app.data.addMessage(this.app.currentChat.id, {
+            from: 'me',
+            type: 'redpacket',
+            amount: amount,
+            wish: wish,
+            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        });
+        
+        this.app.phoneShell.showNotification('红包已发送', `已向${this.app.currentChat.name}发送¥${amount}红包`, '🧧');
+        
+        // 🔥 通知AI
+        if (window.VirtualPhone?.settings?.onlineMode) {
+            await this.notifyAI(`用户通过微信给你发了一个¥${amount}的红包，祝福语：${wish}`);
+        }
+        
+        setTimeout(() => this.app.render(), 1000);
+    });
+}
+
+// 🎨 添加自定义表情弹窗
+showAddCustomEmojiDialog() {
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-add-emoji">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">添加表情</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                <div style="background: #fff; border-radius: 12px; padding: 25px; text-align: center;">
+                    <div style="font-size: 14px; color: #999; margin-bottom: 15px;">点击选择图片</div>
+                    
+                    <!-- 预览区 -->
+                    <div id="emoji-preview" style="
+                        width: 120px;
+                        height: 120px;
+                        border-radius: 12px;
+                        border: 2px dashed #ccc;
+                        margin: 0 auto 20px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 60px;
+                        color: #ccc;
+                        cursor: pointer;
+                        overflow: hidden;
+                    ">
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    
+                    <input type="file" id="emoji-image-upload" accept="image/*" style="display: none;">
+                    
+                    <!-- 名字输入 -->
+                    <div style="text-align: left; margin-bottom: 20px;">
+                        <div style="font-size: 13px; color: #999; margin-bottom: 8px;">表情名字（方便AI识别）</div>
+                        <input type="text" id="emoji-name-input" placeholder="例如：开心、哭泣、比心" maxlength="10" style="
+                            width: 100%;
+                            padding: 12px;
+                            border: 1.5px solid #e5e5e5;
+                            border-radius: 8px;
+                            font-size: 15px;
+                            box-sizing: border-box;
+                        ">
+                    </div>
+                    
+                    <button id="save-custom-emoji" style="
+                        width: 100%;
+                        padding: 14px;
+                        background: #07c160;
+                        color: #fff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 500;
+                        cursor: pointer;
+                    ">保存</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.app.phoneShell.setContent(html);
+    
+    let selectedImage = null;
+    
+    document.getElementById('back-from-add-emoji')?.addEventListener('click', () => {
+        this.app.render();
+    });
+    
+    document.getElementById('emoji-preview')?.addEventListener('click', () => {
+        document.getElementById('emoji-image-upload').click();
+    });
+    
+    document.getElementById('emoji-image-upload')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 1 * 1024 * 1024) {
+                this.app.phoneShell.showNotification('提示', '图片太大，请选择小于1MB的图片', '⚠️');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                selectedImage = e.target.result;
+                const preview = document.getElementById('emoji-preview');
+                preview.innerHTML = `<img src="${selectedImage}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    document.getElementById('save-custom-emoji')?.addEventListener('click', () => {
+        const name = document.getElementById('emoji-name-input').value.trim();
+        
+        if (!selectedImage) {
+            this.app.phoneShell.showNotification('提示', '请选择图片', '⚠️');
+            return;
+        }
+        
+        if (!name) {
+            this.app.phoneShell.showNotification('提示', '请输入表情名字', '⚠️');
+            return;
+        }
+        
+        this.app.data.addCustomEmoji({
+            name: name,
+            image: selectedImage
+        });
+        
+        this.app.phoneShell.showNotification('添加成功', `表情"${name}"已添加`, '✅');
+        this.emojiTab = 'custom';
+        setTimeout(() => this.app.render(), 1000);
+    });
+}
+
+// 🔔 通用AI通知方法
+async notifyAI(message) {
+    if (!window.VirtualPhone?.settings?.onlineMode) return;
+    
+    try {
+        const context = window.SillyTavern?.getContext?.();
+        if (!context) return;
+        
+        const prompt = `${context.name1 || '用户'}${message}`;
+        
+        // 静默调用AI
+        await this.sendToAIHidden(prompt, context);
+        
+        console.log('✅ 已通知AI:', message);
+    } catch (error) {
+        console.error('❌ 通知AI失败:', error);
+    }
+  }
 }
