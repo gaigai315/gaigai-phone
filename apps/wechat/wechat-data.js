@@ -452,100 +452,44 @@ detectAPIType(context) {
     return 'openai';
 }
     
-// 📤 调用酒馆的生成API（适配你的酒馆版本）
+// 📤 调用酒馆的生成API（静默调用，不污染聊天窗口）
 async sendToAI(prompt) {
     try {
-        console.log('🚀 [联系人生成] 开始调用酒馆API...');
+        console.log('🚀 [手机AI调用] 开始静默调用...');
         
-        const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
-            ? SillyTavern.getContext() 
-            : null;
-        
-        if (!context) {
-            throw new Error('无法获取SillyTavern上下文');
-        }
-        
-        // 🔥 方法1：尝试直接调用 /api/generate（旧版酒馆）
-        console.log('📡 尝试调用 /api/generate...');
-        
+        // 🔥 方法1：使用标准API端点（推荐）
         try {
-            const response = await fetch('/api/generate', {
+            const response = await fetch('/api/backends/chat-completions/generate', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt: prompt,
-                    max_length: 1000,
+                    max_tokens: 1000,
                     temperature: 0.9,
-                    top_p: 1,
-                    top_k: 0,
-                    top_a: 0,
-                    typical_p: 1,
-                    min_p: 0,
-                    rep_pen: 1,
-                    rep_pen_range: 0,
-                    rep_pen_slope: 1,
-                    sampler_order: [6],
-                    use_default_badwordsids: false,
-                    stop_sequence: [],
-                    streaming: false,
-                    can_abort: false,
-                    mirostat: 0,
-                    mirostat_tau: 5,
-                    mirostat_eta: 0.1,
-                    guidance_scale: 1,
-                    negative_prompt: '',
-                    quiet: true,
-                    use_story_string: false,
-                    use_memory: false,
-                    use_authors_note: false,
-                    use_world_info: false,
-                    max_context_length: context.maxContext || 8000,
-                    max_length: 1000,
-                    rep_pen: 1.1,
-                    rep_pen_range: 0,
-                    rep_pen_slope: 0.9,
-                    temperature: 0.9,
-                    tfs: 1,
-                    top_a: 0,
-                    top_k: 0,
-                    top_p: 1,
-                    typical: 1,
-                    s1: 1,
-                    s2: 1,
-                    s3: 1,
-                    s4: 1
+                    stream: false,
+                    quiet: true  // 静默模式
                 })
             });
             
             if (response.ok) {
                 const data = await response.json();
-                const aiResponse = data.results?.[0]?.text || data.response || '';
-                console.log('✅ [联系人生成] /api/generate 调用成功');
+                const aiResponse = data.choices?.[0]?.message?.content || data.response || '';
+                console.log('✅ [手机AI调用] 成功，回复长度:', aiResponse.length);
                 return aiResponse;
             } else {
-                console.warn(`⚠️ /api/generate 返回 ${response.status}，尝试其他方法...`);
+                console.warn(`⚠️ API返回 ${response.status}`);
             }
         } catch (e) {
-            console.warn('⚠️ /api/generate 失败:', e.message);
+            console.warn('⚠️ 方法1失败:', e.message);
         }
         
-        // 🔥 方法2：通过Chat Completion API（新版酒馆）
-        console.log('📡 尝试调用 Chat Completion API...');
-        
+        // 🔥 方法2：尝试Chat Completions端点（兼容）
         try {
             const response = await fetch('/api/chat/completions', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: context.model || 'gpt-3.5-turbo',
-                    messages: [{
-                        role: 'user',
-                        content: prompt
-                    }],
+                    messages: [{ role: 'user', content: prompt }],
                     max_tokens: 1000,
                     temperature: 0.9,
                     stream: false
@@ -555,85 +499,43 @@ async sendToAI(prompt) {
             if (response.ok) {
                 const data = await response.json();
                 const aiResponse = data.choices?.[0]?.message?.content || '';
-                console.log('✅ [联系人生成] Chat Completion 调用成功');
+                console.log('✅ [手机AI调用] Chat Completions成功');
                 return aiResponse;
             } else {
-                console.warn(`⚠️ Chat Completion 返回 ${response.status}，尝试最后方法...`);
+                console.warn(`⚠️ Chat Completions返回 ${response.status}`);
             }
         } catch (e) {
-            console.warn('⚠️ Chat Completion 失败:', e.message);
+            console.warn('⚠️ 方法2失败:', e.message);
         }
         
-        // 🔥 方法3：模拟用户输入（兜底方案）
-        console.log('📡 使用模拟输入方式...');
-        
-        return await new Promise((resolve, reject) => {
-            const textarea = document.querySelector('#send_textarea');
-            const sendButton = document.querySelector('#send_but');
+        // 🔥 方法3：尝试旧版API（兼容旧酒馆）
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    max_length: 1000,
+                    temperature: 0.9,
+                    quiet: true
+                })
+            });
             
-            if (!textarea || !sendButton) {
-                reject(new Error('找不到聊天输入框'));
-                return;
+            if (response.ok) {
+                const data = await response.json();
+                const aiResponse = data.results?.[0]?.text || data.response || '';
+                console.log('✅ [手机AI调用] 旧版API成功');
+                return aiResponse;
             }
-            
-            // 保存原始值
-            const originalValue = textarea.value;
-            const originalChat = [...(context.chat || [])];
-            
-            // 设置特殊标记
-            const MARKER = `[PHONE_SILENT_${Date.now()}]`;
-            textarea.value = `${MARKER}\n${prompt}`;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            
-            // 监听AI回复
-            let responded = false;
-            const checkResponse = setInterval(() => {
-                const messages = context.chat || [];
-                const lastMessage = messages[messages.length - 1];
-                
-                if (lastMessage && !lastMessage.is_user && !responded) {
-                    responded = true;
-                    clearInterval(checkResponse);
-                    
-                    const response = lastMessage.mes || '';
-                    
-                    // 删除临时消息
-                    context.chat = originalChat;
-                    
-                    // 恢复输入框
-                    textarea.value = originalValue;
-                    
-                    // 刷新界面
-                    const chatElement = document.querySelector('#chat');
-                    if (chatElement) {
-                        const tempMessages = chatElement.querySelectorAll('.mes');
-                        tempMessages.forEach(msg => {
-                            if (msg.textContent.includes(MARKER)) {
-                                msg.remove();
-                            }
-                        });
-                    }
-                    
-                    console.log('✅ [联系人生成] 模拟输入调用成功');
-                    resolve(response);
-                }
-            }, 500);
-            
-            // 发送
-            sendButton.click();
-            
-            // 超时
-            setTimeout(() => {
-                if (!responded) {
-                    clearInterval(checkResponse);
-                    textarea.value = originalValue;
-                    reject(new Error('AI响应超时'));
-                }
-            }, 30000);
-        });
+        } catch (e) {
+            console.warn('⚠️ 方法3失败:', e.message);
+        }
+        
+        // ❌ 所有方法都失败
+        throw new Error('无法连接到AI服务，请检查酒馆API配置');
         
     } catch (error) {
-        console.error('❌ [联系人生成] 所有方法都失败:', error);
+        console.error('❌ [手机AI调用] 失败:', error);
         throw error;
     }
 }
