@@ -516,7 +516,6 @@ async sendToAI(prompt) {
     try {
         console.log('🚀 [手机AI调用] 开始静默调用...');
         
-        // 获取上下文
         const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
             ? SillyTavern.getContext() 
             : null;
@@ -525,47 +524,101 @@ async sendToAI(prompt) {
             throw new Error('无法获取SillyTavern上下文，请确保在聊天界面');
         }
         
-        // ========================================
-        // 🔥 使用 context.generate（新版酒馆标准方法）
-        // ========================================
-        if (typeof context.generate === 'function') {
-            console.log('📡 使用 context.generate（新版酒馆）...');
-            
-            try {
-                // 调用静默生成
-                const response = await context.generate(prompt, {
-                    quiet: true,           // 静默模式
-                    quietToLoud: false,    // 不转为正常消息
-                    skipWIAN: false,       // 不跳过世界书
-                    force_name2: false,    // 不强制角色名
-                    isQuiet: true          // 额外的静默标记
-                });
-                
-                console.log('✅ [手机AI调用] 成功，回复长度:', response?.length || 0);
-                return response || '';
-                
-            } catch (genError) {
-                console.warn('⚠️ context.generate 失败，尝试备用方案:', genError.message);
-                
-                // 🔧 备用方案：临时消息法
-                return await this.fallbackGenerate(context, prompt);
-            }
-        }
+        // 🔥 关键修复：保存原始聊天长度，调用后删除临时消息
+        const originalChatLength = context.chat?.length || 0;
         
-        // 如果连 context.generate 都没有，抛出错误
-        throw new Error('当前酒馆版本不支持AI生成，请更新到最新版');
+        console.log('📊 [手机AI调用] 当前聊天记录数:', originalChatLength);
+        
+        try {
+            // 使用 context.generate 但不传递 prompt 作为用户消息
+            // 而是通过系统提示注入
+            const response = await context.generate('', {
+                quiet: true,
+                quietToLoud: false,
+                skipWIAN: true,
+                force_name2: false,
+                system_prompt: prompt,  // ← 关键：作为系统提示而非用户消息
+                quietImage: true
+            });
+            
+            console.log('✅ [手机AI调用] 成功，回复长度:', response?.length || 0);
+            
+            // 🧹 清理：删除可能添加的临时消息
+            if (context.chat && context.chat.length > originalChatLength) {
+                console.log('🧹 [手机AI调用] 检测到新消息，正在清理...');
+                const messagesToRemove = context.chat.length - originalChatLength;
+                context.chat.splice(originalChatLength, messagesToRemove);
+                console.log(`🧹 [手机AI调用] 已删除 ${messagesToRemove} 条临时消息`);
+                
+                // 触发聊天更新（但不保存）
+                if (typeof eventSource !== 'undefined' && eventSource.emit) {
+                    eventSource.emit('chatUpdated', { preventSave: true });
+                }
+            }
+            
+            return response || '';
+            
+        } catch (genError) {
+            console.warn('⚠️ context.generate 失败:', genError.message);
+            
+            // 🔧 备用方案：使用 API 直接调用
+            return await this.directAPICall(prompt);
+        }
         
     } catch (error) {
         console.error('❌ [手机AI调用] 失败:', error);
+        throw new Error('AI调用失败: ' + error.message);
+    }
+}
+
+// 🔧 新增：直接 API 调用方法（备用方案）
+async directAPICall(prompt) {
+    console.log('📡 [手机AI调用] 使用直接API调用...');
+    
+    try {
+        const context = SillyTavern.getContext();
         
-        // 🎯 友好的错误提示
-        if (error.message.includes('上下文')) {
-            throw new Error('请先选择一个角色并开始聊天');
-        } else if (error.message.includes('不支持')) {
-            throw new Error(error.message);
-        } else {
-            throw new Error('AI调用失败: ' + error.message);
+        // 构建API请求（根据你的API类型）
+        const apiUrl = '/api/backends/chat-completions/generate';
+        
+        const requestBody = {
+            messages: [
+                {
+                    role: 'system',
+                    content: '你是一个JSON数据生成助手。只返回纯JSON格式，不要角色扮演。'
+                },
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: 1000
+        };
+        
+        console.log('📤 [手机AI调用] 发送API请求...');
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API请求失败: ${response.status}`);
         }
+        
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || data.content || '';
+        
+        console.log('✅ [手机AI调用] API调用成功');
+        return content;
+        
+    } catch (error) {
+        console.error('❌ [手机AI调用] API调用失败:', error);
+        throw error;
     }
 }
 
