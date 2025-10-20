@@ -275,6 +275,25 @@ buildContactPrompt(context) {
                     .substring(0, 3000); // 限制长度
         }
     }
+
+    
+// ✅ 从记忆表格获取NPC信息
+let memoryTableData = '';
+if (typeof window.Gaigai !== 'undefined') {
+    try {
+        if (typeof window.Gaigai.getSummary === 'function') {
+            const summary = window.Gaigai.getSummary();
+            if (summary && summary.trim()) {
+                memoryTableData = '\n**记忆总结（NPC和剧情）：**\n' + summary + '\n';
+                console.log('✅ [联系人生成] 已获取记忆表格');
+            }
+        } else if (window.Gaigai.data && window.Gaigai.data.summary) {
+            memoryTableData = '\n**记忆总结：**\n' + window.Gaigai.data.summary + '\n';
+        }
+    } catch (e) {
+        console.warn('⚠️ 无法获取记忆表格:', e);
+    }
+}
     
     // ✅ 从聊天记录提取（最近30条）
     const chatHistory = [];
@@ -310,6 +329,7 @@ ${charDescription ? `**角色描述：**\n${charDescription}\n` : ''}
 ${charPersonality ? `**性格：**\n${charPersonality}\n` : ''}
 ${charScenario ? `**场景：**\n${charScenario}\n` : ''}
 ${worldInfoText}
+${memoryTableData}
 
 # 聊天历史（最近30条）
 ${chatText}
