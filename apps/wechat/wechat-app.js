@@ -2113,20 +2113,12 @@ showLoadContactsConfirm() {
         if (result.success) {
             this.phoneShell.showNotification('✅ 生成成功', result.message, '✅');
             
-            // 🔥 修复：先切换视图，再渲染，最后绑定事件
+            // 简化：直接切换到通讯录
             setTimeout(() => {
                 this.currentView = 'contacts';
                 this.render();
-                
-                // 确保通讯录事件绑定
-                setTimeout(() => {
-                    if (this.contactsView && typeof this.contactsView.bindEvents === 'function') {
-                        this.contactsView.bindEvents();
-                        console.log('✅ 通讯录事件已重新绑定');
-                    }
-                }, 100);
             }, 1000);
-        } else {  // ← ✅ 修复：直接 } else {，没有多余的 }
+        } else {
             this.phoneShell.showNotification('❌ 生成失败', result.message, '❌');
             setTimeout(() => this.render(), 2000);
         }
@@ -2135,7 +2127,7 @@ showLoadContactsConfirm() {
         this.phoneShell.showNotification('❌ 错误', error.message || '未知错误', '❌');
         setTimeout(() => this.render(), 2000);
     }
-   });
+});
 }
     // 🗑️ 显示清空数据确认界面
 showClearDataConfirm() {
