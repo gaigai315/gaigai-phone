@@ -1081,16 +1081,23 @@ export class WechatApp {
 
 .wechat-contacts {
     height: 100%;
-    display: flex;  /* ← 改回 flex 布局 */
+    display: flex;
     flex-direction: column;
     background: #f5f5f5;
-    overflow: hidden !important;  /* ← 父容器不滚动 */
+    overflow: hidden;
 }
 
 .contacts-search {
     padding: 10px 15px;
     background: #ededed;
-    flex-shrink: 0;  /* ← 防止被压缩 */
+    flex-shrink: 0;
+}
+
+.contacts-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 .search-input {
@@ -1107,7 +1114,6 @@ export class WechatApp {
     background: #fff;
     padding: 10px 0;
     margin-bottom: 10px;
-    flex-shrink: 0;  /* ← 防止被压缩 */
 }
 
 .function-item {
@@ -1140,13 +1146,9 @@ export class WechatApp {
 }
 
 .contacts-list {
-    flex: 1;  /* ← 占据剩余空间 */
-    overflow-y: auto !important;  /* ← 只有列表滚动 */
-    overflow-x: hidden;
     background: #fff;
-    -webkit-overflow-scrolling: touch;
+    /* 🔥 删除这行（如果有）：overflow-y: auto; */
 }
-
 .contacts-group {
     position: relative;
 }
