@@ -23,12 +23,118 @@ export class PhoneStorage {
     }
     
     // 保存扩展设置（会自动同步到服务器）
-    async saveExtensionSettings() {
+async saveExtensionSettings() {
+    try {
+        // 获取上下文
+        const context = SillyTavern.getContext();
+        
+        // 方案1：使用 saveSettingsDebounced（最优先）
         if (typeof saveSettingsDebounced === 'function') {
             await saveSettingsDebounced();
-            console.log('💾 数据已保存到服务器（支持跨设备同步）');
+            console.log('💾 数据已保存到服务器（saveSettingsDebounced）');
+            return;
         }
+        
+        // 方案2：使用 extension_settings.js 的保存函数
+        if (typeof window.saveSettings === 'function') {
+            await window.saveSettings();
+            console.log('💾 数据已保存到服务器（saveSettings）');
+            return;
+        }
+        
+        // 🔥 方案3：手动触发保存（添加CSRF Token）
+        if (context && context.extensionSettings) {
+            // 获取CSRF Token
+            let csrfToken = '';
+            
+            if (typeof getRequestHeaders === 'function') {
+                const headers = getRequestHeaders();
+                csrfToken = headers['X-CSRF-Token'] || '';
+            }
+            
+            if (!csrfToken) {
+                const metaToken = document.querySelector('meta[name="csrf-token"]');
+                if (metaToken) {
+                    csrfToken = metaToken.content;
+                }
+            }
+            
+            if (!csrfToken && typeof $ !== 'undefined' && $.ajaxSettings?.headers) {
+                csrfToken = $.ajaxSettings.headers['X-CSRF-Token'] || '';
+            }
+            
+            console.log('🔑 保存数据时的CSRF Token:', csrfToken ? '已获取' : '未获取');
+            
+            // 方案3A：使用fetch（带CSRF Token）
+            try {
+                const response = await fetch('/api/extensions/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        name: 'virtual_phone',
+                        settings: context.extensionSettings.virtual_phone
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('💾 数据已保存到服务器（手动API）');
+                    return;
+                } else {
+                    console.warn('⚠️ Fetch保存失败:', response.status);
+                    // 继续尝试jQuery方案
+                }
+            } catch (fetchError) {
+                console.warn('⚠️ Fetch保存出错:', fetchError);
+                // 继续尝试jQuery方案
+            }
+            
+            // 方案3B：使用jQuery（自动处理CSRF）
+            if (typeof $ !== 'undefined') {
+                try {
+                    await new Promise((resolve, reject) => {
+                        $.ajax({
+                            url: '/api/extensions/save',
+                            type: 'POST',
+                            data: JSON.stringify({
+                                name: 'virtual_phone',
+                                settings: context.extensionSettings.virtual_phone
+                            }),
+                            contentType: 'application/json',
+                            success: function(data) {
+                                console.log('💾 数据已保存到服务器（jQuery）');
+                                resolve(data);
+                            },
+                            error: function(xhr, status, error) {
+                                console.warn('⚠️ jQuery保存失败:', error);
+                                reject(error);
+                            }
+                        });
+                    });
+                    return;
+                } catch (jqueryError) {
+                    console.warn('⚠️ jQuery保存出错:', jqueryError);
+                }
+            }
+        }
+        
+        // 方案4：触发设置变更事件（最后的备用方案）
+        if (typeof eventSource !== 'undefined' && eventSource) {
+            eventSource.emit('settingsUpdated');
+            console.log('💾 触发设置更新事件');
+            return;
+        }
+        
+        console.warn('⚠️ 无法保存到服务器，请手动刷新页面');
+        
+    } catch (e) {
+        console.error('❌ 保存扩展设置失败:', e);
+        // 不抛出错误，避免中断用户操作
     }
+}
     
     // 获取当前上下文
     getContext() {
