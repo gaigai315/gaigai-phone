@@ -118,24 +118,26 @@ export class HomeScreen {
     }
     
     getCurrentDate() {
-        const timeManager = window.VirtualPhone?.timeManager;
-        
-        if (timeManager) {
-            const storyTime = timeManager.getCurrentStoryTime();
-            const dateParts = storyTime.date.match(/(\d+)年(\d+)月(\d+)日/);
-            if (dateParts) {
-                const month = parseInt(dateParts[2]);
-                const day = parseInt(dateParts[3]);
-                return `${month}月${day}日 ${storyTime.weekday}`;
-            }
+    const timeManager = window.VirtualPhone?.timeManager;
+    
+    if (timeManager) {
+        const storyTime = timeManager.getCurrentStoryTime();
+        const dateParts = storyTime.date.match(/(\d+)年(\d+)月(\d+)日/);
+        if (dateParts) {
+            const year = parseInt(dateParts[1]);
+            const month = parseInt(dateParts[2]);
+            const day = parseInt(dateParts[3]);
+            return `${year}年${month}月${day}日 ${storyTime.weekday}`;
         }
-        
-        // 降级方案
-        const now = new Date();
-        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-        const month = now.getMonth() + 1;
-        const day = now.getDate();
-        const weekday = weekdays[now.getDay()];
-        return `${month}月${day}日 ${weekday}`;
     }
+    
+    // 降级方案
+    const now = new Date();
+    const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const weekday = weekdays[now.getDay()];
+    return `${year}年${month}月${day}日 ${weekday}`;
+}
 }
