@@ -9,31 +9,38 @@ export class TimeManager {
      * @returns {Object} { time: "14:30", date: "2044年10月28日", weekday: "星期三", timestamp: 1730102400000 }
      */
     getCurrentStoryTime() {
-        const context = this.getContext();
-        
-        // 🔹 情况1：未选择角色，返回现实时间
-        if (!context || !context.characterId) {
-            return this.getRealTime();
-        }
-        
-        // 🔹 情况2：从聊天记录提取时间（优先级最高）
-        const timeFromChat = this.extractTimeFromChat(context);
-        if (timeFromChat) {
-            console.log('⏰ [时间管理] 从聊天记录提取:', timeFromChat);
-            return timeFromChat;
-        }
-        
-        // 🔹 情况3：智能推断时间
-        const inferredTime = this.inferTimeFromLore(context);
-        if (inferredTime) {
-            console.log('⏰ [时间管理] 从设定推断:', inferredTime);
-            return inferredTime;
-        }
-        
-        // 🔹 情况4：默认时间
-        console.log('⏰ [时间管理] 使用默认剧情时间');
-        return this.getDefaultStoryTime();
+    const context = this.getContext();
+    
+    // 🔹 情况1：未选择角色，返回现实时间
+    if (!context || !context.characterId) {
+        return this.getRealTime();
     }
+    
+    // 🔹 情况2：从聊天记录提取时间（优先级最高）
+    const timeFromChat = this.extractTimeFromChat(context);
+    if (timeFromChat) {
+        console.log('⏰ [时间管理] 从聊天记录提取:', timeFromChat);
+        return timeFromChat;
+    }
+    
+    // 🔹 情况3：使用剧情初始时间（智能加载联系人时生成）
+    const storyInitialTime = this.getStoryInitialTime();
+    if (storyInitialTime) {
+        console.log('⏰ [时间管理] 使用剧情初始时间:', storyInitialTime);
+        return storyInitialTime;
+    }
+    
+    // 🔹 情况4：智能推断时间
+    const inferredTime = this.inferTimeFromLore(context);
+    if (inferredTime) {
+        console.log('⏰ [时间管理] 从设定推断:', inferredTime);
+        return inferredTime;
+    }
+    
+    // 🔹 情况5：默认时间
+    console.log('⏰ [时间管理] 使用默认剧情时间');
+    return this.getDefaultStoryTime();
+}
     
     /**
      * 🔍 从聊天记录提取时间（优先级最高）
@@ -91,6 +98,52 @@ export class TimeManager {
         
         return null;
     }
+
+    /**
+ * 🆕 获取剧情初始时间（从智能加载联系人时生成）
+ */
+getStoryInitialTime() {
+    try {
+        const saved = this.storage.get('story-initial-time', true);
+        if (saved) {
+            const data = JSON.parse(saved);
+            console.log('⏰ [时间管理] 使用剧情初始时间:', data);
+            return {
+                time: data.time,
+                date: data.date,
+                weekday: data.weekday,
+                timestamp: this.parseTimeToTimestamp(data),
+                isStoryInitial: true
+            };
+        }
+    } catch (e) {
+        console.warn('⚠️ 获取剧情初始时间失败:', e);
+    }
+    return null;
+}
+
+/**
+ * 🔧 辅助方法：将时间字符串转为时间戳
+ */
+parseTimeToTimestamp(timeData) {
+    try {
+        const dateParts = timeData.date.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+        const timeParts = timeData.time.match(/(\d{1,2}):(\d{2})/);
+        
+        if (dateParts && timeParts) {
+            const year = parseInt(dateParts[1]);
+            const month = parseInt(dateParts[2]) - 1;
+            const day = parseInt(dateParts[3]);
+            const hour = parseInt(timeParts[1]);
+            const minute = parseInt(timeParts[2]);
+            
+            return new Date(year, month, day, hour, minute).getTime();
+        }
+    } catch (e) {
+        console.warn('⚠️ 时间戳解析失败:', e);
+    }
+    return Date.now();
+}
     
     /**
      * 🧠 从世界书/角色卡智能推断时间
