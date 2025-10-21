@@ -432,57 +432,31 @@ isSystemField(str) {
     
     return systemKeywords.some(keyword => str.includes(keyword));
 }
-
-// 🔥 智能检测API类型（修复版）
-detectAPIType(context) {
-    // 🔑 关键修复：正确获取选中的API类型
-    let main_api = document.getElementById('main_api')?.value;
-    
-    console.log('🔍 [联系人生成] 当前选择的API:', main_api);
-    
-    // 如果没有获取到，尝试从全局变量获取
-    if (!main_api && typeof window.main_api === 'string') {
-        main_api = window.main_api;
-    }
-    
-    // 如果还是没有，尝试从context获取
-    if (!main_api && context?.main_api) {
-        main_api = context.main_api;
-    }
-    
-    // 根据API类型返回
-    if (main_api === 'openai') {
-        console.log('✅ [联系人生成] 使用OpenAI兼容接口');
-        return 'openai';
-    } else if (main_api === 'claude') {
-        console.log('✅ [联系人生成] 使用Claude');
-        return 'claude';
-    } else if (main_api === 'textgenerationwebui' || main_api === 'kobold' || main_api === 'ooba') {
-        console.log('✅ [联系人生成] 使用TextGen');
-        return 'textgen';
-    }
-    
-    // 兜底检测：检查配置
-    if (window.oai_settings?.reverse_proxy || window.oai_settings?.api_url_scale) {
-        console.log('✅ [联系人生成] 检测到OpenAI兼容配置（反向代理）');
-        return 'openai';
-    }
-    
-    console.warn('⚠️ [联系人生成] 无法确定API类型，默认使用OpenAI');
-    return 'openai';
-}
     
 // 📤 调用AI生成联系人（完全静默，不影响聊天窗口）
 async sendToAI(prompt) {
     try {
         console.log('🚀 [手机AI调用] 开始静默调用...');
         
-        // 🔥 直接使用 API 调用，不走 context.generate
-        return await this.directAPICall(prompt);
+        const result = await this.directAPICall(prompt);
+        
+        if (!result || result.length < 10) {
+            throw new Error('AI返回内容过短或为空');
+        }
+        
+        return result;
         
     } catch (error) {
         console.error('❌ [手机AI调用] 失败:', error);
-        throw new Error('AI调用失败: ' + error.message);
+        
+        // 返回默认联系人（容错）
+        return JSON.stringify({
+            contacts: [
+                { name: "朋友A", avatar: "👤", relation: "朋友" },
+                { name: "朋友B", avatar: "👤", relation: "朋友" }
+            ],
+            groups: []
+        });
     }
 }
 
@@ -490,45 +464,19 @@ async directAPICall(prompt) {
     console.log('📡 [静默AI] 调用Chat Completion API...');
     
     try {
-        // 🔥 多种方式获取 CSRF Token
-        let token = '';
-        
-        // 方法1：从全局函数获取
-        if (typeof getRequestHeaders === 'function') {
-            const headers = getRequestHeaders();
-            token = headers['X-CSRF-Token'] || headers['x-csrf-token'] || '';
-        }
-        
-        // 方法2：从 meta 标签获取
-        if (!token) {
-            const metaTag = document.querySelector('meta[name="csrf-token"]');
-            token = metaTag?.content || '';
-        }
-        
-        // 方法3：从全局变量获取
-        if (!token && window.token) {
-            token = window.token;
-        }
-        
-        console.log('🔑 CSRF Token:', token ? `已获取(${token.substring(0, 10)}...)` : '⚠️ 未获取到，尝试无token调用');
-        
-        // 🔥 使用 SillyTavern 的 fetch 包装器
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-        
-        if (token) {
-            headers['X-CSRF-Token'] = token;
-        }
-        
         const response = await fetch('/api/backends/chat-completions/generate', {
             method: 'POST',
-            headers: headers,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': typeof getRequestHeaders === 'function' 
+                    ? (getRequestHeaders()['X-CSRF-Token'] || '') 
+                    : ''
+            },
             body: JSON.stringify({
                 messages: [
                     {
                         role: 'system',
-                        content: '你是一个数据分析助手。严格按要求返回JSON格式数据。'
+                        content: '你是一个数据分析助手。严格按要求返回JSON格式数据，不要进行角色扮演。'
                     },
                     {
                         role: 'user',
@@ -543,14 +491,7 @@ async directAPICall(prompt) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('❌ API错误:', errorText.substring(0, 200));
-            
-            // 🔥 如果是 CSRF 错误，尝试备用方案
-            if (response.status === 403 && errorText.includes('CSRF')) {
-                console.warn('⚠️ CSRF验证失败，使用备用方案...');
-                return await this.fallbackGenerate(prompt);
-            }
-            
+            console.error('❌ API错误:', response.status, errorText.substring(0, 200));
             throw new Error(`API请求失败: ${response.status}`);
         }
         
@@ -573,90 +514,6 @@ async directAPICall(prompt) {
         
     } catch (error) {
         console.error('❌ [静默AI] 失败:', error);
-        
-        // 🔥 最后的备用方案
-        console.warn('⚠️ API调用失败，尝试备用生成方法...');
-        return await this.fallbackGenerate(prompt);
-    }
-}
-
-// 🔧 备用生成方法（临时消息法 - 但会立即清理）
-async fallbackGenerate(prompt) {
-    console.log('📡 [备用方案] 使用临时消息法...');
-    
-    try {
-        const context = SillyTavern.getContext();
-        if (!context || !context.chat) {
-            throw new Error('无法获取聊天上下文');
-        }
-        
-        const originalLength = context.chat.length;
-        console.log('📊 当前聊天记录数:', originalLength);
-        
-        // 添加临时消息（最小化内容以减少显示）
-        const tempMsg = {
-            name: context.name1 || 'System',
-            is_user: true,
-            mes: '',  // 空消息
-            send_date: Date.now(),
-            extra: { isQuiet: true }
-        };
-        
-        context.chat.push(tempMsg);
-        
-        // 手动触发生成
-        console.log('📤 触发AI生成...');
-        
-        // 使用 quiet 生成
-        const generatePromise = context.generate(prompt, {
-            quiet: true,
-            quietToLoud: false,
-            force_name2: true,
-            skipWIAN: true
-        });
-        
-        // 等待生成完成
-        let result = '';
-        const checkInterval = setInterval(() => {
-            if (context.chat.length > originalLength + 1) {
-                clearInterval(checkInterval);
-                
-                const aiMsg = context.chat[context.chat.length - 1];
-                result = aiMsg.mes || aiMsg.swipes?.[aiMsg.swipe_id || 0] || '';
-                
-                // 🔥 立即删除临时消息
-                context.chat.splice(originalLength, 2);
-                console.log('🧹 已删除', 2, '条临时消息');
-                
-                // 🔥 强制刷新UI（清空显示）
-                if (typeof eventSource !== 'undefined' && eventSource.emit) {
-                    eventSource.emit('chatChanged', { preventSave: true });
-                }
-            }
-        }, 100);
-        
-        await generatePromise;
-        
-        // 等待result被设置
-        await new Promise(resolve => {
-            const wait = setInterval(() => {
-                if (result) {
-                    clearInterval(wait);
-                    resolve();
-                }
-            }, 100);
-            
-            setTimeout(() => {
-                clearInterval(wait);
-                resolve();
-            }, 30000);
-        });
-        
-        console.log('✅ [备用方案] 成功，长度:', result.length);
-        return result;
-        
-    } catch (error) {
-        console.error('❌ [备用方案] 失败:', error);
         throw error;
     }
 }
