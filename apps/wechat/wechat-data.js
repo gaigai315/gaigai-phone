@@ -101,20 +101,29 @@ export class WechatData {
     }
     
     addMessage(chatId, message) {
-        if (!this.data.messages[chatId]) {
-            this.data.messages[chatId] = [];
-        }
-        
-        this.data.messages[chatId].push(message);
-        
-        const chat = this.getChat(chatId);
-        if (chat) {
-            chat.lastMessage = message.content || '[图片]';
-            chat.time = message.time;
-        }
-        
-        this.saveData();
+    if (!this.data.messages[chatId]) {
+        this.data.messages[chatId] = [];
     }
+    
+    // 🔥 记录发送时的酒馆消息索引（用于后续注入）
+    const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
+        ? SillyTavern.getContext() 
+        : null;
+    
+    if (context && context.chat) {
+        message.tavernMessageIndex = context.chat.length;  // 记录当前酒馆聊天的长度
+    }
+    
+    this.data.messages[chatId].push(message);
+    
+    const chat = this.getChat(chatId);
+    if (chat) {
+        chat.lastMessage = message.content || '[图片]';
+        chat.time = message.time;
+    }
+    
+    this.saveData();
+}
     
     getContacts() {
         return this.data.contacts;
