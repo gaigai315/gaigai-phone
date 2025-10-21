@@ -464,13 +464,46 @@ async directAPICall(prompt) {
     console.log('📡 [静默AI] 调用Chat Completion API...');
     
     try {
+        // 🔥 方案A：使用酒馆内置的generateQuietPrompt（推荐）
+        if (typeof generateQuietPrompt === 'function') {
+            console.log('✅ 使用酒馆内置API');
+            const result = await generateQuietPrompt(prompt, false, false);
+            return result;
+        }
+        
+        // 🔥 方案B：使用正确的CSRF Token
+        let csrfToken = '';
+        
+        // 获取CSRF Token的多种方式
+        if (typeof getRequestHeaders === 'function') {
+            const headers = getRequestHeaders();
+            csrfToken = headers['X-CSRF-Token'] || '';
+        }
+        
+        if (!csrfToken) {
+            // 从meta标签获取
+            const metaToken = document.querySelector('meta[name="csrf-token"]');
+            if (metaToken) {
+                csrfToken = metaToken.getAttribute('content');
+            }
+        }
+        
+        if (!csrfToken) {
+            // 从jQuery获取
+            if (typeof $ !== 'undefined' && $.ajaxSettings && $.ajaxSettings.headers) {
+                csrfToken = $.ajaxSettings.headers['X-CSRF-Token'] || '';
+            }
+        }
+        
+        console.log('🔑 CSRF Token:', csrfToken ? '已获取' : '未获取');
+        
         const response = await fetch('/api/backends/chat-completions/generate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': typeof getRequestHeaders === 'function' 
-                    ? (getRequestHeaders()['X-CSRF-Token'] || '') 
-                    : ''
+                'X-CSRF-Token': csrfToken,
+                // 添加额外的请求头以模拟酒馆正常请求
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
                 messages: [
@@ -485,13 +518,24 @@ async directAPICall(prompt) {
                 ],
                 max_tokens: 2000,
                 temperature: 0.7,
-                stream: false
+                stream: false,
+                // 添加quiet标志，避免显示在聊天窗口
+                quiet: true,
+                // 使用酒馆的设置
+                ...getGenerationDefaults?.()
             })
         });
         
         if (!response.ok) {
             const errorText = await response.text();
             console.error('❌ API错误:', response.status, errorText.substring(0, 200));
+            
+            // 如果是403，尝试使用jQuery ajax作为备用方案
+            if (response.status === 403) {
+                console.log('🔄 尝试使用jQuery备用方案...');
+                return await this.jqueryFallback(prompt);
+            }
+            
             throw new Error(`API请求失败: ${response.status}`);
         }
         
@@ -516,6 +560,46 @@ async directAPICall(prompt) {
         console.error('❌ [静默AI] 失败:', error);
         throw error;
     }
+}
+
+// 🔥 新增：jQuery备用方案
+async jqueryFallback(prompt) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: '/api/backends/chat-completions/generate',
+            type: 'POST',
+            data: JSON.stringify({
+                messages: [
+                    {
+                        role: 'system',
+                        content: '你是一个数据分析助手。严格按要求返回JSON格式数据，不要进行角色扮演。'
+                    },
+                    {
+                        role: 'user', 
+                        content: prompt
+                    }
+                ],
+                max_tokens: 2000,
+                temperature: 0.7,
+                stream: false,
+                quiet: true
+            }),
+            contentType: 'application/json',
+            success: function(data) {
+                const result = 
+                    data.choices?.[0]?.message?.content ||
+                    data.response ||
+                    data.message?.content ||
+                    '';
+                console.log('✅ jQuery方案成功');
+                resolve(result);
+            },
+            error: function(xhr, status, error) {
+                console.error('❌ jQuery方案失败:', error);
+                reject(new Error(`jQuery请求失败: ${error}`));
+            }
+        });
+    });
 }
     
 // 📥 解析AI返回（增强版）
