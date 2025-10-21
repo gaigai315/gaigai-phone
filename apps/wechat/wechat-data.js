@@ -243,7 +243,7 @@ async loadContactsFromCharacter() {
                         members: group.members || []
                     });
                     
-                    if (group.lastMessage) {
+                                    if (group.lastMessage) {
                         this.addMessage(chatId, {
                             from: group.members?.[0] || '群成员',
                             content: group.lastMessage,
@@ -256,25 +256,19 @@ async loadContactsFromCharacter() {
             });
         }
 
+        // 🔥 保存初始时间（如果有）
+        if (generatedData.initialTime) {
+            this.storage.set('story-initial-time', JSON.stringify(generatedData.initialTime), true);
+            console.log('⏰ 已保存剧情初始时间:', generatedData.initialTime);
+        }
+
         await this.saveData();
         
         return {
             success: true,
             count: addedCount,
-            mes// 🔥 保存初始时间（如果有）
-if (generatedData.initialTime) {
-    this.storage.set('story-initial-time', JSON.stringify(generatedData.initialTime), true);
-    console.log('⏰ 已保存剧情初始时间:', generatedData.initialTime);
-}
-
-await this.saveData();
-
-return {
-    success: true,
-    count: addedCount,
-    time: generatedData.initialTime || null,
-    message: `✅ 成功生成${addedCount}个联系人`
-};sage: `✅ 成功生成${addedCount}个联系人`
+            time: generatedData.initialTime || null,
+            message: `✅ 成功生成${addedCount}个联系人`
         };
         
     } catch (error) {
