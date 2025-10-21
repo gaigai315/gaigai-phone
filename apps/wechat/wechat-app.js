@@ -2086,6 +2086,7 @@ document.getElementById('clear-wechat-data')?.addEventListener('click', () => {
     this.showClearDataConfirm();
 });
 }
+}
 
     // 📋 显示智能加载联系人确认界面
 showLoadContactsConfirm() {
@@ -2274,5 +2275,4 @@ showClearDataConfirm() {
         this.render();
     }, 1000);
 });
-}
 }
