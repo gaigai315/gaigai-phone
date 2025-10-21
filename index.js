@@ -29,6 +29,7 @@ import { TimeManager } from './config/time-manager.js';
     let currentApps = JSON.parse(JSON.stringify(APPS));
     let storage = new PhoneStorage();
     let settings = storage.loadSettings();
+    let timeManager = new TimeManager(storage);
     
     // 🔥 新版：统一的JSON格式手机标签
 const PHONE_TAG_REGEX = /<phone>([\s\S]*?)<\/phone>/gi;
@@ -151,7 +152,7 @@ function parsePhoneCommands(text) {
     while ((match = LEGACY_PHONE_TAG.exec(text)) !== null) {
         try {
             const jsonStr = match[1].trim();
-            // 🔥 新增：跳过空内容
+            // 🔥 跳过空内容
             if (!jsonStr) {
                 console.log('📱 空的Phone标签，跳过');
                 continue;
@@ -160,7 +161,7 @@ function parsePhoneCommands(text) {
             commands.push(command);
             console.log('📱 解析到旧版Phone命令:', command);
         } catch (e) {
-            console.warn('⚠️ 旧版Phone标签解析失败（已忽略）:', e.message);  // ← 改为warn，不显示完整错误
+            console.warn('⚠️ 旧版Phone标签解析失败（已忽略）:', e.message);
         }
     }
     return commands;
@@ -758,7 +759,7 @@ if (context && context.eventSource) {
                                         speaker: speaker,
                                         content: content,
                                         time: msg.time,
-                                        timestamp: Date.now(),
+                                        timestamp: msg.realTimestamp || Date.now(),
                                         tavernMessageIndex: msg.tavernMessageIndex  // 🔥 保留索引
                                      });
                                   });
@@ -847,7 +848,11 @@ if (phoneActivities.length > 0) {
         .sort((a, b) => a - b);
     
     let totalInjected = 0;
-    
+
+    // 🔥 对同一索引下的消息按时间排序，确保顺序正确
+Object.keys(activitiesByIndex).forEach(index => {
+    activitiesByIndex[index].sort((a, b) => a.timestamp - b.timestamp);
+});
     sortedIndices.forEach(tavernIndex => {
     const activities = activitiesByIndex[tavernIndex];
     
@@ -919,12 +924,12 @@ else {
         if (messages[i].role === 'user' || messages[i].role === 'assistant') {
             messageCount++;
             
-            // 🔥 关键：在第N句对话之后插入
-            if (messageCount === tavernIndex) {
-                insertPosition = i + 1;  // 在这条消息之后
-                console.log(`📍 [位置计算] 找到匹配：第${tavernIndex}句之后 -> 位置${insertPosition}`);
-                break;
-            }
+           // 🔥 关键：在第N句对话之后插入
+if (messageCount === tavernIndex) {
+    insertPosition = i + 1;
+    console.log(`📍 [位置计算] 找到匹配：第${tavernIndex}句之后 -> 位置${insertPosition}`);
+    break;
+}
         }
     }
     
@@ -982,6 +987,7 @@ else {
     storage: storage,
     settings: settings,
     imageManager: new ImageUploadManager(storage),
+    timeManager: timeManager,
     wechatApp: null,
     version: '1.0.0'
 };
