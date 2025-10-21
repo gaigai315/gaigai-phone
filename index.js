@@ -9,6 +9,7 @@ import { APPS } from './config/apps.js';
 import { PhoneStorage } from './config/storage.js';
 import { SettingsApp } from './apps/settings/settings-app.js';
 import { ImageUploadManager } from './apps/settings/image-upload.js';
+import { TimeManager } from './config/time-manager.js';
 
 (function() {
     'use strict';
