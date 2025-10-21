@@ -673,20 +673,219 @@ function init() {
         });
         
         // 连接到酒馆
-        const context = getContext();
-        if (context && context.eventSource) {
-            context.eventSource.on(
-                context.event_types.CHARACTER_MESSAGE_RENDERED,
-                onMessageReceived
-            );
-            
-            context.eventSource.on(
-                context.event_types.CHAT_CHANGED,
-                onChatChanged
-            );
-            
-            console.log('✅ 已连接到酒馆事件系统');
-        }
+const context = getContext();
+if (context && context.eventSource) {
+    context.eventSource.on(
+        context.event_types.CHARACTER_MESSAGE_RENDERED,
+        onMessageReceived
+    );
+    
+    context.eventSource.on(
+        context.event_types.CHAT_CHANGED,
+        onChatChanged
+    );
+    
+    // 🟢🟢🟢 在这里添加新的监听器 🟢🟢🟢
+    // ========================================
+    // 📱 监听提示词准备事件，注入手机活动记录
+    // ========================================
+    if (context.event_types.CHAT_COMPLETION_PROMPT_READY) {
+        context.eventSource.on(
+            context.event_types.CHAT_COMPLETION_PROMPT_READY,
+            (data) => {
+                if (!settings.enabled) return;
+                
+                try {
+                    console.log('\n📱 [手机→酒馆] 开始收集手机活动记录...');
+                    
+                    const phoneActivities = [];
+                    
+                    // ========================================
+                    // 1️⃣ 收集微信消息
+                    // ========================================
+                    if (window.VirtualPhone?.wechatApp?.wechatData) {
+                        const wechatData = window.VirtualPhone.wechatApp.wechatData;
+                        const allChats = wechatData.getChatList();
+                        
+                        console.log('💬 微信聊天数量:', allChats.length);
+                        
+                        allChats.forEach(chat => {
+                            const messages = wechatData.getMessages(chat.id);
+                            if (messages && messages.length > 0) {
+                                // 取每个聊天的最近10条消息
+                                const recentMessages = messages.slice(-10);
+                                
+                                recentMessages.forEach(msg => {
+                                    const speaker = msg.from === 'me' 
+                                        ? (context.name1 || '用户') 
+                                        : chat.name;
+                                    
+                                    let content = '';
+                                    switch (msg.type) {
+                                        case 'text':
+                                            content = msg.content;
+                                            break;
+                                        case 'image':
+                                            content = '[图片]';
+                                            break;
+                                        case 'voice':
+                                            content = `[语音 ${msg.duration || '3秒'}]`;
+                                            break;
+                                        case 'video':
+                                            content = '[视频通话]';
+                                            break;
+                                        case 'transfer':
+                                            content = `[转账 ¥${msg.amount}]`;
+                                            break;
+                                        case 'redpacket':
+                                            content = `[红包 ¥${msg.amount}]`;
+                                            break;
+                                        default:
+                                            content = `[${msg.type}]`;
+                                    }
+                                    
+                                    phoneActivities.push({
+                                        app: '微信',
+                                        type: chat.type === 'group' ? '群聊' : '私聊',
+                                        chatName: chat.name,
+                                        speaker: speaker,
+                                        content: content,
+                                        time: msg.time,
+                                        timestamp: Date.now()
+                                    });
+                                });
+                            }
+                        });
+                        
+                        console.log('✅ 收集了微信消息:', phoneActivities.length, '条');
+                    }
+                    
+                    // ========================================
+                    // 2️⃣ 收集朋友圈（如果有）
+                    // ========================================
+                    if (window.VirtualPhone?.wechatApp?.wechatData) {
+                        const wechatData = window.VirtualPhone.wechatApp.wechatData;
+                        const moments = wechatData.getMoments();
+                        
+                        if (moments && moments.length > 0) {
+                            moments.slice(-5).forEach(moment => {
+                                phoneActivities.push({
+                                    app: '微信朋友圈',
+                                    type: '动态',
+                                    chatName: moment.author || '未知',
+                                    speaker: moment.author || '未知',
+                                    content: moment.content || '',
+                                    time: moment.time || '刚刚',
+                                    timestamp: Date.now()
+                                });
+                            });
+                            
+                            console.log('✅ 收集了朋友圈:', moments.length, '条');
+                        }
+                    }
+                    
+                    // ========================================
+                    // 3️⃣ 预留：其他APP（短信、电话等）
+                    // ========================================
+                    // 未来可以在这里添加其他APP的数据收集
+                    
+                    // ========================================
+                    // 4️⃣ 构建手机活动摘要并注入
+                    // ========================================
+                    if (phoneActivities.length > 0) {
+                        console.log('📊 总共收集到', phoneActivities.length, '条手机活动');
+                        
+                        // 限制总数，避免提示词太长
+                        const maxActivities = 30;
+                        const activitiesToInject = phoneActivities.slice(-maxActivities);
+                        
+                        // 构建注入内容
+                        let phoneContextContent = `
+═══════════════════════════════════════
+📱 手机活动记录（最近${activitiesToInject.length}条）
+═══════════════════════════════════════
+
+【重要说明】
+以下是用户通过手机进行的各种活动（微信聊天、朋友圈等）。
+这些活动与面对面对话是并行发生的，角色应该知道这些内容。
+请在回复时考虑这些手机互动的信息。
+
+`;
+
+                        // 按APP分组显示
+                        const groupedByApp = {};
+                        activitiesToInject.forEach(activity => {
+                            if (!groupedByApp[activity.app]) {
+                                groupedByApp[activity.app] = [];
+                            }
+                            groupedByApp[activity.app].push(activity);
+                        });
+                        
+                        Object.keys(groupedByApp).forEach(appName => {
+                            phoneContextContent += `\n## ${appName}\n\n`;
+                            
+                            groupedByApp[appName].forEach(activity => {
+                                let prefix = '';
+                                
+                                if (activity.type === '群聊') {
+                                    prefix = `[群：${activity.chatName}]`;
+                                } else if (activity.type === '私聊') {
+                                    prefix = `[私聊]`;
+                                } else if (activity.type === '动态') {
+                                    prefix = `[朋友圈]`;
+                                } else {
+                                    prefix = `[${activity.type}]`;
+                                }
+                                
+                                phoneContextContent += `${prefix} ${activity.time} ${activity.speaker}: ${activity.content}\n`;
+                            });
+                        });
+                        
+                        phoneContextContent += `\n═══════════════════════════════════════\n`;
+                        
+                        // 找到合适的位置注入（在system消息的末尾）
+                        const systemMessages = data.messages.filter(m => m.role === 'system');
+                        if (systemMessages.length > 0) {
+                            // 找到最后一个system消息的索引
+                            let lastSystemIndex = -1;
+                            for (let i = data.messages.length - 1; i >= 0; i--) {
+                                if (data.messages[i].role === 'system') {
+                                    lastSystemIndex = i;
+                                    break;
+                                }
+                            }
+                            
+                            if (lastSystemIndex !== -1) {
+                                // 在最后一个system消息之后插入
+                                data.messages.splice(lastSystemIndex + 1, 0, {
+                                    role: 'system',
+                                    content: phoneContextContent
+                                });
+                                
+                                console.log(`✅ 已注入 ${activitiesToInject.length} 条手机活动到位置${lastSystemIndex + 1}`);
+                            } else {
+                                console.warn('⚠️ 找不到system消息，手机活动未注入');
+                            }
+                        } else {
+                            console.warn('⚠️ 没有system消息，手机活动未注入');
+                        }
+                    } else {
+                        console.log('📱 暂无手机活动记录');
+                    }
+                    
+                } catch (e) {
+                    console.error('❌ 手机活动注入失败:', e);
+                }
+            }
+        );
+        
+        console.log('✅ 已注册手机活动注入监听器');
+    } else {
+        console.warn('⚠️ CHAT_COMPLETION_PROMPT_READY 事件不存在，手机活动将不会注入到酒馆');
+    }
+    
+    console.log('✅ 已连接到酒馆事件系统');
+}
         
         console.log('🎉 虚拟手机初始化完成！');
         console.log(`📊 状态: ${settings.enabled ? '已启用' : '已禁用'}`);
