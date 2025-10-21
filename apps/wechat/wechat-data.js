@@ -112,14 +112,21 @@ export class WechatData {
             : null;
         
         if (context && context.chat && Array.isArray(context.chat)) {
-            // 🔥 关键修改：记录当前的聊天长度
-            // 如果是0，说明手机消息在酒馆对话之前
-            message.tavernMessageIndex = context.chat.length;
+            // 🔥 核心修复：正确计算索引
+            // 统计聊天记录中 user 和 assistant 的实际消息数量
+            let messageCount = 0;
+            for (let i = 0; i < context.chat.length; i++) {
+                if (context.chat[i].is_user || context.chat[i].name) {
+                    messageCount++;
+                }
+            }
             
-            // 添加真实时间戳作为备用
+            // 🔥 关键：记录的是"第几句对话之后"
+            // 例如：如果现在有3句对话，这条手机消息应该插入"第3句之后"
+            message.tavernMessageIndex = messageCount;
             message.realTimestamp = Date.now();
             
-            console.log(`📍 手机消息索引: tavern=${message.tavernMessageIndex}, 时间=${new Date(message.realTimestamp).toLocaleTimeString()}`);
+            console.log(`📍 [手机消息] 记录索引: ${message.tavernMessageIndex} (当前对话数=${messageCount}, 总消息=${context.chat.length})`);
         } else {
             // 如果获取不到上下文，标记为0（对话开始前）
             message.tavernMessageIndex = 0;
