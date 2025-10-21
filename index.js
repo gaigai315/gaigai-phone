@@ -842,85 +842,107 @@ if (phoneActivities.length > 0) {
     let totalInjected = 0;
     
     sortedIndices.forEach(tavernIndex => {
-        const activities = activitiesByIndex[tavernIndex];
-        
-        // 构建这个时间点的手机消息内容
-        // 🔥 更清晰的时间点描述
-const timeDesc = tavernIndex >= 999999 
-    ? '（最新）' 
-    : `（在第${tavernIndex}句对话之后）`;
-
-let phoneContextContent = `
+    const activities = activitiesByIndex[tavernIndex];
+    
+    // 🔥 改进的时间点描述
+    let timeDesc;
+    if (tavernIndex === 0) {
+        timeDesc = '（在酒馆对话开始之前）';
+    } else if (tavernIndex >= 999999) {
+        timeDesc = '（时间未知，放在对话最前）';
+    } else {
+        timeDesc = `（在酒馆第${tavernIndex}句对话之后）`;
+    }
+    
+    // 构建这个时间点的手机消息内容
+    let phoneContextContent = `
 ═══════════════════════════════════════
 📱 手机活动${timeDesc}
 ═══════════════════════════════════════
-
 `;
+    
+    const groupedByApp = {};
+    activities.forEach(activity => {
+        if (!groupedByApp[activity.app]) {
+            groupedByApp[activity.app] = [];
+        }
+        groupedByApp[activity.app].push(activity);
+    });
+    
+    Object.keys(groupedByApp).forEach(appName => {
+        phoneContextContent += `## ${appName}\n\n`;
         
-        const groupedByApp = {};
-        activities.forEach(activity => {
-            if (!groupedByApp[activity.app]) {
-                groupedByApp[activity.app] = [];
+        groupedByApp[appName].forEach(activity => {
+            let prefix = '';
+            if (activity.type === '群聊') {
+                prefix = `[群：${activity.chatName}]`;
+            } else if (activity.type === '私聊') {
+                prefix = `[私聊]`;
+            } else if (activity.type === '动态') {
+                prefix = `[朋友圈]`;
+            } else {
+                prefix = `[${activity.type}]`;
             }
-            groupedByApp[activity.app].push(activity);
-        });
-        
-        Object.keys(groupedByApp).forEach(appName => {
-            phoneContextContent += `## ${appName}\n\n`;
             
-            groupedByApp[appName].forEach(activity => {
-                let prefix = '';
-                if (activity.type === '群聊') {
-                    prefix = `[群：${activity.chatName}]`;
-                } else if (activity.type === '私聊') {
-                    prefix = `[私聊]`;
-                } else if (activity.type === '动态') {
-                    prefix = `[朋友圈]`;
-                } else {
-                    prefix = `[${activity.type}]`;
-                }
-                
-                phoneContextContent += `${prefix} ${activity.time} ${activity.speaker}: ${activity.content}\n`;
-            });
+            phoneContextContent += `${prefix} ${activity.time} ${activity.speaker}: ${activity.content}\n`;
         });
-        
-        phoneContextContent += `\n═══════════════════════════════════════\n`;
-        
-        // 🔥 计算插入位置
-        // tavernIndex 是酒馆消息的索引（从0开始）
-        // 需要映射到 eventData.chat 的位置
-        
-        // 在聊天记录中找到对应的消息位置
-        let insertPosition = chatStartIndex;
+    });
+    
+    phoneContextContent += `\n═══════════════════════════════════════\n`;
+    
+    // 🔥 改进的插入位置计算
+    let insertPosition;
+    
+    // 特殊情况1：索引为0，说明手机消息在酒馆对话之前
+    if (tavernIndex === 0) {
+        insertPosition = chatStartIndex;
+        console.log(`📍 索引=0，插入到聊天开始位置: ${insertPosition}`);
+    }
+    // 特殊情况2：索引无效（999999），也放在最前面
+    else if (tavernIndex >= 999999) {
+        insertPosition = chatStartIndex;
+        console.log(`📍 索引无效，插入到聊天开始位置: ${insertPosition}`);
+    }
+    // 正常情况：根据索引查找位置
+    else {
+        insertPosition = chatStartIndex;
         let messageCount = 0;
         
         for (let i = chatStartIndex; i < messages.length; i++) {
-    if (messages[i].role === 'user' || messages[i].role === 'assistant') {
-        messageCount++;
-        
-        // 🔥 修正：应该在对应消息之后插入
-        if (messageCount > tavernIndex) {
-            insertPosition = i;  // 在这条消息之前（也就是上一条消息之后）
-            break;
+            if (messages[i].role === 'user' || messages[i].role === 'assistant') {
+                messageCount++;
+                
+                // 🔥 在第N句对话之后插入
+                if (messageCount === tavernIndex) {
+                    insertPosition = i + 1;  // 在这条消息之后
+                    break;
+                }
+                // 如果已经超过了目标索引，在当前位置插入
+                else if (messageCount > tavernIndex) {
+                    insertPosition = i;
+                    break;
+                }
+            }
         }
+        
+        // 如果遍历完了还没找到，插在最后
+        if (messageCount < tavernIndex) {
+            insertPosition = messages.length;
+        }
+        
+        console.log(`📍 查找位置: 目标索引=${tavernIndex}, 当前消息数=${messageCount}, 插入位置=${insertPosition}`);
     }
-}
-
-// 🔥 如果遍历完了还没找到位置，说明手机消息是在最后发送的
-if (messageCount <= tavernIndex) {
-    insertPosition = messages.length;
-}
-        
-        // 插入手机消息
-        messages.splice(insertPosition, 0, {
-            role: 'system',
-            content: phoneContextContent
-        });
-        
-        totalInjected++;
-        
-        console.log(`✅ 已注入第${tavernIndex}句的手机消息到位置${insertPosition}（${activities.length}条）`);
+    
+    // 插入手机消息
+    messages.splice(insertPosition, 0, {
+        role: 'system',
+        content: phoneContextContent
     });
+    
+    totalInjected++;
+    
+    console.log(`✅ 已注入索引${tavernIndex}的手机消息到位置${insertPosition}（${activities.length}条）`);
+});
     
     console.log(`🎉 总共注入了 ${totalInjected} 个时间点的手机消息`);
     
