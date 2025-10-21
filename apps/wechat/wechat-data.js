@@ -105,13 +105,31 @@ export class WechatData {
         this.data.messages[chatId] = [];
     }
     
-    // 🔥 记录发送时的酒馆消息索引（用于后续注入）
-    const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
-        ? SillyTavern.getContext() 
-        : null;
-    
-    if (context && context.chat) {
-        message.tavernMessageIndex = context.chat.length;  // 记录当前酒馆聊天的长度
+    // 🔥 改进的索引记录逻辑
+    try {
+        const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
+            ? SillyTavern.getContext() 
+            : null;
+        
+        if (context && context.chat && Array.isArray(context.chat)) {
+            // 🔥 关键修改：记录当前的聊天长度
+            // 如果是0，说明手机消息在酒馆对话之前
+            message.tavernMessageIndex = context.chat.length;
+            
+            // 添加真实时间戳作为备用
+            message.realTimestamp = Date.now();
+            
+            console.log(`📍 手机消息索引: tavern=${message.tavernMessageIndex}, 时间=${new Date(message.realTimestamp).toLocaleTimeString()}`);
+        } else {
+            // 如果获取不到上下文，标记为0（对话开始前）
+            message.tavernMessageIndex = 0;
+            message.realTimestamp = Date.now();
+            console.warn('⚠️ 无法获取酒馆上下文，标记为对话开始前');
+        }
+    } catch (e) {
+        console.error('❌ 记录索引失败:', e);
+        message.tavernMessageIndex = 0;
+        message.realTimestamp = Date.now();
     }
     
     this.data.messages[chatId].push(message);
