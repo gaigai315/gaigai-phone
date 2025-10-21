@@ -29,10 +29,12 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
     let storage = new PhoneStorage();
     let settings = storage.loadSettings();
     
-    const PHONE_TAG_REGEX = /<Phone>([\s\S]*?)<\/Phone>/gi;
-    
-    // 🔥 新增：微信消息标签正则
-    const WECHAT_TAG_REGEX = /<wechat\s+chatId="([^"]+)"\s+from="([^"]+)">([\s\S]*?)<\/wechat>/gi;
+    // 🔥 新版：统一的JSON格式手机标签
+const PHONE_TAG_REGEX = /<phone>([\s\S]*?)<\/phone>/gi;
+
+// 兼容旧版标签（逐步废弃）
+const LEGACY_PHONE_TAG = /<Phone>([\s\S]*?)<\/Phone>/gi;
+const LEGACY_WECHAT_TAG = /<wechat\s+chatId="([^"]+)"\s+from="([^"]+)">([\s\S]*?)<\/wechat>/gi;
     
     // 创建顶部面板按钮
     function createTopPanel() {
@@ -158,6 +160,113 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
         }
         return messages;
     }
+
+    // 🔥 新增：解析新版JSON格式手机标签
+function parsePhoneTag(text) {
+    if (!text || !settings.enabled) return null;
+    
+    let match;
+    PHONE_TAG_REGEX.lastIndex = 0;
+    
+    while ((match = PHONE_TAG_REGEX.exec(text)) !== null) {
+        try {
+            const content = match[1].trim();
+            
+            // 空标签，不更新
+            if (!content) {
+                console.log('📱 收到空手机标签，保持现状');
+                return null;
+            }
+            
+            // 解析JSON
+            const data = JSON.parse(content);
+            console.log('📱 解析到手机标签:', data);
+            return data;
+            
+        } catch (e) {
+            console.error('❌ 手机标签JSON解析失败:', e, '原文:', match[1]);
+        }
+    }
+    
+    return null;
+}
+
+// 🔥 新增：处理手机标签数据
+function handlePhoneTag(tagData) {
+    if (!tagData || !tagData.type) return;
+    
+    switch (tagData.type) {
+        case 'wechat_message':
+            handleWechatTagData(tagData);
+            break;
+            
+        case 'wechat_contacts':
+            handleContactsUpdate(tagData);
+            break;
+            
+        case 'notification':
+            if (tagData.title && tagData.content) {
+                phoneShell?.showNotification(tagData.title, tagData.content, tagData.icon || '📱');
+            }
+            break;
+            
+        default:
+            console.warn('⚠️ 未知的手机标签类型:', tagData.type);
+    }
+}
+
+// 🔥 处理微信消息标签数据
+function handleWechatTagData(data) {
+    if (!data.contact || !data.messages) {
+        console.warn('⚠️ 微信消息数据不完整:', data);
+        return;
+    }
+    
+    // 传递给微信APP
+    if (window.currentWechatApp) {
+        data.messages.forEach((msg, index) => {
+            setTimeout(() => {
+                window.currentWechatApp.receiveMessage({
+                    chatId: data.contact,
+                    from: data.contact,
+                    message: msg.content,
+                    messageType: msg.type || 'text',
+                    timestamp: msg.time || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                    avatar: data.avatar
+                });
+            }, index * 800);
+        });
+        
+        console.log(`📱 已同步 ${data.messages.length} 条微信消息`);
+    }
+    
+    // 显示通知
+    if (data.notification) {
+        phoneShell?.showNotification('微信消息', data.notification, '💬');
+        updateAppBadge('wechat', data.messages.length);
+        totalNotifications += data.messages.length;
+        updateNotificationBadge(totalNotifications);
+    }
+}
+
+// 🔥 处理联系人更新
+function handleContactsUpdate(data) {
+    if (!data.contacts || !Array.isArray(data.contacts)) {
+        console.warn('⚠️ 联系人数据格式错误:', data);
+        return;
+    }
+    
+    if (window.currentWechatApp && window.currentWechatApp.addContacts) {
+        window.currentWechatApp.addContacts(data.contacts);
+        console.log(`📱 已添加 ${data.contacts.length} 个联系人`, data.contacts);
+    } else {
+        // 暂存到存储，等微信APP加载后再添加
+        const pending = storage.get('pending-contacts') || [];
+        pending.push(...data.contacts);
+        storage.set('pending-contacts', pending);
+        console.log('📱 联系人已暂存，等待微信APP加载');
+    }
+}
     
     // 🔥 新增：隐藏微信标签
     function hideWechatTags() {
@@ -304,27 +413,32 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
     }
     
     function onMessageReceived(messageId) {
-        if (!settings.enabled) return;
+    if (!settings.enabled) return;
+    
+    try {
+        const context = getContext();
+        if (!context || !context.chat) return;
         
-        try {
-            const context = getContext();
-            if (!context || !context.chat) return;
-            
-            const index = typeof messageId === 'number' ? messageId : context.chat.length - 1;
-            const message = context.chat[index];
-            
-            if (!message || message.is_user) return;
-            
-            const text = message.mes || message.swipes?.[message.swipe_id || 0] || '';
-            const commands = parsePhoneCommands(text);
-            
-            commands.forEach(cmd => executePhoneCommand(cmd));
-            
-                    if (commands.length > 0) {
-            setTimeout(hidePhoneTags, 100);
+        const index = typeof messageId === 'number' ? messageId : context.chat.length - 1;
+        const message = context.chat[index];
+        
+        if (!message || message.is_user) return;
+        
+        const text = message.mes || message.swipes?.[message.swipe_id || 0] || '';
+        
+        // 🔥 优先解析新版JSON标签
+        const phoneTagData = parsePhoneTag(text);
+        if (phoneTagData) {
+            handlePhoneTag(phoneTagData);
+            setTimeout(() => hidePhoneTags(text), 100);
+            return; // 新版标签优先，跳过旧版解析
         }
         
-        // 🔥 新增：解析微信消息标签
+        // 🔥 兼容旧版 <Phone> 标签
+        const commands = parsePhoneCommands(text);
+        commands.forEach(cmd => executePhoneCommand(cmd));
+        
+        // 🔥 兼容旧版 <wechat> 标签
         const wechatMessages = parseWechatMessages(text);
         if (wechatMessages.length > 0) {
             wechatMessages.forEach(msg => {
@@ -335,32 +449,31 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
                         message: msg.content,
                         timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
                     });
-                    console.log('📱 已同步微信消息到手机:', msg.content);
                 }
             });
-            
-            // 在酒馆界面标注（可选）
-            setTimeout(() => hideWechatTags(), 100);
+        }
+        
+        // 隐藏所有标签
+        if (commands.length > 0 || wechatMessages.length > 0) {
+            setTimeout(() => hidePhoneTags(text), 150);
         }
         
         // 隐藏用户消息中的手机模式标记
-            
-            // 隐藏用户消息中的手机模式标记
-            setTimeout(() => {
-                $('.mes_text').each(function() {
-                    const $this = $(this);
-                    let html = $this.html();
-                    if (html && html.includes('((PHONE_CHAT_MODE))')) {
-                        html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '');
-                        $this.html(html);
-                    }
-                });
-            }, 150);
-            
-        } catch (e) {
-            console.error('❌ 消息处理失败:', e);
-        }
+        setTimeout(() => {
+            $('.mes_text').each(function() {
+                const $this = $(this);
+                let html = $this.html();
+                if (html && html.includes('((PHONE_CHAT_MODE))')) {
+                    html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '');
+                    $this.html(html);
+                }
+            });
+        }, 150);
+        
+    } catch (e) {
+        console.error('❌ 消息处理失败:', e);
     }
+}
     
     function onChatChanged() {
         console.log('🔄 聊天已切换，重新加载数据...');
@@ -471,7 +584,16 @@ function init() {
     import('./apps/wechat/wechat-app.js').then(module => {
         const wechatApp = new module.WechatApp(phoneShell, storage);
         window.currentWechatApp = wechatApp;
-        window.VirtualPhone.wechatApp = wechatApp;  // ← 新增：同时挂载到 VirtualPhone
+        window.VirtualPhone.wechatApp = wechatApp;
+        
+        // 🔥 新增：加载待处理的联系人
+        const pendingContacts = storage.get('pending-contacts') || [];
+        if (pendingContacts.length > 0 && wechatApp.addContacts) {
+            wechatApp.addContacts(pendingContacts);
+            storage.set('pending-contacts', []); // 清空
+            console.log(`📱 已加载 ${pendingContacts.length} 个待处理联系人`);
+        }
+        
         wechatApp.render();
     }).catch(err => {
         console.error('加载微信APP失败:', err);
