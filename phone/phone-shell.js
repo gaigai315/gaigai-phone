@@ -62,11 +62,19 @@ export class PhoneShell {
 }
     
     getCurrentTime() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        return `${hours}:${minutes}`;
+    const timeManager = window.VirtualPhone?.timeManager;
+    
+    if (timeManager) {
+        const storyTime = timeManager.getCurrentStoryTime();
+        return storyTime.time;
     }
+    
+    // 降级方案
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
     
     startClock() {
         setInterval(() => {
