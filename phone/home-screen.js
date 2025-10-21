@@ -101,25 +101,14 @@ export class HomeScreen {
     }
     
     getCurrentTime() {
-    // 优先从酒馆状态栏获取时间
-    try {
-        const statusbar = document.querySelector('.mes_text');
-        if (statusbar) {
-            const lastMessage = Array.from(document.querySelectorAll('.mes_text')).pop();
-            if (lastMessage) {
-                const text = lastMessage.textContent;
-                // 匹配状态栏中的时间格式
-                const timeMatch = text.match(/全局时间[：:][^·]+·[^·]+·[^·]+·(\d{1,2}:\d{2})/);
-                if (timeMatch && timeMatch[1]) {
-                    return timeMatch[1];
-                }
-            }
-        }
-    } catch (e) {
-        console.warn('从状态栏获取时间失败:', e);
+    const timeManager = window.VirtualPhone?.timeManager;
+    
+    if (timeManager) {
+        const storyTime = timeManager.getCurrentStoryTime();
+        return storyTime.time;
     }
     
-    // 备用：使用现实时间
+    // 降级方案
     const now = new Date();
     return now.toLocaleTimeString('zh-CN', { 
         hour: '2-digit', 
@@ -129,21 +118,26 @@ export class HomeScreen {
 }
     
     getCurrentDate() {
-    // 优先从酒馆状态栏获取日期
-    try {
-        const statusbar = document.querySelector('.mes_text');
-        if (statusbar) {
-            const lastMessage = Array.from(document.querySelectorAll('.mes_text')).pop();
-            if (lastMessage) {
-                const text = lastMessage.textContent;
-                // 匹配状态栏中的日期格式：2055年06月11日·🍦·星期三
-                const dateMatch = text.match(/全局时间[：:](\d{4})年(\d{2})月(\d{2})日·[^·]+·(星期[一二三四五六日])/);
-                if (dateMatch) {
-                    const month = parseInt(dateMatch[2]);
-                    const day = parseInt(dateMatch[3]);
-                    const weekday = dateMatch[4];
-                    return `${month}月${day}日 ${weekday}`;
-                }
+    const timeManager = window.VirtualPhone?.timeManager;
+    
+    if (timeManager) {
+        const storyTime = timeManager.getCurrentStoryTime();
+        const dateParts = storyTime.date.match(/(\d+)年(\d+)月(\d+)日/);
+        if (dateParts) {
+            const month = parseInt(dateParts[2]);
+            const day = parseInt(dateParts[3]);
+            return `${month}月${day}日 ${storyTime.weekday}`;
+        }
+    }
+    
+    // 降级方案
+    const now = new Date();
+    const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const weekday = weekdays[now.getDay()];
+    return `${month}月${day}日 ${weekday}`;
+}
             }
         }
     } catch (e) {
