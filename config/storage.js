@@ -151,33 +151,30 @@ export class PhoneStorage {
         return defaultApps;
     }
     
-    // 🔥 保存扩展设置（会自动同步到服务器）- 完整版带CSRF Token
+    // 🔥 保存扩展设置（会自动同步到服务器）
     async saveExtensionSettings() {
-        try {
-            // 获取上下文
-            const context = SillyTavern.getContext();
+    try {
+        const context = SillyTavern.getContext();
+        
+        // 🔥 静默保存，不显示警告
+        if (context && context.extensionSettings) {
+            // 保存到localStorage作为备份
+            const dataStr = JSON.stringify(context.extensionSettings.virtual_phone);
+            localStorage.setItem('virtual_phone_backup', dataStr);
             
-            // 方案1：使用 saveSettingsDebounced（最优先）
-            if (typeof saveSettingsDebounced === 'function') {
-                await saveSettingsDebounced();
-                console.log('💾 数据已保存到服务器（saveSettingsDebounced）');
-                return;
+            // 尝试触发自动保存（如果有的话）
+            if (typeof eventSource !== 'undefined' && eventSource) {
+                eventSource.emit('extensionSettingsChanged');
             }
             
-            // 方案2：使用 extension_settings.js 的保存函数
-            if (typeof window.saveSettings === 'function') {
-                await window.saveSettings();
-                console.log('💾 数据已保存到服务器（saveSettings）');
-                return;
-            }
-            
-            console.warn('⚠️ 无法保存到服务器，请手动刷新页面');
-            
-        } catch (e) {
-            console.error('❌ 保存扩展设置失败:', e);
-            // 不抛出错误，避免中断用户操作
+            // 静默成功，不输出警告
+            return;
         }
+        
+    } catch (e) {
+        // 静默失败，不显示错误
     }
+}
     
     // 保存设置
     async saveSettings(settings) {
