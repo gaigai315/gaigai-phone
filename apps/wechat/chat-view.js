@@ -755,43 +755,50 @@ console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
 return finalPrompt;
 }
 
-// 🔧 完全静默调用AI（使用酒馆API）
+    // 🔧 完全静默调用AI（使用酒馆API）
 async sendToAIHidden(prompt, context) {
     try {
         console.log('🚀 [手机聊天] 开始静默调用...');
+        
+        // 🔥 优先使用酒馆内置API
+        if (typeof generateQuietPrompt === 'function') {
+            console.log('✅ 使用酒馆内置generateQuietPrompt');
+            const result = await generateQuietPrompt(prompt, false, false);
+            return result;
+        }
         
         // 复用 wechat-data.js 的方法
         if (this.app.wechatData && typeof this.app.wechatData.sendToAI === 'function') {
             return await this.app.wechatData.sendToAI(prompt);
         }
         
-        // 备用方案：直接调用酒馆API
-        const response = await fetch('/api/backends/chat-completions/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                messages: [{
-                    role: 'user',
-                    content: prompt
-                }],
-                max_tokens: 500,
-                temperature: 0.9,
-                stream: false,
-                quiet: true
-            })
+        // 备用方案：使用jQuery（自动处理CSRF）
+        return await new Promise((resolve, reject) => {
+            $.ajax({
+                url: '/api/backends/chat-completions/generate',
+                type: 'POST',
+                data: JSON.stringify({
+                    messages: [{
+                        role: 'user',
+                        content: prompt
+                    }],
+                    max_tokens: 500,
+                    temperature: 0.9,
+                    stream: false,
+                    quiet: true
+                }),
+                contentType: 'application/json',
+                success: function(data) {
+                    const aiResponse = data.choices?.[0]?.message?.content || data.response || '';
+                    console.log('✅ [手机聊天] 调用成功，回复长度:', aiResponse.length);
+                    resolve(aiResponse);
+                },
+                error: function(xhr, status, error) {
+                    console.error('❌ [手机聊天] 调用失败:', error);
+                    reject(new Error(`API错误: ${error}`));
+                }
+            });
         });
-        
-        if (!response.ok) {
-            throw new Error(`API错误: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        const aiResponse = data.choices?.[0]?.message?.content || data.response || '';
-        
-        console.log('✅ [手机聊天] 调用成功，回复长度:', aiResponse.length);
-        return aiResponse;
         
     } catch (error) {
         console.error('❌ [手机聊天] 静默调用失败:', error);
