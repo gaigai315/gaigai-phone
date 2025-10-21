@@ -1531,7 +1531,6 @@ if (this.currentView === 'contacts' && !this.currentChat) {
     }, 50);
 }
 }
-}
     
     renderContent() {
         if (this.currentChat) {
