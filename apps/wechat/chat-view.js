@@ -550,209 +550,299 @@ async sendToAI(message) {
     }
 }
 
-// 🔧 构建手机聊天提示词（完整版：角色卡+用户卡+记忆表格）
+// 🔧 构建手机聊天提示词（支持多角色）
 buildPhoneChatPrompt(context, contactName, userMessage) {
     const userName = context.name1 || '用户';
     
     console.log('📝 开始构建手机聊天提示词...');
+    console.log('💬 当前聊天对象:', contactName);
     
     // ========================================
-    // 1️⃣ AI角色信息
+    // 1️⃣ 判断聊天对象类型
     // ========================================
-    let charName = '对方';
-    let charPersonality = '';
-    let charScenario = '';
+    let chatMode = 'npc'; // 默认是NPC
+    let chatPartner = contactName;
+    let partnerInfo = '';
     
-    if (context.characters && context.characterId !== undefined) {
-        const char = context.characters[context.characterId];
-        if (char) {
-            charName = char.name || context.name2 || '对方';
-            charPersonality = char.personality || '';
-            charScenario = char.scenario || '';
-            
-            console.log('✅ AI角色:', {
-                name: charName,
-                personality: charPersonality ? `${charPersonality.length}字` : '无',
-                scenario: charScenario ? `${charScenario.length}字` : '无'
-            });
-        }
+    // 检查是否是主角色
+    const mainCharName = context.name2 || context.characters?.[context.characterId]?.name;
+    if (contactName === mainCharName) {
+        chatMode = 'main_char';
+        console.log('✅ 正在和主角色聊天:', mainCharName);
+    } else if (contactName.includes('群')) {
+        chatMode = 'group';
+        console.log('✅ 群聊模式:', contactName);
+    } else {
+        console.log('✅ NPC聊天:', contactName);
     }
     
     // ========================================
-    // 2️⃣ 用户角色卡
+    // 2️⃣ 获取角色信息
     // ========================================
+    
+    // 2.1 获取用户信息
     let userPersona = '';
     const personaTextarea = document.getElementById('persona_description');
     if (personaTextarea && personaTextarea.value) {
         userPersona = personaTextarea.value;
         console.log('✅ 用户角色卡:', userPersona.length, '字符');
+    }
+    
+    // 2.2 获取聊天对象信息
+    if (chatMode === 'main_char') {
+        // 主角色：从角色卡获取
+        if (context.characters && context.characterId !== undefined) {
+            const char = context.characters[context.characterId];
+            if (char) {
+                partnerInfo = `
+角色名：${char.name}
+${char.personality ? `性格：${char.personality.substring(0, 500)}` : ''}
+${char.scenario ? `背景：${char.scenario.substring(0, 300)}` : ''}
+`;
+            }
+        }
     } else {
-        console.log('⚠️ 未找到用户角色卡');
+        // NPC：从世界书、记忆表格、联系人信息查找
+        partnerInfo = this.findNPCInfo(contactName, context);
     }
     
     // ========================================
-// 3️⃣ 记忆表格（从 Gaigai.m.s[i].r）
-// ========================================
-let memoryData = '';
-
-if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
-    const memoryLines = [];
+    // 3️⃣ 获取记忆和世界信息
+    // ========================================
+    let memoryData = '';
+    let worldInfoData = '';
     
-    window.Gaigai.m.s.forEach((section, idx) => {
-        if (Array.isArray(section.r) && section.r.length > 0) {
-            memoryLines.push(`## ${section.n}`);
+    // 3.1 记忆表格
+    if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
+        const memoryLines = [];
+        window.Gaigai.m.s.forEach((section) => {
+            if (Array.isArray(section.r) && section.r.length > 0) {
+                // 查找与当前聊天对象相关的记忆
+                section.r.forEach((row) => {
+                    const rowText = Object.values(row).join(' ');
+                    if (rowText.includes(contactName)) {
+                        memoryLines.push(rowText);
+                    }
+                });
+            }
+        });
+        
+        if (memoryLines.length > 0) {
+            memoryData = '相关记忆：\n' + memoryLines.join('\n');
+            console.log('✅ 找到相关记忆:', memoryLines.length, '条');
+        }
+    }
+    
+    // 3.2 世界书（查找NPC信息）
+    if (context.characters && context.characterId !== undefined) {
+        const char = context.characters[context.characterId];
+        if (char?.data?.character_book?.entries) {
+            const entries = char.data.character_book.entries;
+            entries.forEach(entry => {
+                if (entry.content && entry.content.includes(contactName)) {
+                    worldInfoData += `\n${entry.content.substring(0, 500)}`;
+                }
+            });
             
-            section.r.forEach((row, rowIdx) => {
-                const values = Object.values(row).filter(v => v && typeof v === 'string');
-                if (values.length > 0) {
-                    memoryLines.push(values.join(' | '));
+            if (worldInfoData) {
+                console.log('✅ 从世界书找到相关信息');
+            }
+        }
+    }
+    
+    // ========================================
+    // 4️⃣ 获取聊天历史
+    // ========================================
+    const chatHistory = [];
+    
+    // 4.1 酒馆聊天记录（可能包含与NPC的互动）
+    if (context.chat && Array.isArray(context.chat)) {
+        context.chat.slice(-10).forEach(msg => {
+            if (msg.mes && msg.mes.trim()) {
+                const content = msg.mes
+                    .replace(/<[^>]*>/g, '')
+                    .replace(/\*.*?\*/g, '')
+                    .substring(0, 300);
+                
+                // 检查是否提到当前聊天对象
+                if (content.includes(contactName) || chatMode === 'main_char') {
+                    chatHistory.push({
+                        speaker: msg.is_user ? userName : (context.name2 || '角色'),
+                        message: content,
+                        source: 'tavern'
+                    });
+                }
+            }
+        });
+    }
+    
+    // 4.2 当前微信聊天记录
+    const wechatMessages = this.app.wechatData.getMessages(this.app.currentChat.id);
+    wechatMessages.slice(-15).forEach(msg => {
+        chatHistory.push({
+            speaker: msg.from === 'me' ? userName : contactName,
+            message: msg.content || '',
+            source: 'wechat'
+        });
+    });
+    
+    // ========================================
+    // 5️⃣ 构建提示词
+    // ========================================
+    const sections = [];
+    
+    if (chatMode === 'main_char') {
+        // 与主角色聊天
+        sections.push(
+            '# 场景：微信聊天',
+            `你现在扮演${contactName}，正在微信上和${userName}聊天。`,
+            '',
+            '## 角色信息',
+            partnerInfo,
+            ''
+        );
+    } else if (chatMode === 'group') {
+        // 群聊
+        sections.push(
+            '# 场景：微信群聊',
+            `这是一个名为"${contactName}"的微信群。`,
+            `你需要扮演群里的一个或多个成员回复${userName}的消息。`,
+            '可以模拟多人对话，用"【名字】内容"格式区分不同人。',
+            ''
+        );
+    } else {
+        // NPC聊天
+        sections.push(
+            '# 场景：微信聊天',
+            `你现在扮演${contactName}，正在微信上和${userName}聊天。`,
+            '',
+            '## 关于' + contactName,
+            partnerInfo || `${contactName}是故事中的一个角色。根据上下文推测其身份和性格。`,
+            ''
+        );
+    }
+    
+    // 添加用户信息
+    if (userPersona) {
+        sections.push(
+            `## 关于${userName}`,
+            userPersona.substring(0, 300),
+            ''
+        );
+    }
+    
+    // 添加相关记忆
+    if (memoryData) {
+        sections.push(memoryData, '');
+    }
+    
+    // 添加世界信息
+    if (worldInfoData) {
+        sections.push('## 背景信息', worldInfoData, '');
+    }
+    
+    // 添加聊天历史
+    if (chatHistory.length > 0) {
+        sections.push(
+            '## 相关对话历史',
+            chatHistory.map(h => {
+                const tag = h.source === 'tavern' ? '[剧情]' : '[微信]';
+                return `${tag} ${h.speaker}: ${h.message}`;
+            }).join('\n'),
+            ''
+        );
+    }
+    
+    // 添加当前消息
+    sections.push(
+        '## 用户刚发来的微信消息',
+        `${userName}: ${userMessage}`,
+        '',
+        '---',
+        ''
+    );
+    
+    // 回复要求
+    if (chatMode === 'group') {
+        sections.push(
+            '## 回复要求',
+            '1. 可以模拟1-3个群成员回复',
+            '2. 用【名字】开头标识说话人',
+            '3. 符合群聊的氛围（可能有人开玩笑、有人认真回复）',
+            '4. 每个人用|||分隔',
+            '',
+            '示例格式：',
+            '【张三】这事我知道|||【李四】真的假的？|||【王五】[图片]',
+            ''
+        );
+    } else {
+        sections.push(
+            '## 回复要求',
+            `1. 你是${contactName}本人，用第一人称说话`,
+            `2. 符合${contactName}的身份、性格和说话方式`,
+            '3. 基于聊天历史保持话题连贯',
+            '4. 只返回微信消息内容，不要旁白描写',
+            '5. 多条消息用|||分隔',
+            '6. 可以适当使用表情，但要符合角色性格',
+            ''
+        );
+    }
+    
+    sections.push(`现在请以${contactName}的身份回复：`);
+    
+    const finalPrompt = sections.join('\n');
+    console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
+    
+    // 保存供调试
+    window.lastPhonePrompt = finalPrompt;
+    
+    return finalPrompt;
+}
+
+// 🔍 辅助方法：查找NPC信息
+findNPCInfo(npcName, context) {
+    let info = [];
+    
+    // 1. 从联系人列表查找
+    const contacts = this.app.wechatData.getContacts();
+    const contact = contacts.find(c => c.name === npcName);
+    if (contact) {
+        info.push(`关系：${contact.relation || '联系人'}`);
+        if (contact.remark) {
+            info.push(`备注：${contact.remark}`);
+        }
+    }
+    
+    // 2. 从世界书查找
+    if (context.characters && context.characterId !== undefined) {
+        const char = context.characters[context.characterId];
+        if (char?.data?.character_book?.entries) {
+            char.data.character_book.entries.forEach(entry => {
+                if (entry.comment === npcName || (entry.content && entry.content.includes(npcName))) {
+                    const content = entry.content.substring(0, 300);
+                    if (!info.some(i => i.includes(content))) {
+                        info.push(content);
+                    }
                 }
             });
         }
-    });
-    
-    if (memoryLines.length > 0) {
-        memoryData = memoryLines.join('\n');
-        console.log('✅ 记忆表格:', memoryLines.length, '行');
-    } else {
-        console.log('⚠️ 记忆表格为空');
     }
-} else {
-    console.log('⚠️ 未找到记忆表格');
-}
-
-// ========================================
-// 🔥 新增：4️⃣ 世界书（World Info）
-// ========================================
-let worldInfoData = '';
-
-if (context.worldInfoData && Array.isArray(context.worldInfoData)) {
-    const worldInfoLines = [];
     
-    context.worldInfoData.forEach(entry => {
-        if (entry.content && entry.content.trim()) {
-            const title = entry.comment || entry.key?.[0] || '信息';
-            worldInfoLines.push(`### ${title}`);
-            worldInfoLines.push(entry.content.trim());
-        }
-    });
-    
-    if (worldInfoLines.length > 0) {
-        worldInfoData = '\n**世界书（NPC和设定）：**\n' + worldInfoLines.join('\n') + '\n';
-        console.log('✅ 世界书:', worldInfoLines.length / 2, '条');
-    }
-} else {
-    console.log('⚠️ 未找到世界书');
-}
-
-// ========================================
-// 5️⃣ 聊天历史（手机+酒馆）
-// ========================================
-const chatHistory = [];
-
-// 酒馆聊天记录
-if (context.chat && Array.isArray(context.chat)) {
-    context.chat.forEach(msg => {
-        if (msg.mes && msg.mes.trim()) {
-            const speaker = msg.is_user ? (context.name1 || '用户') : (context.name2 || '角色');
-            const content = msg.mes
-                .replace(/<[^>]*>/g, '')
-                .replace(/\*.*?\*/g, '')
-                .substring(0, 500);
-            
-            if (content.trim()) {
-                chatHistory.push({
-                    speaker: speaker,
-                    message: content,
-                    source: 'tavern'
+    // 3. 从记忆表格查找
+    if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
+        window.Gaigai.m.s.forEach(section => {
+            if (section.n === '人物档案' || section.n === '人物关系') {
+                section.r?.forEach(row => {
+                    const rowText = Object.values(row).join(' ');
+                    if (rowText.includes(npcName)) {
+                        info.push(rowText.substring(0, 200));
+                    }
                 });
             }
-        }
-    });
-}
-
-// 🔥 当前微信聊天记录
-const wechatMessages = this.app.wechatData.getMessages(this.app.currentChat.id);
-wechatMessages.forEach(msg => {
-    const speaker = msg.from === 'me' 
-        ? (context.name1 || '用户') 
-        : (context.name2 || this.app.currentChat.name);
+        });
+    }
     
-    chatHistory.push({
-        speaker: speaker,
-        message: msg.content || '',
-        source: 'wechat'
-    });
-});
-
-    // ========================================
-// 6️⃣ 构建最终提示词
-// ========================================
-const sections = [
-    '# 场景：微信聊天',
-    `你正在通过微信和${userName}聊天（不是面对面对话，是手机文字聊天）。`,
-    '',
-    '## 你的角色信息',
-    `**名字：** ${charName}`,
-    `**微信备注名：** ${contactName}`,
-    ''
-];
-
-if (charPersonality) {
-    sections.push(`**性格和背景：**`, charPersonality, '');
-}
-
-if (charScenario) {
-    sections.push(`**当前场景：**`, charScenario, '');
-}
-
-if (userPersona) {
-    sections.push(`## ${userName}的角色信息`, userPersona, '');
-}
-
-// 🔥 添加世界书
-if (worldInfoData) {
-    sections.push(worldInfoData);
-}
-
-// 添加记忆表格
-if (memoryData) {
-    sections.push('## 记忆表格（重要剧情和人物关系）', memoryData, '');
-}
-
-// 🔥 修改聊天历史部分，区分手机和酒馆
-const recentHistory = chatHistory.slice(-40);
-const historyText = recentHistory.map(h => {
-    const source = h.source === 'tavern' ? '(面对面)' : '(微信)';
-    return `${h.speaker}${source}: ${h.message}`;
-}).join('\n');
-
-console.log('✅ 聊天历史:', recentHistory.length, '条');
-
-sections.push(
-    '## 完整聊天历史（包含面对面对话和微信记录）',
-    historyText,
-    '',
-    '## 用户刚通过微信发来的消息',
-    `${userName}(微信): ${userMessage}`,
-    '',
-    '---',
-    '',
-    '## 回复要求',
-    '1. 只返回你的微信回复文字，不要旁白、动作、场景描述',
-    '2. 语气符合微信聊天风格（简洁、口语化）',
-    '3. 可以使用emoji 😊',
-    '4. 多条消息用|||分隔，例如：好的|||我马上过来|||😊',
-    '5. 考虑所有对话历史（面对面+微信）、记忆表格和世界书',
-    '6. 保持角色性格一致',
-    '',
-    `现在回复${userName}的微信消息：`
-);
-
-const finalPrompt = sections.join('\n');
-console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
-
-return finalPrompt;
+    return info.length > 0 ? info.join('\n') : '';
 }
 
     // ✅ 静默调用AI（使用 context.generateRaw）
