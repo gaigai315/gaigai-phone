@@ -2148,37 +2148,36 @@ showLoadContactsConfirm() {
         this.render();
     });
     
-    document.getElementById('confirm-load')?.addEventListener('click', async () => {
+   document.getElementById('confirm-load')?.addEventListener('click', async () => {
     this.phoneShell.showNotification('AI分析中', '正在生成联系人...', '⏳');
     
     try {
         console.log('📡 开始智能加载联系人...');
         
-        // ✅ 直接调用，不需要预先获取Token
         const result = await this.wechatData.loadContactsFromCharacter();
-
-if (result.success) {
-    let message = result.message;
-    
-    // 🔥 如果生成了时间，显示在通知中
-    if (result.time) {
-        message += `\n⏰ 剧情时间: ${result.time.date} ${result.time.time}`;
         
-        // 🔥 刷新主屏幕时间显示
-        if (window.VirtualPhone?.home) {
-            setTimeout(() => window.VirtualPhone.home.render(), 500);
+        if (result.success) {
+            let message = result.message;
+            
+            // 🔥 如果生成了时间，显示在通知中
+            if (result.time) {
+                message += `\n⏰ 剧情时间: ${result.time.date} ${result.time.time}`;
+                
+                // 🔥 刷新主屏幕时间显示
+                if (window.VirtualPhone?.home) {
+                    setTimeout(() => window.VirtualPhone.home.render(), 500);
+                }
+            }
+            
+            this.phoneShell.showNotification('✅ 生成成功', message, '✅');
+            setTimeout(() => {
+                this.currentView = 'contacts';
+                this.render();
+            }, 2000);
+        } else {
+            this.phoneShell.showNotification('❌ 生成失败', result.message, '❌');
+            setTimeout(() => this.render(), 2000);
         }
-    }
-    
-    this.phoneShell.showNotification('✅ 生成成功', message, '✅');
-    setTimeout(() => {
-        this.currentView = 'contacts';
-        this.render();
-    }, 2000);
-} else {
-    this.phoneShell.showNotification('❌ 生成失败', result.message, '❌');
-    setTimeout(() => this.render(), 2000);
-}
         
     } catch (error) {
         console.error('❌ 加载联系人失败:', error);
