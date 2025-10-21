@@ -35,6 +35,7 @@ const PHONE_TAG_REGEX = /<phone>([\s\S]*?)<\/phone>/gi;
 // 兼容旧版标签（逐步废弃）
 const LEGACY_PHONE_TAG = /<Phone>([\s\S]*?)<\/Phone>/gi;
 const LEGACY_WECHAT_TAG = /<wechat\s+chatId="([^"]+)"\s+from="([^"]+)">([\s\S]*?)<\/wechat>/gi;
+const WECHAT_TAG_REGEX = /<wechat\s+chatId="([^"]+)"\s+from="([^"]+)">([\s\S]*?)<\/wechat>/gi;
     
     // 创建顶部面板按钮
     function createTopPanel() {
@@ -149,11 +150,16 @@ function parsePhoneCommands(text) {
     while ((match = LEGACY_PHONE_TAG.exec(text)) !== null) {
         try {
             const jsonStr = match[1].trim();
+            // 🔥 新增：跳过空内容
+            if (!jsonStr) {
+                console.log('📱 空的Phone标签，跳过');
+                continue;
+            }
             const command = JSON.parse(jsonStr);
             commands.push(command);
             console.log('📱 解析到旧版Phone命令:', command);
         } catch (e) {
-            console.error('❌ 旧版Phone标签解析失败:', e);
+            console.warn('⚠️ 旧版Phone标签解析失败（已忽略）:', e.message);  // ← 改为warn，不显示完整错误
         }
     }
     return commands;
