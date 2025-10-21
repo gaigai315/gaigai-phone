@@ -434,32 +434,6 @@ isSystemField(str) {
 }
     
 // 📤 调用AI生成联系人（完全静默，不影响聊天窗口）
-async sendToAI(prompt) {
-    try {
-        console.log('🚀 [手机AI调用] 开始静默调用...');
-        
-        const result = await this.directAPICall(prompt);
-        
-        if (!result || result.length < 10) {
-            throw new Error('AI返回内容过短或为空');
-        }
-        
-        return result;
-        
-    } catch (error) {
-        console.error('❌ [手机AI调用] 失败:', error);
-        
-        // 返回默认联系人（容错）
-        return JSON.stringify({
-            contacts: [
-                { name: "朋友A", avatar: "👤", relation: "朋友" },
-                { name: "朋友B", avatar: "👤", relation: "朋友" }
-            ],
-            groups: []
-        });
-    }
-}
-
 async directAPICall(prompt) {
     console.log('📡 [静默AI] 调用Chat Completion API...');
     
