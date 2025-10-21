@@ -433,128 +433,32 @@ isSystemField(str) {
     return systemKeywords.some(keyword => str.includes(keyword));
 }
     
-// 📤 调用AI生成联系人（完全静默，不影响聊天窗口）
-async directAPICall(prompt) {
-    console.log('📡 [静默AI] 调用Chat Completion API...');
-    
+// ✅ 正确的AI调用方法（使用 context.generateRaw）
+async sendToAI(prompt) {
     try {
-        // 🔥 使用fetch + 动态获取Token（模拟酒馆的真实请求）
+        console.log('📡 [AI调用] 开始静默调用...');
         
-        // 动态获取CSRF Token（在请求时获取，而不是提前）
-        let csrfToken = '';
+        const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
+            ? SillyTavern.getContext() 
+            : null;
         
-        // 尝试从酒馆的请求头函数获取
-        if (typeof getRequestHeaders === 'function') {
-            try {
-                const headers = getRequestHeaders();
-                csrfToken = headers['X-CSRF-Token'] || headers['x-csrf-token'] || '';
-                console.log('🔑 从getRequestHeaders获取Token:', csrfToken ? '成功' : '失败');
-            } catch (e) {
-                console.warn('getRequestHeaders调用失败:', e);
-            }
+        if (!context || typeof context.generateRaw !== 'function') {
+            throw new Error('❌ 无法获取 SillyTavern.getContext 或 generateRaw 方法');
         }
         
-        // 如果还没获取到，尝试其他方式
-        if (!csrfToken) {
-            // 从meta标签
-            const metaToken = document.querySelector('meta[name="csrf-token"]');
-            if (metaToken) {
-                csrfToken = metaToken.content || metaToken.getAttribute('content');
-                console.log('🔑 从meta标签获取Token:', csrfToken ? '成功' : '失败');
-            }
-        }
-        
-        if (!csrfToken && typeof $ !== 'undefined') {
-            // 从jQuery配置
-            csrfToken = $.ajaxSettings?.headers?.['X-CSRF-Token'] || '';
-            if (csrfToken) {
-                console.log('🔑 从jQuery配置获取Token: 成功');
-            }
-        }
-        
-        console.log('🔑 最终Token状态:', csrfToken ? `已获取(${csrfToken.substring(0, 20)}...)` : '❌ 未获取');
-        
-        // 构建请求（完全模拟酒馆的真实请求）
-        const requestBody = {
-            messages: [
-                {
-                    role: 'system',
-                    content: '你是一个数据分析助手。严格按要求返回JSON格式数据，不要进行角色扮演。'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ]
-        };
-        
-        console.log('📤 发送请求，Body长度:', JSON.stringify(requestBody).length);
-        
-        const response = await fetch('/api/backends/chat-completions/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
-            },
-            body: JSON.stringify(requestBody)
+        // ✅ 使用正确的对象参数格式
+        const result = await context.generateRaw({
+            prompt: prompt,
+            quietToLoud: false,  // 🔥 关键：不显示在聊天窗口
+            instructOverride: false,
+            systemPrompt: '你是一个数据分析助手。严格按要求返回JSON格式数据，不要进行角色扮演。'
         });
         
-        console.log('📥 响应状态:', response.status);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ API错误:', response.status, errorText.substring(0, 300));
-            throw new Error(`API请求失败: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('📥 原始响应:', data);
-        
-        // 🔥 解析响应（兼容多种格式）
-        let result = '';
-        
-        if (data.choices && Array.isArray(data.choices) && data.choices.length > 0) {
-            result = data.choices[0].message?.content || 
-                    data.choices[0].text || 
-                    '';
-        } else if (data.response) {
-            result = data.response;
-        } else if (data.message) {
-            result = typeof data.message === 'string' ? data.message : data.message.content;
-        } else if (data.text) {
-            result = data.text;
-        } else if (data.content) {
-            result = data.content;
-        }
-        
-        // 如果还是空的，尝试从整个响应中提取
-        if (!result && typeof data === 'object') {
-            console.warn('⚠️ 响应格式未知，尝试提取:', JSON.stringify(data).substring(0, 200));
-            
-            // 递归查找content字段
-            const findContent = (obj) => {
-                if (typeof obj !== 'object' || obj === null) return null;
-                if (obj.content && typeof obj.content === 'string') return obj.content;
-                for (const key in obj) {
-                    const found = findContent(obj[key]);
-                    if (found) return found;
-                }
-                return null;
-            };
-            
-            result = findContent(data) || '';
-        }
-        
-        if (!result) {
-            console.error('❌ 无法从响应中提取内容，完整响应:', JSON.stringify(data));
-            throw new Error('AI返回为空或格式不正确');
-        }
-        
-        console.log('✅ [静默AI] 成功，回复长度:', result.length);
+        console.log('✅ [AI调用] 成功，回复长度:', result?.length || 0);
         return result;
         
     } catch (error) {
-        console.error('❌ [静默AI] 失败:', error);
+        console.error('❌ [AI调用] 失败:', error);
         throw error;
     }
 }
