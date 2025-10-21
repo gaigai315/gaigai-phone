@@ -744,18 +744,19 @@ if (context && context.eventSource) {
                                             content = `[${msg.type}]`;
                                     }
                                     
-                                    phoneActivities.push({
+                                        phoneActivities.push({
                                         app: '微信',
                                         type: chat.type === 'group' ? '群聊' : '私聊',
                                         chatName: chat.name,
                                         speaker: speaker,
                                         content: content,
                                         time: msg.time,
-                                        timestamp: Date.now()
-                                    });
-                                });
-                            }
-                        });
+                                        timestamp: Date.now(),
+                                        tavernMessageIndex: msg.tavernMessageIndex  // 🔥 保留索引
+                                     });
+                                  });
+                                }
+                            });
                         
                         console.log('✅ 收集了微信消息:', phoneActivities.length, '条');
                     }
@@ -790,96 +791,138 @@ if (context && context.eventSource) {
                     // 未来可以在这里添加其他APP的数据收集
                     
                     // ========================================
-                    // 4️⃣ 构建手机活动摘要并注入
-                    // ========================================
-                    if (phoneActivities.length > 0) {
-                        console.log('📊 总共收集到', phoneActivities.length, '条手机活动');
-                        
-                        // 限制总数，避免提示词太长
-                        const maxActivities = 30;
-                        const activitiesToInject = phoneActivities.slice(-maxActivities);
-                        
-                        // 构建注入内容
-                        let phoneContextContent = `
+// 4️⃣ 按时间线智能注入手机消息
+// ========================================
+if (phoneActivities.length > 0) {
+    console.log('📊 总共收集到', phoneActivities.length, '条手机活动');
+    
+    const messages = eventData.chat;
+    
+    if (!messages || !Array.isArray(messages)) {
+        console.error('❌ eventData.chat 不是数组');
+        return;
+    }
+    
+    // 🔥 按消息索引分组手机活动
+    const activitiesByIndex = {};
+    
+    phoneActivities.forEach(activity => {
+        // 使用记录的索引，如果没有则默认为最新
+        const index = activity.tavernMessageIndex || 999999;
+        
+        if (!activitiesByIndex[index]) {
+            activitiesByIndex[index] = [];
+        }
+        activitiesByIndex[index].push(activity);
+    });
+    
+    console.log('📊 手机消息分组:', Object.keys(activitiesByIndex).length, '个时间点');
+    
+    // 🔥 找到聊天记录的起始位置（第一条 user 或 assistant 消息）
+    let chatStartIndex = -1;
+    for (let i = 0; i < messages.length; i++) {
+        if (messages[i].role === 'user' || messages[i].role === 'assistant') {
+            chatStartIndex = i;
+            break;
+        }
+    }
+    
+    if (chatStartIndex === -1) {
+        console.warn('⚠️ 找不到聊天记录起始位置，使用默认插入');
+        chatStartIndex = messages.length;
+    }
+    
+    console.log('📍 聊天记录起始位置:', chatStartIndex);
+    
+    // 🔥 按时间顺序注入
+    const sortedIndices = Object.keys(activitiesByIndex)
+        .map(k => parseInt(k))
+        .sort((a, b) => a - b);
+    
+    let totalInjected = 0;
+    
+    sortedIndices.forEach(tavernIndex => {
+        const activities = activitiesByIndex[tavernIndex];
+        
+        // 构建这个时间点的手机消息内容
+        let phoneContextContent = `
 ═══════════════════════════════════════
-📱 手机活动记录（最近${activitiesToInject.length}条）
+📱 手机活动（在第${tavernIndex}句对话前后发生）
 ═══════════════════════════════════════
-
-【重要说明】
-以下是用户通过手机进行的各种活动（微信聊天、朋友圈等）。
-这些活动与面对面对话是并行发生的，角色应该知道这些内容。
-请在回复时考虑这些手机互动的信息。
 
 `;
-
-                        // 按APP分组显示
-                        const groupedByApp = {};
-                        activitiesToInject.forEach(activity => {
-                            if (!groupedByApp[activity.app]) {
-                                groupedByApp[activity.app] = [];
-                            }
-                            groupedByApp[activity.app].push(activity);
-                        });
-                        
-                        Object.keys(groupedByApp).forEach(appName => {
-                            phoneContextContent += `\n## ${appName}\n\n`;
-                            
-                            groupedByApp[appName].forEach(activity => {
-                                let prefix = '';
-                                
-                                if (activity.type === '群聊') {
-                                    prefix = `[群：${activity.chatName}]`;
-                                } else if (activity.type === '私聊') {
-                                    prefix = `[私聊]`;
-                                } else if (activity.type === '动态') {
-                                    prefix = `[朋友圈]`;
-                                } else {
-                                    prefix = `[${activity.type}]`;
-                                }
-                                
-                                phoneContextContent += `${prefix} ${activity.time} ${activity.speaker}: ${activity.content}\n`;
-                            });
-                        });
-                        
-                        phoneContextContent += `\n═══════════════════════════════════════\n`;
-                        
-                        // 找到合适的位置注入（在system消息的末尾）
-                       // 🔥 关键：messages 数组在 eventData.chat，不是 eventData.messages
-                       const messages = eventData.chat;
-
-                       if (!messages || !Array.isArray(messages)) {
-                           console.error('❌ eventData.chat 不是数组:', messages);
-                           return;
-                         }
-
-                        const systemMessages = messages.filter(m => m && m.role === 'system');
-                        if (systemMessages.length > 0) {
-                            // 找到最后一个system消息的索引
-                            let lastSystemIndex = -1;
-                            for (let i = messages.length - 1; i >= 0; i--) {
-                                if (messages[i] && messages[i].role === 'system') {
-                                    lastSystemIndex = i;
-                                    break;
-                                }
-                            }
-                            
-                            if (lastSystemIndex !== -1) {
-                                // 在最后一个system消息之后插入
-                                messages.splice(lastSystemIndex + 1, 0, {
-                                    role: 'system',
-                                    content: phoneContextContent
-                                });
-                                
-                                console.log(`✅ 已注入 ${activitiesToInject.length} 条手机活动到位置${lastSystemIndex + 1}`);
-                            } else {
-                                console.warn('⚠️ 找不到system消息，手机活动未注入');
-                            }
-                        } else {
-                            console.warn('⚠️ 没有system消息，手机活动未注入');
-                        }
-                    } else {
-                        console.log('📱 暂无手机活动记录');
-                    }
+        
+        const groupedByApp = {};
+        activities.forEach(activity => {
+            if (!groupedByApp[activity.app]) {
+                groupedByApp[activity.app] = [];
+            }
+            groupedByApp[activity.app].push(activity);
+        });
+        
+        Object.keys(groupedByApp).forEach(appName => {
+            phoneContextContent += `## ${appName}\n\n`;
+            
+            groupedByApp[appName].forEach(activity => {
+                let prefix = '';
+                if (activity.type === '群聊') {
+                    prefix = `[群：${activity.chatName}]`;
+                } else if (activity.type === '私聊') {
+                    prefix = `[私聊]`;
+                } else if (activity.type === '动态') {
+                    prefix = `[朋友圈]`;
+                } else {
+                    prefix = `[${activity.type}]`;
+                }
+                
+                phoneContextContent += `${prefix} ${activity.time} ${activity.speaker}: ${activity.content}\n`;
+            });
+        });
+        
+        phoneContextContent += `\n═══════════════════════════════════════\n`;
+        
+        // 🔥 计算插入位置
+        // tavernIndex 是酒馆消息的索引（从0开始）
+        // 需要映射到 eventData.chat 的位置
+        
+        // 在聊天记录中找到对应的消息位置
+        let insertPosition = chatStartIndex;
+        let messageCount = 0;
+        
+        for (let i = chatStartIndex; i < messages.length; i++) {
+            if (messages[i].role === 'user' || messages[i].role === 'assistant') {
+                messageCount++;
+                
+                // 如果这条消息的索引大于等于手机消息发送时的索引
+                // 就在这条消息之前插入手机消息
+                if (messageCount >= tavernIndex) {
+                    insertPosition = i;
+                    break;
+                }
+            }
+        }
+        
+        // 如果手机消息是在最新的对话之后，插在最后
+        if (tavernIndex >= 999999 || messageCount < tavernIndex) {
+            insertPosition = messages.length;
+        }
+        
+        // 插入手机消息
+        messages.splice(insertPosition, 0, {
+            role: 'system',
+            content: phoneContextContent
+        });
+        
+        totalInjected++;
+        
+        console.log(`✅ 已注入第${tavernIndex}句的手机消息到位置${insertPosition}（${activities.length}条）`);
+    });
+    
+    console.log(`🎉 总共注入了 ${totalInjected} 个时间点的手机消息`);
+    
+} else {
+    console.log('📱 暂无手机活动记录');
+}
                     
                 } catch (e) {
                     console.error('❌ 手机活动注入失败:', e);
