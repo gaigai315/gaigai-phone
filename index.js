@@ -138,6 +138,26 @@ const LEGACY_WECHAT_TAG = /<wechat\s+chatId="([^"]+)"\s+from="([^"]+)">([\s\S]*?
             badge.style.display = 'none';
         }
     }
+
+        // 🔧 解析旧版 <Phone> 标签中的JSON命令
+function parsePhoneCommands(text) {
+    if (!text || !settings.enabled) return [];
+    const commands = [];
+    let match;
+    LEGACY_PHONE_TAG.lastIndex = 0;
+    
+    while ((match = LEGACY_PHONE_TAG.exec(text)) !== null) {
+        try {
+            const jsonStr = match[1].trim();
+            const command = JSON.parse(jsonStr);
+            commands.push(command);
+            console.log('📱 解析到旧版Phone命令:', command);
+        } catch (e) {
+            console.error('❌ 旧版Phone标签解析失败:', e);
+        }
+    }
+    return commands;
+}
     
         // 🔥 新增：解析微信消息标签
     function parseWechatMessages(text) {
@@ -484,19 +504,25 @@ function handleContactsUpdate(data) {
             homeScreen.render();
         }
     }
-    
-    function hidePhoneTags() {
-        $('.mes_text').each(function() {
-            const $this = $(this);
-            let html = $this.html();
-            if (!html) return;
-            
-            html = html.replace(PHONE_TAG_REGEX, '<span style="display:none!important;">$&</span>');
-            html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '<span style="display:none!important;"></span>');
-            
-            $this.html(html);
-        });
-    }
+    function hidePhoneTags(text) {
+    $('.mes_text').each(function() {
+        const $this = $(this);
+        let html = $this.html();
+        if (!html) return;
+        
+        // 隐藏新版标签
+        html = html.replace(PHONE_TAG_REGEX, '<span style="color:#07c160;font-size:11px;">📱 已同步到手机</span>');
+        
+        // 隐藏旧版标签
+        html = html.replace(LEGACY_PHONE_TAG, '<span style="display:none!important;">$&</span>');
+        html = html.replace(LEGACY_WECHAT_TAG, '<span style="display:none!important;">$&</span>');
+        
+        // 隐藏手机模式标记
+        html = html.replace(/KATEX_INLINE_OPENKATEX_INLINE_OPENPHONE_CHAT_MODEKATEX_INLINE_CLOSEKATEX_INLINE_CLOSE/g, '');
+        
+        $this.html(html);
+    });
+}
     
     function getContext() {
         return (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) 
