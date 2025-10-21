@@ -2149,15 +2149,80 @@ showLoadContactsConfirm() {
     });
     
     document.getElementById('confirm-load')?.addEventListener('click', async () => {
-    this.phoneShell.showNotification('AI分析中', '请稍候，正在生成联系人...', '⏳');
+    // 🔥 第1步：强制用户先发送一条测试消息，获取Token
+    this.phoneShell.showNotification('正在准备', '正在激活API连接...', '⏳');
     
     try {
+        // 🔥 发送一条测试消息到酒馆（静默，不显示在聊天窗口）
+        console.log('📡 第1步：发送测试消息以获取CSRF Token...');
+        
+        const context = SillyTavern.getContext();
+        
+        // 构造最小化的测试请求（模拟酒馆的真实请求）
+        const testRequest = {
+            messages: [
+                {
+                    role: 'system',
+                    content: 'Test'
+                },
+                {
+                    role: 'user',
+                    content: '测试连接'
+                }
+            ]
+        };
+        
+        // 使用酒馆的API endpoint发送测试请求
+        let capturedToken = null;
+        
+        // 临时拦截fetch，获取Token
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const [url, options] = args;
+            if (url.includes('chat-completions')) {
+                capturedToken = options?.headers?.['X-CSRF-Token'];
+                console.log('🔑 捕获到Token:', capturedToken ? '成功' : '失败');
+            }
+            return originalFetch.apply(this, args);
+        };
+        
+        // 🔥 关键：使用酒馆内部方法触发真实请求
+        const testResponse = await fetch('/api/backends/chat-completions/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // 🔥 留空，让浏览器自动添加（这会触发酒馆的拦截器）
+            },
+            body: JSON.stringify(testRequest)
+        });
+        
+        // 恢复原始fetch
+        window.fetch = originalFetch;
+        
+        console.log('📡 测试请求状态:', testResponse.status);
+        
+        // 如果测试请求也失败，说明有更深层的问题
+        if (!testResponse.ok && !capturedToken) {
+            throw new Error('无法获取API访问权限。请在酒馆主聊天窗口手动发送一条消息后再试。');
+        }
+        
+        // 🔥 如果捕获到Token，保存到全局
+        if (capturedToken) {
+            window._cachedCSRFToken = capturedToken;
+            console.log('✅ Token已保存:', capturedToken.substring(0, 20) + '...');
+        }
+        
+        // 延迟500ms确保Token生效
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 🔥 第2步：开始真正的联系人加载
+        console.log('📡 第2步：开始加载联系人...');
+        this.phoneShell.showNotification('AI分析中', '正在生成联系人...', '⏳');
+        
         const result = await this.wechatData.loadContactsFromCharacter();
         
         if (result.success) {
             this.phoneShell.showNotification('✅ 生成成功', result.message, '✅');
-            
-            // 简化：直接切换到通讯录
             setTimeout(() => {
                 this.currentView = 'contacts';
                 this.render();
@@ -2166,10 +2231,15 @@ showLoadContactsConfirm() {
             this.phoneShell.showNotification('❌ 生成失败', result.message, '❌');
             setTimeout(() => this.render(), 2000);
         }
+        
     } catch (error) {
-        console.error('加载联系人失败:', error);
-        this.phoneShell.showNotification('❌ 错误', error.message || '未知错误', '❌');
-        setTimeout(() => this.render(), 2000);
+        console.error('❌ 加载联系人失败:', error);
+        this.phoneShell.showNotification(
+            '❌ 错误', 
+            error.message || '请先在酒馆聊天窗口发送一条消息以激活API', 
+            '❌'
+        );
+        setTimeout(() => this.render(), 3000);
     }
 });
 }
