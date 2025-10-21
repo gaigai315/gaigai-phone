@@ -897,47 +897,42 @@ if (phoneActivities.length > 0) {
     phoneContextContent += `\n═══════════════════════════════════════\n`;
     
     // 🔥 改进的插入位置计算
-    let insertPosition;
+let insertPosition;
+
+// 特殊情况1：索引为0，说明手机消息在酒馆对话之前
+if (tavernIndex === 0) {
+    insertPosition = chatStartIndex;
+    console.log(`📍 [位置计算] 索引=0，插入到聊天开始: ${insertPosition}`);
+}
+// 特殊情况2：索引无效（999999 或超大值），放在最后
+else if (tavernIndex >= 999999) {
+    insertPosition = messages.length;
+    console.log(`📍 [位置计算] 索引无效(${tavernIndex})，插入到最末尾: ${insertPosition}`);
+}
+// 正常情况：根据索引查找位置
+else {
+    insertPosition = chatStartIndex;
+    let messageCount = 0;
     
-    // 特殊情况1：索引为0，说明手机消息在酒馆对话之前
-    if (tavernIndex === 0) {
-        insertPosition = chatStartIndex;
-        console.log(`📍 索引=0，插入到聊天开始位置: ${insertPosition}`);
-    }
-    // 特殊情况2：索引无效（999999），也放在最前面
-    else if (tavernIndex >= 999999) {
-        insertPosition = chatStartIndex;
-        console.log(`📍 索引无效，插入到聊天开始位置: ${insertPosition}`);
-    }
-    // 正常情况：根据索引查找位置
-    else {
-        insertPosition = chatStartIndex;
-        let messageCount = 0;
-        
-        for (let i = chatStartIndex; i < messages.length; i++) {
-            if (messages[i].role === 'user' || messages[i].role === 'assistant') {
-                messageCount++;
-                
-                // 🔥 在第N句对话之后插入
-                if (messageCount === tavernIndex) {
-                    insertPosition = i + 1;  // 在这条消息之后
-                    break;
-                }
-                // 如果已经超过了目标索引，在当前位置插入
-                else if (messageCount > tavernIndex) {
-                    insertPosition = i;
-                    break;
-                }
+    for (let i = chatStartIndex; i < messages.length; i++) {
+        if (messages[i].role === 'user' || messages[i].role === 'assistant') {
+            messageCount++;
+            
+            // 🔥 关键：在第N句对话之后插入
+            if (messageCount === tavernIndex) {
+                insertPosition = i + 1;  // 在这条消息之后
+                console.log(`📍 [位置计算] 找到匹配：第${tavernIndex}句之后 -> 位置${insertPosition}`);
+                break;
             }
         }
-        
-        // 如果遍历完了还没找到，插在最后
-        if (messageCount < tavernIndex) {
-            insertPosition = messages.length;
-        }
-        
-        console.log(`📍 查找位置: 目标索引=${tavernIndex}, 当前消息数=${messageCount}, 插入位置=${insertPosition}`);
     }
+    
+    // 🔥 修复：如果遍历完了还没找到（说明手机消息在最新的对话之后）
+    if (messageCount < tavernIndex) {
+        insertPosition = messages.length;
+        console.log(`📍 [位置计算] 超出范围：目标=${tavernIndex}, 实际=${messageCount} -> 插入到末尾${insertPosition}`);
+    }
+}
     
     // 插入手机消息
     messages.splice(insertPosition, 0, {
