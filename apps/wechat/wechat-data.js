@@ -261,7 +261,20 @@ async loadContactsFromCharacter() {
         return {
             success: true,
             count: addedCount,
-            message: `✅ 成功生成${addedCount}个联系人`
+            mes// 🔥 保存初始时间（如果有）
+if (generatedData.initialTime) {
+    this.storage.set('story-initial-time', JSON.stringify(generatedData.initialTime), true);
+    console.log('⏰ 已保存剧情初始时间:', generatedData.initialTime);
+}
+
+await this.saveData();
+
+return {
+    success: true,
+    count: addedCount,
+    time: generatedData.initialTime || null,
+    message: `✅ 成功生成${addedCount}个联系人`
+};sage: `✅ 成功生成${addedCount}个联系人`
         };
         
     } catch (error) {
@@ -414,9 +427,21 @@ ${chatHistory || '（暂无聊天记录）'}
     {"name": "${charName}", "avatar": "⭐", "relation": "主角", "remark": ""},
     {"name": "具体人名", "avatar": "👨", "relation": "关系", "remark": ""}
   ],
-  "groups": []
+  "groups": [],
+  "initialTime": {
+    "date": "2044年10月28日",
+    "time": "21:30",
+    "weekday": "星期一",
+    "period": "晚上"
+  }
 }
 \`\`\`
+
+# 关于 initialTime（初始时间）
+1. 根据上述信息推断故事开始的时间
+2. 如果世界书/角色卡中明确了时间，使用明确的时间
+3. 如果没有明确，根据故事氛围推断（例如：校园故事→早上8点，都市故事→晚上8点）
+4. period 可选值：凌晨、早上、上午、中午、下午、傍晚、晚上、深夜
 
 **重要**：你是数据提取助手，不要进行角色扮演，不要输出剧情或对话，只返回JSON格式的联系人列表。`;
 }
