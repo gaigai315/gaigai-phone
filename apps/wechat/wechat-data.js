@@ -112,8 +112,7 @@ export class WechatData {
             : null;
         
         if (context && context.chat && Array.isArray(context.chat)) {
-            // 🔥 核心修复：正确计算索引
-            // 统计聊天记录中 user 和 assistant 的实际消息数量
+            // 🔥 核心修复：统计实际对话数量
             let messageCount = 0;
             for (let i = 0; i < context.chat.length; i++) {
                 if (context.chat[i].is_user || context.chat[i].name) {
@@ -122,7 +121,6 @@ export class WechatData {
             }
             
             // 🔥 关键：记录的是"第几句对话之后"
-            // 例如：如果现在有3句对话，这条手机消息应该插入"第3句之后"
             message.tavernMessageIndex = messageCount;
             message.realTimestamp = Date.now();
             
