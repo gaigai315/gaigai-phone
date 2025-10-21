@@ -1420,6 +1420,44 @@ export class WechatApp {
         console.log('✅ 微信样式已内联加载（优化版）');
     }
 }
+
+    // 🔥 新增：批量添加联系人（支持AI生成的联系人）
+addContacts(contactsArray) {
+    if (!Array.isArray(contactsArray)) {
+        console.error('❌ addContacts 参数必须是数组');
+        return;
+    }
+    
+    let addedCount = 0;
+    
+    contactsArray.forEach(contact => {
+        // 检查是否已存在
+        const exists = this.wechatData.getContacts().find(c => c.name === contact.name);
+        
+        if (!exists) {
+            this.wechatData.addContact({
+                id: `contact_${Date.now()}_${Math.random()}`,
+                name: contact.name,
+                avatar: contact.avatar || '👤',
+                remark: contact.remark || '',
+                relation: contact.relation || '',
+                letter: this.wechatData.getFirstLetter(contact.name)
+            });
+            addedCount++;
+        }
+    });
+    
+    if (addedCount > 0) {
+        console.log(`✅ 已添加 ${addedCount} 个联系人`);
+        
+        // 如果当前在通讯录页面，刷新界面
+        if (this.currentView === 'contacts') {
+            this.render();
+        }
+    }
+    
+    return addedCount;
+}
     
     render() {
         const chatList = this.wechatData.getChatList();
