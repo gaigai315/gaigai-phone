@@ -20,8 +20,7 @@ export class WechatApp {
         // 加载样式
         this.loadStyles();
     }
-    
-    loadStyles() {
+loadStyles() {
     if (!document.getElementById('wechat-styles')) {
         const style = document.createElement('style');
         style.id = 'wechat-styles';
