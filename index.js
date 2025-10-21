@@ -692,7 +692,7 @@ if (context && context.eventSource) {
     if (context.event_types.CHAT_COMPLETION_PROMPT_READY) {
         context.eventSource.on(
             context.event_types.CHAT_COMPLETION_PROMPT_READY,
-            (data) => {
+            (eventData) => {
                 if (!settings.enabled) return;
                 
                 try {
@@ -844,12 +844,20 @@ if (context && context.eventSource) {
                         phoneContextContent += `\n═══════════════════════════════════════\n`;
                         
                         // 找到合适的位置注入（在system消息的末尾）
-                        const systemMessages = data.messages.filter(m => m.role === 'system');
+                       // 🔥 关键：messages 数组在 eventData.chat，不是 eventData.messages
+                       const messages = eventData.chat;
+
+                       if (!messages || !Array.isArray(messages)) {
+                           console.error('❌ eventData.chat 不是数组:', messages);
+                           return;
+                         }
+
+                        const systemMessages = messages.filter(m => m && m.role === 'system');
                         if (systemMessages.length > 0) {
                             // 找到最后一个system消息的索引
                             let lastSystemIndex = -1;
-                            for (let i = data.messages.length - 1; i >= 0; i--) {
-                                if (data.messages[i].role === 'system') {
+                            for (let i = messages.length - 1; i >= 0; i--) {
+                                if (messages[i] && messages[i].role === 'system') {
                                     lastSystemIndex = i;
                                     break;
                                 }
@@ -857,7 +865,7 @@ if (context && context.eventSource) {
                             
                             if (lastSystemIndex !== -1) {
                                 // 在最后一个system消息之后插入
-                                data.messages.splice(lastSystemIndex + 1, 0, {
+                                messages.splice(lastSystemIndex + 1, 0, {
                                     role: 'system',
                                     content: phoneContextContent
                                 });
