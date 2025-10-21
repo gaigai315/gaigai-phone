@@ -504,6 +504,7 @@ function handleContactsUpdate(data) {
             homeScreen.render();
         }
     }
+    
     function hidePhoneTags(text) {
     $('.mes_text').each(function() {
         const $this = $(this);
