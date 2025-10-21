@@ -5,73 +5,73 @@ export class ContactsView {
         this.searchText = '';
     }
     
- render() {
-    const contacts = this.app.data.getContacts();
-    const grouped = this.groupContacts(contacts);
-    
-    return `
-        <div class="wechat-contacts">
-            <div class="contacts-search">
-                <input type="text" class="search-input" placeholder="搜索" />
-            </div>
-            
-            <!-- 🔥 可滚动内容区 -->
-            <div class="contacts-scrollable">
-                <!-- 功能入口 -->
-                <div class="contacts-functions">
-                    <div class="function-item" data-func="new-friends">
-                        <div class="function-icon" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f);">
-                            <i class="fa-solid fa-user-plus"></i>
+    render() {
+        const contacts = this.app.wechatData.getContacts();  // ← 改这里
+        const grouped = this.groupContacts(contacts);
+        
+        return `
+            <div class="wechat-contacts">
+                <div class="contacts-search">
+                    <input type="text" class="search-input" placeholder="搜索" />
+                </div>
+                
+                <!-- 🔥 可滚动内容区 -->
+                <div class="contacts-scrollable">
+                    <!-- 功能入口 -->
+                    <div class="contacts-functions">
+                        <div class="function-item" data-func="new-friends">
+                            <div class="function-icon" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f);">
+                                <i class="fa-solid fa-user-plus"></i>
+                            </div>
+                            <div class="function-name">新的朋友</div>
                         </div>
-                        <div class="function-name">新的朋友</div>
+                        <div class="function-item" data-func="groups">
+                            <div class="function-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                            <div class="function-name">群聊</div>
+                        </div>
+                        <div class="function-item" data-func="tags">
+                            <div class="function-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+                                <i class="fa-solid fa-tag"></i>
+                            </div>
+                            <div class="function-name">标签</div>
+                        </div>
+                        <div class="function-item" data-func="official">
+                            <div class="function-icon" style="background: linear-gradient(135deg, #fa709a, #fee140);">
+                                <i class="fa-solid fa-bullhorn"></i>
+                            </div>
+                            <div class="function-name">公众号</div>
+                        </div>
                     </div>
-                    <div class="function-item" data-func="groups">
-                        <div class="function-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
-                            <i class="fa-solid fa-users"></i>
-                        </div>
-                        <div class="function-name">群聊</div>
-                    </div>
-                    <div class="function-item" data-func="tags">
-                        <div class="function-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
-                            <i class="fa-solid fa-tag"></i>
-                        </div>
-                        <div class="function-name">标签</div>
-                    </div>
-                    <div class="function-item" data-func="official">
-                        <div class="function-icon" style="background: linear-gradient(135deg, #fa709a, #fee140);">
-                            <i class="fa-solid fa-bullhorn"></i>
-                        </div>
-                        <div class="function-name">公众号</div>
+                    
+                    <!-- 联系人列表 -->
+                    <div class="contacts-list">
+                        ${Object.keys(grouped).sort().map(letter => `
+                            <div class="contacts-group">
+                                <div class="group-letter">${letter}</div>
+                                ${grouped[letter].map(contact => `
+                                    <div class="contact-item" data-contact-id="${contact.id}">
+                                        <div class="contact-avatar">
+                                            ${contact.avatar || '👤'}
+                                        </div>
+                                        <div class="contact-name">${contact.name}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
                 
-                <!-- 联系人列表 -->
-                <div class="contacts-list">
-                    ${Object.keys(grouped).sort().map(letter => `
-                        <div class="contacts-group">
-                            <div class="group-letter">${letter}</div>
-                            ${grouped[letter].map(contact => `
-                                <div class="contact-item" data-contact-id="${contact.id}">
-                                    <div class="contact-avatar">
-                                        ${contact.avatar || '👤'}
-                                    </div>
-                                    <div class="contact-name">${contact.name}</div>
-                                </div>
-                            `).join('')}
-                        </div>
+                <!-- ✅ 字母索引移到外面，成为固定元素 -->
+                <div class="letter-index">
+                    ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').map(letter => `
+                        <span class="letter-item" data-letter="${letter}">${letter}</span>
                     `).join('')}
                 </div>
             </div>
-            
-            <!-- ✅ 字母索引移到外面，成为固定元素 -->
-            <div class="letter-index">
-                ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').map(letter => `
-                    <span class="letter-item" data-letter="${letter}">${letter}</span>
-                `).join('')}
-            </div>
-        </div>
-    `;
-}
+        `;
+    }
     
     groupContacts(contacts) {
         const grouped = {};
@@ -104,7 +104,7 @@ export class ContactsView {
     
     bindEvents() {
         // 搜索
-        document.getElementById('contacts-search')?.addEventListener('input', (e) => {
+        document.querySelector('.search-input')?.addEventListener('input', (e) => {
             this.searchText = e.target.value;
             this.filterContacts();
         });
@@ -139,48 +139,45 @@ export class ContactsView {
         console.log('搜索:', this.searchText);
     }
     
-   scrollToLetter(letter) {
-    // 滚动到指定字母
-    const contactsList = document.querySelector('.contacts-list');
-    const groups = document.querySelectorAll('.group-letter');
-    
-    for (const group of groups) {
-        if (group.textContent.trim() === letter) {
-            // 计算目标位置（相对于列表容器）
-            const targetTop = group.offsetTop - contactsList.offsetTop;
-            contactsList.scrollTo({
-                top: targetTop,
-                behavior: 'smooth'
-            });
-            break;
+    scrollToLetter(letter) {
+        // 滚动到指定字母
+        const contactsList = document.querySelector('.contacts-list');
+        const groups = document.querySelectorAll('.group-letter');
+        
+        for (const group of groups) {
+            if (group.textContent.trim() === letter) {
+                // 计算目标位置（相对于列表容器）
+                const targetTop = group.offsetTop - contactsList.offsetTop;
+                contactsList.scrollTo({
+                    top: targetTop,
+                    behavior: 'smooth'
+                });
+                break;
+            }
         }
     }
-}
     
     openContactChat(contactId) {
-    const contact = this.app.data.getContact(contactId);
-    if (contact) {
-        // 创建或打开聊天
-        let chat = this.app.data.getChatByContactId(contactId);
-        
-        if (!chat) {
-            chat = this.app.data.createChat({
-                id: `chat_${contactId}`,
-                contactId: contactId,  // ← 保留 contactId
-                name: contact.name,
-                type: 'single',
-                avatar: contact.avatar
-            });
+        const contact = this.app.wechatData.getContact(contactId);  // ← 改这里
+        if (contact) {
+            // 创建或打开聊天
+            let chat = this.app.wechatData.getChatByContactId(contactId);  // ← 改这里
+            
+            if (!chat) {
+                chat = this.app.wechatData.createChat({  // ← 改这里
+                    id: `chat_${contactId}`,
+                    contactId: contactId,
+                    name: contact.name,
+                    type: 'single',
+                    avatar: contact.avatar
+                });
+            }
+            
+            this.app.currentChat = chat;
+            this.app.currentView = 'chats';
+            this.app.render();
         }
-        
-        // ❌ 删除自动添加欢迎消息的逻辑
-        // 如果没有消息就是空的，有消息就显示已有的
-        
-        this.app.currentChat = chat;
-        this.app.currentView = 'chats';
-        this.app.render();
     }
-}
     
     handleFunction(func) {
         switch (func) {
