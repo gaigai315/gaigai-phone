@@ -845,9 +845,14 @@ if (phoneActivities.length > 0) {
         const activities = activitiesByIndex[tavernIndex];
         
         // 构建这个时间点的手机消息内容
-        let phoneContextContent = `
+        // 🔥 更清晰的时间点描述
+const timeDesc = tavernIndex >= 999999 
+    ? '（最新）' 
+    : `（在第${tavernIndex}句对话之后）`;
+
+let phoneContextContent = `
 ═══════════════════════════════════════
-📱 手机活动（在第${tavernIndex}句对话前后发生）
+📱 手机活动${timeDesc}
 ═══════════════════════════════════════
 
 `;
@@ -890,22 +895,21 @@ if (phoneActivities.length > 0) {
         let messageCount = 0;
         
         for (let i = chatStartIndex; i < messages.length; i++) {
-            if (messages[i].role === 'user' || messages[i].role === 'assistant') {
-                messageCount++;
-                
-                // 如果这条消息的索引大于等于手机消息发送时的索引
-                // 就在这条消息之前插入手机消息
-                if (messageCount >= tavernIndex) {
-                    insertPosition = i;
-                    break;
-                }
-            }
-        }
+    if (messages[i].role === 'user' || messages[i].role === 'assistant') {
+        messageCount++;
         
-        // 如果手机消息是在最新的对话之后，插在最后
-        if (tavernIndex >= 999999 || messageCount < tavernIndex) {
-            insertPosition = messages.length;
+        // 🔥 修正：应该在对应消息之后插入
+        if (messageCount > tavernIndex) {
+            insertPosition = i;  // 在这条消息之前（也就是上一条消息之后）
+            break;
         }
+    }
+}
+
+// 🔥 如果遍历完了还没找到位置，说明手机消息是在最后发送的
+if (messageCount <= tavernIndex) {
+    insertPosition = messages.length;
+}
         
         // 插入手机消息
         messages.splice(insertPosition, 0, {
