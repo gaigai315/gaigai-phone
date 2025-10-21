@@ -101,55 +101,41 @@ export class HomeScreen {
     }
     
     getCurrentTime() {
-    const timeManager = window.VirtualPhone?.timeManager;
-    
-    if (timeManager) {
-        const storyTime = timeManager.getCurrentStoryTime();
-        return storyTime.time;
+        const timeManager = window.VirtualPhone?.timeManager;
+        
+        if (timeManager) {
+            const storyTime = timeManager.getCurrentStoryTime();
+            return storyTime.time;
+        }
+        
+        // 降级方案
+        const now = new Date();
+        return now.toLocaleTimeString('zh-CN', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false
+        });
     }
-    
-    // 降级方案
-    const now = new Date();
-    return now.toLocaleTimeString('zh-CN', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false
-    });
-}
     
     getCurrentDate() {
-    const timeManager = window.VirtualPhone?.timeManager;
-    
-    if (timeManager) {
-        const storyTime = timeManager.getCurrentStoryTime();
-        const dateParts = storyTime.date.match(/(\d+)年(\d+)月(\d+)日/);
-        if (dateParts) {
-            const month = parseInt(dateParts[2]);
-            const day = parseInt(dateParts[3]);
-            return `${month}月${day}日 ${storyTime.weekday}`;
-        }
-    }
-    
-    // 降级方案
-    const now = new Date();
-    const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
-    const weekday = weekdays[now.getDay()];
-    return `${month}月${day}日 ${weekday}`;
-}
+        const timeManager = window.VirtualPhone?.timeManager;
+        
+        if (timeManager) {
+            const storyTime = timeManager.getCurrentStoryTime();
+            const dateParts = storyTime.date.match(/(\d+)年(\d+)月(\d+)日/);
+            if (dateParts) {
+                const month = parseInt(dateParts[2]);
+                const day = parseInt(dateParts[3]);
+                return `${month}月${day}日 ${storyTime.weekday}`;
             }
         }
-    } catch (e) {
-        console.warn('从状态栏获取日期失败:', e);
+        
+        // 降级方案
+        const now = new Date();
+        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+        const weekday = weekdays[now.getDay()];
+        return `${month}月${day}日 ${weekday}`;
     }
-    
-    // 备用：使用现实日期
-    const now = new Date();
-    const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
-    const weekday = weekdays[now.getDay()];
-    return `${month}月${day}日 ${weekday}`;
-  }
 }
