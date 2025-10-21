@@ -427,14 +427,20 @@ async sendMessage() {
     const userName = context?.name1 || '我';
     const userAvatar = this.app.wechatData.getUserInfo().avatar;
     
-    // 添加用户消息到微信
-    this.app.wechatData.addMessage(this.app.currentChat.id, {
-        from: 'me',
-        content: this.inputText,
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-        type: 'text',
-        avatar: userAvatar
-    });
+    // 🎯 获取剧情时间
+const timeManager = window.VirtualPhone?.timeManager;
+const currentTime = timeManager 
+    ? timeManager.getCurrentStoryTime().time 
+    : new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+// 添加用户消息到微信
+this.app.wechatData.addMessage(this.app.currentChat.id, {
+    from: 'me',
+    content: this.inputText,
+    time: currentTime,  // ← 使用剧情时间
+    type: 'text',
+    avatar: userAvatar
+});
     
     const messageToSend = this.inputText;
     
