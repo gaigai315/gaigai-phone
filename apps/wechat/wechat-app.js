@@ -1523,8 +1523,15 @@ addContacts(contactsArray) {
         `;
         
         this.phoneShell.setContent(html);
-        this.bindEvents();
-    }
+this.bindEvents();
+
+if (this.currentView === 'contacts' && !this.currentChat) {
+    setTimeout(() => {
+        this.contactsView.bindEvents();
+    }, 50);
+}
+}
+}
     
     renderContent() {
         if (this.currentChat) {
