@@ -755,50 +755,24 @@ console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
 return finalPrompt;
 }
 
-    // 🔧 完全静默调用AI（使用酒馆API）
+    // ✅ 静默调用AI（使用 context.generateRaw）
 async sendToAIHidden(prompt, context) {
     try {
         console.log('🚀 [手机聊天] 开始静默调用...');
         
-        // 🔥 优先使用酒馆内置API
-        if (typeof generateQuietPrompt === 'function') {
-            console.log('✅ 使用酒馆内置generateQuietPrompt');
-            const result = await generateQuietPrompt(prompt, false, false);
-            return result;
+        if (!context || typeof context.generateRaw !== 'function') {
+            throw new Error('❌ 无法访问 context.generateRaw');
         }
         
-        // 复用 wechat-data.js 的方法
-        if (this.app.wechatData && typeof this.app.wechatData.sendToAI === 'function') {
-            return await this.app.wechatData.sendToAI(prompt);
-        }
-        
-        // 备用方案：使用jQuery（自动处理CSRF）
-        return await new Promise((resolve, reject) => {
-            $.ajax({
-                url: '/api/backends/chat-completions/generate',
-                type: 'POST',
-                data: JSON.stringify({
-                    messages: [{
-                        role: 'user',
-                        content: prompt
-                    }],
-                    max_tokens: 500,
-                    temperature: 0.9,
-                    stream: false,
-                    quiet: true
-                }),
-                contentType: 'application/json',
-                success: function(data) {
-                    const aiResponse = data.choices?.[0]?.message?.content || data.response || '';
-                    console.log('✅ [手机聊天] 调用成功，回复长度:', aiResponse.length);
-                    resolve(aiResponse);
-                },
-                error: function(xhr, status, error) {
-                    console.error('❌ [手机聊天] 调用失败:', error);
-                    reject(new Error(`API错误: ${error}`));
-                }
-            });
+        // ✅ 使用正确的对象参数格式
+        const result = await context.generateRaw({
+            prompt: prompt,
+            quietToLoud: false,  // 🔥 关键：不显示在聊天窗口
+            instructOverride: false
         });
+        
+        console.log('✅ [手机聊天] 调用成功，回复长度:', result?.length || 0);
+        return result;
         
     } catch (error) {
         console.error('❌ [手机聊天] 静默调用失败:', error);
@@ -806,7 +780,7 @@ async sendToAIHidden(prompt, context) {
         throw error;
     }
 }
-
+    
     handleMoreAction(action) {
     switch(action) {
         case 'photo':
