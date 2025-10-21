@@ -9,8 +9,8 @@ export class ChatView {
 }
     
     renderChatRoom(chat) {
-        const messages = this.app.data.getMessages(chat.id);
-        const userInfo = this.app.data.getUserInfo();
+    const messages = this.app.wechatData.getMessages(chat.id);
+    const userInfo = this.app.wechatData.getUserInfo();
         
         return `
     <div class="chat-room" style="background: ${chat.background || '#ededed'};">
@@ -90,7 +90,7 @@ export class ChatView {
     const emojis = ['😊', '😂', '🤣', '😍', '😘', '🥰', '😭', '😅', '😁', '🤔', '😒', '🙄', 
                    '😤', '😡', '🥺', '😱', '😨', '😰', '😓', '🤗', '🤭', '🤫', '😏', '😌'];
     
-    const customEmojis = this.app.data.getCustomEmojis(); // ← 新增：获取自定义表情
+    const customEmojis = this.app.wechatDataa.getCustomEmojis(); // ← 新增：获取自定义表情
     
     return `
         <div class="emoji-panel">
@@ -213,7 +213,7 @@ export class ChatView {
     }
     
     // 2️⃣ 替换自定义表情
-    const customEmojis = this.app.data.getCustomEmojis();
+    const customEmojis = this.app.wechatDataa.getCustomEmojis();
     customEmojis.forEach(emoji => {
         const pattern = `[${emoji.name}]`;
         if (result.includes(pattern)) {
@@ -322,12 +322,12 @@ document.getElementById('photo-upload-input')?.addEventListener('change', async 
         const reader = new FileReader();
         reader.onload = (e) => {
             // 添加图片消息
-            this.app.data.addMessage(this.app.currentChat.id, {
+            this.app.wechatDataa.addMessage(this.app.currentChat.id, {
                 from: 'me',
                 type: 'image',
                 content: e.target.result,
                 time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-                avatar: this.app.data.getUserInfo().avatar
+                avatar: this.app.wechatDataa.getUserInfo().avatar
             });
             
             this.app.render();
@@ -362,7 +362,7 @@ document.getElementById('add-custom-emoji')?.addEventListener('click', () => {
 document.querySelectorAll('.custom-emoji-item').forEach(item => {
     item.addEventListener('click', () => {
         const emojiId = item.dataset.emojiId;
-        const emoji = this.app.data.getCustomEmoji(emojiId);
+        const emoji = this.app.wechatDataa.getCustomEmoji(emojiId);
         if (emoji) {
             this.inputText += `[${emoji.name}]`;
             const input = document.getElementById('chat-input');
@@ -425,10 +425,10 @@ async sendMessage() {
     
     const context = window.SillyTavern?.getContext?.();
     const userName = context?.name1 || '我';
-    const userAvatar = this.app.data.getUserInfo().avatar;
+    const userAvatar = this.app.wechatDataa.getUserInfo().avatar;
     
     // 添加用户消息到微信
-    this.app.data.addMessage(this.app.currentChat.id, {
+    this.app.wechatDataa.addMessage(this.app.currentChat.id, {
         from: 'me',
         content: this.inputText,
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
@@ -493,7 +493,7 @@ async sendToAI(message) {
         }
         
         // 当前微信聊天记录
-        const wechatMessages = this.app.data.getMessages(this.app.currentChat.id);
+        const wechatMessages = this.app.wechatDataa.getMessages(this.app.currentChat.id);
         wechatMessages.forEach(msg => {
             const speaker = msg.from === 'me' 
                 ? (context.name1 || '用户') 
@@ -527,7 +527,7 @@ async sendToAI(message) {
         const charName = context.name2 || this.app.currentChat.name;
         messages.forEach((msgText, index) => {
             setTimeout(() => {
-                this.app.data.addMessage(this.app.currentChat.id, {
+                this.app.wechatDataa.addMessage(this.app.currentChat.id, {
                     from: charName,
                     content: msgText,
                     time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
@@ -672,7 +672,7 @@ if (context.chat && Array.isArray(context.chat)) {
 }
 
 // 🔥 当前微信聊天记录
-const wechatMessages = this.app.data.getMessages(this.app.currentChat.id);
+const wechatMessages = this.app.wechatDataa.getMessages(this.app.currentChat.id);
 wechatMessages.forEach(msg => {
     const speaker = msg.from === 'me' 
         ? (context.name1 || '用户') 
@@ -761,8 +761,8 @@ async sendToAIHidden(prompt, context) {
         console.log('🚀 [手机聊天] 开始静默调用...');
         
         // 复用 wechat-data.js 的方法
-        if (this.app.data && typeof this.app.data.sendToAI === 'function') {
-            return await this.app.data.sendToAI(prompt);
+        if (this.app.wechatDataa && typeof this.app.wechatDataa.sendToAI === 'function') {
+            return await this.app.wechatDataa.sendToAI(prompt);
         }
         
         // 备用方案：直接调用酒馆API
@@ -883,7 +883,7 @@ async sendToAIHidden(prompt, context) {
         return;
     }
     
-    this.app.data.addMessage(this.app.currentChat.id, {
+    this.app.wechatDataa.addMessage(this.app.currentChat.id, {
         from: 'me',
         type: 'transfer',
         amount: amount,
@@ -1021,7 +1021,7 @@ async sendToAIHidden(prompt, context) {
         const remark = document.getElementById('remark-input').value.trim();
         if (remark) {
             chat.name = remark;
-            this.app.data.saveData();
+            this.app.wechatDataa.saveData();
             this.app.phoneShell.showNotification('保存成功', '设置已更新', '✅');
             setTimeout(() => this.app.render(), 1000);
         }
@@ -1217,7 +1217,7 @@ document.getElementById('block-contact-btn')?.addEventListener('click', () => {
                 
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    this.app.data.setChatBackground(this.app.currentChat.id, e.target.result);
+                    this.app.wechatDataa.setChatBackground(this.app.currentChat.id, e.target.result);
                     this.app.phoneShell.showNotification('设置成功', '聊天背景已更新', '✅');
                     setTimeout(() => this.app.render(), 1000);
                 };
@@ -1229,7 +1229,7 @@ document.getElementById('block-contact-btn')?.addEventListener('click', () => {
         document.querySelectorAll('.preset-bg').forEach(item => {
             item.addEventListener('click', () => {
                 const bg = item.dataset.bg;
-                this.app.data.setChatBackground(this.app.currentChat.id, bg);
+                this.app.wechatDataa.setChatBackground(this.app.currentChat.id, bg);
                 this.app.phoneShell.showNotification('设置成功', '聊天背景已更新', '✅');
                 setTimeout(() => this.app.render(), 1000);
             });
@@ -1238,7 +1238,7 @@ document.getElementById('block-contact-btn')?.addEventListener('click', () => {
     
     // 🗑️ 显示消息操作菜单
     showMessageMenu(messageIndex) {
-        const messages = this.app.data.getMessages(this.app.currentChat.id);
+        const messages = this.app.wechatDataa.getMessages(this.app.currentChat.id);
         const message = messages[messageIndex];
         
         const menuHtml = `
@@ -1321,14 +1321,14 @@ document.getElementById('block-contact-btn')?.addEventListener('click', () => {
     // 🗑️ 删除消息
     deleteMessage(messageIndex) {
     // 直接删除，不需要确认（因为已经是长按操作了）
-    this.app.data.deleteMessage(this.app.currentChat.id, messageIndex);
+    this.app.wechatDataa.deleteMessage(this.app.currentChat.id, messageIndex);
     this.app.render();
     this.app.phoneShell.showNotification('已删除', '消息已删除', '✅');
 }
     
     // ✏️ 编辑消息
     editMessage(messageIndex) {
-    const messages = this.app.data.getMessages(this.app.currentChat.id);
+    const messages = this.app.wechatDataa.getMessages(this.app.currentChat.id);
     const message = messages[messageIndex];
     
     const html = `
@@ -1384,7 +1384,7 @@ document.getElementById('block-contact-btn')?.addEventListener('click', () => {
     document.getElementById('save-edit')?.addEventListener('click', () => {
         const newContent = document.getElementById('edit-message-input').value.trim();
         if (newContent) {
-            this.app.data.editMessage(this.app.currentChat.id, messageIndex, newContent);
+            this.app.wechatDataa.editMessage(this.app.currentChat.id, messageIndex, newContent);
             this.app.render();
             this.app.phoneShell.showNotification('已修改', '消息已更新', '✅');
         }
@@ -1449,7 +1449,7 @@ document.getElementById('block-contact-btn')?.addEventListener('click', () => {
         });
         
         document.getElementById('confirm-delete')?.addEventListener('click', () => {
-            this.app.data.deleteChat(this.app.currentChat.id);
+            this.app.wechatDataa.deleteChat(this.app.currentChat.id);
             this.app.phoneShell.showNotification('已删除', '聊天已删除', '✅');
             this.app.currentChat = null;
             this.app.currentView = 'chats';
@@ -1516,7 +1516,7 @@ document.getElementById('block-contact-btn')?.addEventListener('click', () => {
         });
         
         document.getElementById('confirm-block')?.addEventListener('click', () => {
-            this.app.data.blockContact(this.app.currentChat.contactId);
+            this.app.wechatDataa.blockContact(this.app.currentChat.contactId);
             this.app.phoneShell.showNotification('已拉黑', `${this.app.currentChat.name}已被拉黑`, '✅');
             this.app.currentChat = null;
             this.app.currentView = 'chats';
@@ -1703,7 +1703,7 @@ startVideoCall() {
                 
                 <!-- 小窗口（自己） -->
                 <div style="position: absolute; top: 60px; right: 15px; width: 100px; height: 140px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: center; font-size: 40px;">
-                    ${this.app.data.getUserInfo().avatar || '😊'}
+                    ${this.app.wechatDataa.getUserInfo().avatar || '😊'}
                 </div>
                 
                 <!-- 底部控制栏 -->
@@ -1912,7 +1912,7 @@ showRedPacketDialog() {
             return;
         }
         
-        this.app.data.addMessage(this.app.currentChat.id, {
+        this.app.wechatDataa.addMessage(this.app.currentChat.id, {
             from: 'me',
             type: 'redpacket',
             amount: amount,
@@ -2041,7 +2041,7 @@ showAddCustomEmojiDialog() {
             return;
         }
         
-        this.app.data.addCustomEmoji({
+        this.app.wechatDataa.addCustomEmoji({
             name: name,
             image: selectedImage
         });
