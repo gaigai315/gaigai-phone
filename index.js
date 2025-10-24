@@ -826,19 +826,22 @@ if (phoneActivities.length > 0) {
     
     console.log('📊 手机消息分组:', Object.keys(activitiesByIndex).length, '个时间点');
     
-    // 🔥 找到聊天记录的起始位置（第一条 user 或 assistant 消息）
-    let chatStartIndex = -1;
-    for (let i = 0; i < messages.length; i++) {
-        if (messages[i].role === 'user' || messages[i].role === 'assistant') {
-            chatStartIndex = i;
-            break;
-        }
+    // 🔥 找到聊天记录的起始位置（兼容多种格式）
+let chatStartIndex = -1;
+for (let i = 0; i < messages.length; i++) {
+    if (messages[i].role === 'user' || 
+        messages[i].role === 'assistant' ||
+        messages[i].is_user !== undefined ||
+        messages[i].name !== undefined) {
+        chatStartIndex = i;
+        break;
     }
-    
-    if (chatStartIndex === -1) {
-        console.warn('⚠️ 找不到聊天记录起始位置，使用默认插入');
-        chatStartIndex = messages.length;
-    }
+}
+
+if (chatStartIndex === -1) {
+    console.warn('⚠️ 找不到聊天记录起始位置，插入到开头');
+    chatStartIndex = 0;
+}
     
     console.log('📍 聊天记录起始位置:', chatStartIndex);
     
@@ -907,8 +910,8 @@ let insertPosition;
 
 // 特殊情况1：索引为0，说明手机消息在酒馆对话之前
 if (tavernIndex === 0) {
-    insertPosition = chatStartIndex;
-    console.log(`📍 [位置计算] 索引=0，插入到聊天开始: ${insertPosition}`);
+    insertPosition = Math.max(0, chatStartIndex);
+    console.log(`📍 [位置计算] 索引=0（对话开始前），插入到位置: ${insertPosition}`);
 }
 // 特殊情况2：索引无效（999999 或超大值），放在最后
 else if (tavernIndex >= 999999) {
