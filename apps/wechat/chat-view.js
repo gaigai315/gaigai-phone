@@ -532,14 +532,27 @@ async sendToAI(message) {
         // 6️⃣ 将AI回复添加到微信界面（可能多条）
         const charName = context.name2 || this.app.currentChat.name;
         messages.forEach((msgText, index) => {
-            setTimeout(() => {
-                this.app.wechatData.addMessage(this.app.currentChat.id, {
-                    from: charName,
-                    content: msgText,
-                    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-                    type: 'text',
-                    avatar: this.app.currentChat.avatar
-                });
+    setTimeout(() => {
+        // 使用剧情时间而不是现实时间
+        const timeManager = window.VirtualPhone?.timeManager;
+        const currentStoryTime = timeManager 
+            ? timeManager.getCurrentStoryTime() 
+            : { time: '21:30' };
+        
+        // 每条消息递增1分钟
+        const [hour, minute] = currentStoryTime.time.split(':').map(Number);
+        const totalMinutes = hour * 60 + minute + index + 1;
+        const msgHour = Math.floor(totalMinutes / 60) % 24;
+        const msgMinute = totalMinutes % 60;
+        const msgTime = `${String(msgHour).padStart(2, '0')}:${String(msgMinute).padStart(2, '0')}`;
+        
+        this.app.wechatData.addMessage(this.app.currentChat.id, {
+            from: charName,
+            content: msgText,
+            time: msgTime,  // 使用计算后的剧情时间
+            type: 'text',
+            avatar: this.app.currentChat.avatar
+        });
                 
                 // 最后一条消息时刷新界面
                 if (index === messages.length - 1) {
