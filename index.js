@@ -243,29 +243,57 @@ function handlePhoneTag(tagData) {
     }
 }
 
-// 🔥 处理微信消息标签数据
+// 🔥 处理微信消息标签数据（强制使用剧情时间）
 function handleWechatTagData(data) {
     if (!data.contact || !data.messages) {
         console.warn('⚠️ 微信消息数据不完整:', data);
         return;
     }
     
-    // 🔥 获取剧情时间作为基准
-    const currentTime = timeManager.getCurrentTime();
-    let baseTime = currentTime?.time || '21:30';
-    console.log('⏰ 使用剧情时间作为基准:', baseTime);
+    // 🔥 强制获取剧情时间（不依赖AI）
+    let baseTime = '21:30'; // 默认时间
+    let baseDate = '2044年10月28日';
+    
+    try {
+        const currentTime = timeManager.getCurrentTime();
+        if (currentTime && currentTime.time) {
+            baseTime = currentTime.time;
+            baseDate = currentTime.date || baseDate;
+            console.log('⏰ [强制时间] 使用剧情时间:', baseTime);
+        } else {
+            console.warn('⚠️ [强制时间] 无法获取剧情时间，使用默认21:30');
+        }
+    } catch (e) {
+        console.error('❌ [强制时间] 获取失败，使用默认时间:', e);
+    }
     
     // 传递给微信APP
     if (window.currentWechatApp) {
         data.messages.forEach((msg, index) => {
-            // 🔥 如果AI没有提供时间，自动递增
-            let msgTime = msg.time;
-            if (!msgTime || msgTime === '刚刚') {
-                const [hour, minute] = baseTime.split(':').map(Number);
-                const newMinute = (minute + index + 1) % 60;
-                const newHour = minute + index + 1 >= 60 ? (hour + 1) % 24 : hour;
-                msgTime = `${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`;
-                console.warn(`⚠️ AI未提供时间，自动生成: ${msgTime}`);
+            // 🔥 强制替换时间（忽略AI返回的时间）
+            const [hour, minute] = baseTime.split(':').map(Number);
+            const totalMinutes = hour * 60 + minute + index + 1;
+            const newHour = Math.floor(totalMinutes / 60) % 24;
+            const newMinute = totalMinutes % 60;
+            const msgTime = `${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`;
+            
+            // 🔥 如果AI给的时间明显错误（早上7点之类的），强制替换
+            let finalTime = msgTime;
+            if (msg.time && msg.time.match(/^([01]\d|2[0-3]):([0-5]\d)$/)) {
+                const [aiHour, aiMinute] = msg.time.split(':').map(Number);
+                const timeDiff = Math.abs((aiHour * 60 + aiMinute) - (hour * 60 + minute));
+                
+                // 如果AI给的时间和剧情时间相差超过2小时，视为错误
+                if (timeDiff > 120) {
+                    console.warn(`⚠️ [强制时间] AI时间 ${msg.time} 与剧情时间 ${baseTime} 相差${Math.floor(timeDiff/60)}小时，已强制替换为 ${msgTime}`);
+                    finalTime = msgTime;
+                } else {
+                    // AI时间合理，使用AI的时间
+                    finalTime = msg.time;
+                    console.log(`✅ [时间检查] AI时间 ${msg.time} 合理，保留`);
+                }
+            } else {
+                console.warn(`⚠️ [强制时间] AI未提供时间或格式错误，使用自动生成时间 ${msgTime}`);
             }
             
             setTimeout(() => {
@@ -274,7 +302,7 @@ function handleWechatTagData(data) {
                     from: data.contact,
                     message: msg.content,
                     messageType: msg.type || 'text',
-                    timestamp: msgTime,
+                    timestamp: finalTime,
                     avatar: data.avatar
                 });
             }, index * 800);
@@ -885,15 +913,6 @@ Object.keys(activitiesByIndex).forEach(index => {
     } else {
         timeDesc = `（在酒馆第${tavernIndex}句对话之后）`;
     }
-    
-    // 🔥 获取当前剧情时间
-const currentTime = timeManager.getCurrentTime();
-const timeInfo = currentTime 
-    ? `【当前剧情时间】${currentTime.date} ${currentTime.time} ${currentTime.weekday}
-⚠️ 重要：如果需要给用户发送手机消息，time 字段必须基于此时间（例如：${currentTime.time} 或稍后几分钟）
-
-` 
-    : '';
     
     // 构建这个时间点的手机消息内容
     let phoneContextContent = `
