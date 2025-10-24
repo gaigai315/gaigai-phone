@@ -871,11 +871,17 @@ Object.keys(activitiesByIndex).forEach(index => {
         timeDesc = `（在酒馆第${tavernIndex}句对话之后）`;
     }
     
+    // 🔥 获取当前剧情时间
+    const currentTime = timeManager.getCurrentTime();
+    const timeInfo = currentTime 
+        ? `【当前剧情时间】${currentTime.date} ${currentTime.time} ${currentTime.weekday}\n\n` 
+        : '';
+    
     // 构建这个时间点的手机消息内容
     let phoneContextContent = `
 ═══════════════════════════════════════
 📱 手机活动${timeDesc}
-═══════════════════════════════════════
+${timeInfo}═══════════════════════════════════════
 `;
     
     const groupedByApp = {};
