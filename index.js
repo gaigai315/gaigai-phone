@@ -250,18 +250,17 @@ function handleWechatTagData(data) {
         return;
     }
     
-    // 🔥 获取剧情时间作为默认值
+    // 🔥 获取剧情时间作为基准
     const currentTime = timeManager.getCurrentTime();
-    let baseTime = currentTime?.time || '21:30';  // 默认使用剧情时间，如果没有则用21:30
-    
+    let baseTime = currentTime?.time || '21:30';
     console.log('⏰ 使用剧情时间作为基准:', baseTime);
     
     // 传递给微信APP
     if (window.currentWechatApp) {
         data.messages.forEach((msg, index) => {
-            // 🔥 如果AI没有提供时间，自动递增分钟数
+            // 🔥 如果AI没有提供时间，自动递增
             let msgTime = msg.time;
-            if (!msgTime) {
+            if (!msgTime || msgTime === '刚刚') {
                 const [hour, minute] = baseTime.split(':').map(Number);
                 const newMinute = (minute + index + 1) % 60;
                 const newHour = minute + index + 1 >= 60 ? (hour + 1) % 24 : hour;
@@ -275,7 +274,7 @@ function handleWechatTagData(data) {
                     from: data.contact,
                     message: msg.content,
                     messageType: msg.type || 'text',
-                    timestamp: msgTime,  // ← 使用剧情时间或自动生成的时间
+                    timestamp: msgTime,
                     avatar: data.avatar
                 });
             }, index * 800);
