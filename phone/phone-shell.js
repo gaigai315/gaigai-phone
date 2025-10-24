@@ -77,13 +77,25 @@ export class PhoneShell {
 }
     
     startClock() {
-        setInterval(() => {
+    // 初始化显示
+    const timeEl = this.container?.querySelector('.statusbar-left .time');
+    if (timeEl) {
+        timeEl.textContent = this.getCurrentTime();
+    }
+    
+    // 改为30秒更新一次（剧情时间不会秒秒变化）
+    let lastTime = this.getCurrentTime();
+    setInterval(() => {
+        const newTime = this.getCurrentTime();
+        if (newTime !== lastTime) {  // 只在时间变化时更新DOM
+            lastTime = newTime;
             const timeEl = this.container?.querySelector('.statusbar-left .time');
             if (timeEl) {
-                timeEl.textContent = this.getCurrentTime();
+                timeEl.textContent = newTime;
             }
-        }, 1000);
-    }
+        }
+    }, 30000);  // 30秒检查一次
+}
     
     goHome() {
         this.currentApp = null;
