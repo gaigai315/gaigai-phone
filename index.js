@@ -918,7 +918,7 @@ Object.keys(activitiesByIndex).forEach(index => {
     let phoneContextContent = `
 ═══════════════════════════════════════
 📱 手机活动${timeDesc}
-${timeInfo}═══════════════════════════════════════
+═══════════════════════════════════════
 `;
     
     const groupedByApp = {};
