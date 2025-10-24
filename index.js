@@ -888,10 +888,13 @@ Object.keys(activitiesByIndex).forEach(index => {
     }
     
     // 🔥 获取当前剧情时间
-    const currentTime = timeManager.getCurrentTime();
-    const timeInfo = currentTime 
-        ? `【当前剧情时间】${currentTime.date} ${currentTime.time} ${currentTime.weekday}\n\n` 
-        : '';
+const currentTime = timeManager.getCurrentTime();
+const timeInfo = currentTime 
+    ? `【当前剧情时间】${currentTime.date} ${currentTime.time} ${currentTime.weekday}
+⚠️ 重要：如果需要给用户发送手机消息，time 字段必须基于此时间（例如：${currentTime.time} 或稍后几分钟）
+
+` 
+    : '';
     
     // 构建这个时间点的手机消息内容
     let phoneContextContent = `
