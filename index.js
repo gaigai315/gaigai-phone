@@ -250,16 +250,32 @@ function handleWechatTagData(data) {
         return;
     }
     
+    // 🔥 获取剧情时间作为默认值
+    const currentTime = timeManager.getCurrentTime();
+    let baseTime = currentTime?.time || '21:30';  // 默认使用剧情时间，如果没有则用21:30
+    
+    console.log('⏰ 使用剧情时间作为基准:', baseTime);
+    
     // 传递给微信APP
     if (window.currentWechatApp) {
         data.messages.forEach((msg, index) => {
+            // 🔥 如果AI没有提供时间，自动递增分钟数
+            let msgTime = msg.time;
+            if (!msgTime) {
+                const [hour, minute] = baseTime.split(':').map(Number);
+                const newMinute = (minute + index + 1) % 60;
+                const newHour = minute + index + 1 >= 60 ? (hour + 1) % 24 : hour;
+                msgTime = `${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`;
+                console.warn(`⚠️ AI未提供时间，自动生成: ${msgTime}`);
+            }
+            
             setTimeout(() => {
                 window.currentWechatApp.receiveMessage({
                     chatId: data.contact,
                     from: data.contact,
                     message: msg.content,
                     messageType: msg.type || 'text',
-                    timestamp: msg.time || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                    timestamp: msgTime,  // ← 使用剧情时间或自动生成的时间
                     avatar: data.avatar
                 });
             }, index * 800);
