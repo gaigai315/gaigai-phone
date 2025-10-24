@@ -815,14 +815,16 @@ if (phoneActivities.length > 0) {
     const activitiesByIndex = {};
     
     phoneActivities.forEach(activity => {
-        // 使用记录的索引，如果没有则默认为最新
-        const index = activity.tavernMessageIndex || 999999;
-        
-        if (!activitiesByIndex[index]) {
-            activitiesByIndex[index] = [];
-        }
-        activitiesByIndex[index].push(activity);
-    });
+    // 使用记录的索引，如果没有则默认为最新（修复：0 不应该被当成无效值）
+    const index = activity.tavernMessageIndex !== undefined 
+        ? activity.tavernMessageIndex 
+        : 999999;  // ← 正确判断！
+    
+    if (!activitiesByIndex[index]) {
+        activitiesByIndex[index] = [];
+    }
+    activitiesByIndex[index].push(activity);
+});
     
     console.log('📊 手机消息分组:', Object.keys(activitiesByIndex).length, '个时间点');
     
