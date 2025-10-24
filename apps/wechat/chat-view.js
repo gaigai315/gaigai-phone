@@ -758,6 +758,40 @@ ${char.scenario ? `背景：${char.scenario.substring(0, 300)}` : ''}
             ''
         );
     }
+
+// ========================================
+// 🔥 关键修复：明确注入剧情时间
+// ========================================
+const timeManager = window.VirtualPhone?.timeManager;
+const currentStoryTime = timeManager 
+    ? timeManager.getCurrentStoryTime() 
+    : { time: '21:30', date: '2044年10月28日' };
+
+// 计算AI应该回复的时间（比用户晚1-2分钟）
+const userTime = currentStoryTime.time;
+const [hour, minute] = userTime.split(':').map(Number);
+const replyMinute = minute + 1 + Math.floor(Math.random() * 2); // 加1-2分钟
+const replyHour = hour + Math.floor(replyMinute / 60);
+const replyTime = `${String(replyHour % 24).padStart(2, '0')}:${String(replyMinute % 60).padStart(2, '0')}`;
+
+sections.push(
+    '## ⏰ 当前剧情时间（重要！AI必须遵守）',
+    `剧情当前时间：${currentStoryTime.date} ${currentStoryTime.time}`,
+    '',
+    '### 时间规则（必须严格遵守）：',
+    `1. 用户发送消息的时间：${userTime}`,
+    `2. 你回复消息的时间必须是：${replyTime}`,
+    `3. 严禁使用现实时间（如07:16、08:00等早上时间）`,
+    `4. 严禁使用"刚刚"、"5分钟前"等模糊时间`,
+    `5. 如果要发多条消息，每条递增1分钟`,
+    '',
+    '示例：',
+    `第1条消息 → time: "${replyTime}"`,
+    `第2条消息 → time: "${String(replyHour % 24).padStart(2, '0')}:${String((replyMinute + 1) % 60).padStart(2, '0')}"`,
+    '',
+    '---',
+    ''
+);
     
     // 添加当前消息
     sections.push(
