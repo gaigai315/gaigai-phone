@@ -26,7 +26,6 @@ export class TimeManager {
     // 🔹 情况3：使用剧情初始时间（智能加载联系人时生成）
     const storyInitialTime = this.getStoryInitialTime();
     if (storyInitialTime) {
-        console.log('⏰ [时间管理] 使用剧情初始时间:', storyInitialTime);
         return storyInitialTime;
     }
     
@@ -107,7 +106,6 @@ getStoryInitialTime() {
         const saved = this.storage.get('story-initial-time', true);
         if (saved) {
             const data = JSON.parse(saved);
-            console.log('⏰ [时间管理] 使用剧情初始时间:', data);
             return {
                 time: data.time,
                 date: data.date,
