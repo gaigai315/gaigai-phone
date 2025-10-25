@@ -752,65 +752,83 @@ if (context && context.eventSource) {
                     const phoneActivities = [];
                     
                     // ========================================
-                    // 1️⃣ 收集微信消息
-                    // ========================================
-                    if (window.VirtualPhone?.wechatApp?.wechatData) {
-                        const wechatData = window.VirtualPhone.wechatApp.wechatData;
-                        const allChats = wechatData.getChatList();
+// 1️⃣ 收集微信消息（直接从存储读取，不依赖wechatApp）
+// ========================================
+const storage = window.VirtualPhone?.storage;
+if (storage) {
+    try {
+        // 🔥 直接从存储读取微信数据
+        const context = getContext();
+        const charId = context?.characterId || 'default';
+        const chatId = context?.chatId || 'default';
+        const storageKey = `wechat_data_${charId}_${chatId}`;
+        
+        const savedData = storage.get(storageKey, false);
+        if (savedData) {
+            const wechatDataParsed = JSON.parse(savedData);
+            const allChats = wechatDataParsed.chats || [];
+            
+            console.log('💬 微信聊天数量:', allChats.length);
+            
+            allChats.forEach(chat => {
+                const messages = wechatDataParsed.messages?.[chat.id] || [];
+                if (messages && messages.length > 0) {
+                    // 取每个聊天的最近10条消息
+                    const recentMessages = messages.slice(-10);
+                    
+                    recentMessages.forEach(msg => {
+                        const speaker = msg.from === 'me' 
+                            ? (context.name1 || '用户') 
+                            : chat.name;
                         
-                        console.log('💬 微信聊天数量:', allChats.length);
+                        let content = '';
+                        switch (msg.type) {
+                            case 'text':
+                                content = msg.content;
+                                break;
+                            case 'image':
+                                content = '[图片]';
+                                break;
+                            case 'voice':
+                                content = `[语音 ${msg.duration || '3秒'}]`;
+                                break;
+                            case 'video':
+                                content = '[视频通话]';
+                                break;
+                            case 'transfer':
+                                content = `[转账 ¥${msg.amount}]`;
+                                break;
+                            case 'redpacket':
+                                content = `[红包 ¥${msg.amount}]`;
+                                break;
+                            default:
+                                content = `[${msg.type}]`;
+                        }
                         
-                        allChats.forEach(chat => {
-                            const messages = wechatData.getMessages(chat.id);
-                            if (messages && messages.length > 0) {
-                                // 取每个聊天的最近10条消息
-                                const recentMessages = messages.slice(-10);
-                                
-                                recentMessages.forEach(msg => {
-                                    const speaker = msg.from === 'me' 
-                                        ? (context.name1 || '用户') 
-                                        : chat.name;
-                                    
-                                    let content = '';
-                                    switch (msg.type) {
-                                        case 'text':
-                                            content = msg.content;
-                                            break;
-                                        case 'image':
-                                            content = '[图片]';
-                                            break;
-                                        case 'voice':
-                                            content = `[语音 ${msg.duration || '3秒'}]`;
-                                            break;
-                                        case 'video':
-                                            content = '[视频通话]';
-                                            break;
-                                        case 'transfer':
-                                            content = `[转账 ¥${msg.amount}]`;
-                                            break;
-                                        case 'redpacket':
-                                            content = `[红包 ¥${msg.amount}]`;
-                                            break;
-                                        default:
-                                            content = `[${msg.type}]`;
-                                    }
-                                    
-                                        phoneActivities.push({
-                                        app: '微信',
-                                        type: chat.type === 'group' ? '群聊' : '私聊',
-                                        chatName: chat.name,
-                                        speaker: speaker,
-                                        content: content,
-                                        time: msg.time,
-                                        timestamp: msg.realTimestamp || Date.now(),
-                                        tavernMessageIndex: msg.tavernMessageIndex  // 🔥 保留索引
-                                     });
-                                  });
-                                }
-                            });
-                        
-                        console.log('✅ 收集了微信消息:', phoneActivities.length, '条');
-                    }
+                        phoneActivities.push({
+                            app: '微信',
+                            type: chat.type === 'group' ? '群聊' : '私聊',
+                            chatName: chat.name,
+                            speaker: speaker,
+                            content: content,
+                            time: msg.time,
+                            timestamp: msg.realTimestamp || Date.now(),
+                            tavernMessageIndex: msg.tavernMessageIndex
+                        });
+                    });
+                }
+            });
+            
+            console.log('✅ 收集了微信消息:', phoneActivities.length, '条');
+        } else {
+            console.log('📱 没有保存的微信数据');
+        }
+    } catch (e) {
+        console.error('❌ 读取微信数据失败:', e);
+    }
+} else {
+    console.warn('⚠️ 无法访问storage');
+}
                     
                     // ========================================
                     // 2️⃣ 收集朋友圈（如果有）
@@ -955,8 +973,22 @@ let insertPosition;
 
 // 特殊情况1：索引为0，说明手机消息在酒馆对话之前
 if (tavernIndex === 0) {
-    insertPosition = Math.max(0, chatStartIndex);
-    console.log(`📍 [位置计算] 索引=0（对话开始前），插入到位置: ${insertPosition}`);
+    // 🔥 找到第一条真实用户消息
+    for (let i = 0; i < messages.length; i++) {
+        if (messages[i].role === 'user' && 
+            !messages[i].content?.includes('【Gaigai') &&
+            !messages[i].content?.includes('[Example')) {
+            insertPosition = i;
+            console.log(`📍 [位置计算] 找到第一条用户消息，插入到位置: ${insertPosition}`);
+            break;
+        }
+    }
+    
+    // 如果没找到，使用chatStartIndex
+    if (insertPosition === undefined) {
+        insertPosition = Math.max(0, chatStartIndex);
+        console.log(`📍 [位置计算] 未找到用户消息，使用起始位置: ${insertPosition}`);
+    }
 }
 // 特殊情况2：索引无效（999999 或超大值），放在最后
 else if (tavernIndex >= 999999) {
