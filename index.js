@@ -983,31 +983,25 @@ for (let i = messages.length - 1; i >= 0; i--) {
     }
 }
 
-// 2. 在用户消息后插入
-if (lastUserIndex >= 0) {
-    insertPosition = lastUserIndex + 1;
-    console.log(`✅ [手机] 将在用户消息后插入（位置${insertPosition}）`);
+// 2. 修改消息内容（不是插入新消息）
+if (lastUserIndex >= 0 && messages[lastUserIndex]) {
+    // 将手机消息附加到用户消息的末尾
+    const originalContent = messages[lastUserIndex].content || '';
+    messages[lastUserIndex].content = originalContent + '\n\n' + phoneContent;
+    console.log(`✅ [手机] 已将手机消息附加到用户消息（位置${lastUserIndex}）`);
 } else {
-    // 兜底：没找到用户消息，插入到Gaigai表格之前
+    // 如果找不到用户消息，尝试修改最后一条system消息
     for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].isGaigaiData || 
-            (messages[i].content && messages[i].content.includes('📊表格'))) {
-            insertPosition = i;
-            console.log(`⚠️ [手机] 未找到用户消息，插入到Gaigai表格位置${i}之前`);
+        if (messages[i].role === 'system' && !messages[i].isGaigaiData) {
+            messages[i].content = messages[i].content + '\n\n' + phoneContent;
+            console.log(`✅ [手机] 已将手机消息附加到系统消息（位置${i}）`);
             break;
         }
     }
 }
                         
-                        messages.splice(insertPosition, 0, {
-                            role: 'system',
-                            content: phoneContent,
-                            isPhoneMessage: true
-                        });
-                        
-                        console.log(`🎉 已注入手机消息到位置 ${insertPosition}`);
-                    }
-                }
+                    }  // 结束 if (messages && Array.isArray(messages))
+                }      // 结束 if (phoneActivities.length > 0)
                 
             } catch (e) {
                 console.error('❌ 手机注入失败:', e);
@@ -1020,14 +1014,14 @@ if (lastUserIndex >= 0) {
     console.warn('⚠️ 无法访问 context 或 eventSource');
 }
     
-    console.log('🎉 虚拟手机初始化完成！');
-    console.log(`📊 状态: ${settings.enabled ? '已启用' : '已禁用'}`);
+console.log('🎉 虚拟手机初始化完成！');
+console.log(`📊 状态: ${settings.enabled ? '已启用' : '已禁用'}`);
     
 } catch (e) {
     console.error('❌ 虚拟手机初始化失败:', e);
 }
-}  // ← init() 函数结束
-    
+}  // 结束 init() 函数
+        
 // 🔥 修复：改进初始化流程
 setTimeout(() => {
     init();
