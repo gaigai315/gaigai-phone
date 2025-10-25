@@ -959,25 +959,41 @@ let phoneContent = `
 ╚═══════════════════════════════════════════════════════════════════════════╝
 `;
                         
-// 🔥🔥🔥 关键修复：插入到Gaigai表格之前（而不是最后）
+// 🔥🔥🔥 核心修复：插入到最后一条真实用户消息之后
 let insertPosition = messages.length;
 
-// 查找Gaigai的标记（isGaigaiData 或 包含"📊表格"）
+// 1. 先找最后一条真实用户消息（排除自动注入的文风指南）
+let lastUserIndex = -1;
 for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].isGaigaiData || 
-        (messages[i].content && messages[i].content.includes('📊表格'))) {
-        insertPosition = i; // 插入到Gaigai表格之前
-        console.log(`🎯 [手机] 找到Gaigai表格位置${i}，将在其之前插入`);
-        break;
+    if (messages[i].role === 'user') {
+        const content = messages[i].content || '';
+        // 排除自动注入的提示词（通常很长或包含特定关键词）
+        const isAutoInjected = 
+            content.includes('Gaigai') || 
+            content.includes('Protocol') || 
+            content.includes('Core_Principles') ||
+            content.includes('【') ||
+            content.length > 500;
+        
+        if (!isAutoInjected) {
+            lastUserIndex = i;
+            console.log(`🎯 [手机] 找到最后用户输入位置${i}: "${content.substring(0, 30)}..."`);
+            break;
+        }
     }
 }
 
-// 如果没找到Gaigai标记，就插入到最后一个非Gaigai的system消息后
-if (insertPosition === messages.length) {
+// 2. 在用户消息后插入
+if (lastUserIndex >= 0) {
+    insertPosition = lastUserIndex + 1;
+    console.log(`✅ [手机] 将在用户消息后插入（位置${insertPosition}）`);
+} else {
+    // 兜底：没找到用户消息，插入到Gaigai表格之前
     for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === 'system' && !messages[i].isGaigaiPrompt && !messages[i].isGaigaiData) {
-            insertPosition = i + 1;
-            console.log(`🎯 [手机] 未找到Gaigai标记，插入到system末尾位置${insertPosition}`);
+        if (messages[i].isGaigaiData || 
+            (messages[i].content && messages[i].content.includes('📊表格'))) {
+            insertPosition = i;
+            console.log(`⚠️ [手机] 未找到用户消息，插入到Gaigai表格位置${i}之前`);
             break;
         }
     }
