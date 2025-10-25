@@ -910,16 +910,29 @@ if (context && context.eventSource) {
 ╚═══════════════════════════════════════════════════════════════════════════╝
 `;
                         
-                        // 🔥 在最后一个 system 消息后插入（Gaigai 注入之前）
-                        let lastSystemIndex = -1;
-                        for (let i = messages.length - 1; i >= 0; i--) {
-                            if (messages[i].role === 'system') {
-                                lastSystemIndex = i;
-                                break;
-                            }
-                        }
-                        
-                        const insertPosition = lastSystemIndex >= 0 ? lastSystemIndex + 1 : messages.length;
+// 🔥🔥🔥 关键修复：插入到Gaigai表格之前（而不是最后）
+let insertPosition = messages.length;
+
+// 查找Gaigai的标记（isGaigaiData 或 包含"📊表格"）
+for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].isGaigaiData || 
+        (messages[i].content && messages[i].content.includes('📊表格'))) {
+        insertPosition = i; // 插入到Gaigai表格之前
+        console.log(`🎯 [手机] 找到Gaigai表格位置${i}，将在其之前插入`);
+        break;
+    }
+}
+
+// 如果没找到Gaigai标记，就插入到最后一个非Gaigai的system消息后
+if (insertPosition === messages.length) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'system' && !messages[i].isGaigaiPrompt && !messages[i].isGaigaiData) {
+            insertPosition = i + 1;
+            console.log(`🎯 [手机] 未找到Gaigai标记，插入到system末尾位置${insertPosition}`);
+            break;
+        }
+    }
+}
                         
                         messages.splice(insertPosition, 0, {
                             role: 'system',
