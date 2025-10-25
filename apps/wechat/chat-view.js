@@ -2544,6 +2544,7 @@ showAddCustomEmojiDialog() {
         setTimeout(() => this.app.render(), 1000);
     });
 }
+}
 
 // 🔔 通用AI通知方法
 async notifyAI(message) {
