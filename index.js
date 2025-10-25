@@ -742,10 +742,9 @@ if (context && context.eventSource) {
     // 📱 监听提示词准备事件，注入手机活动记录
     // ========================================
     if (context.event_types.CHAT_COMPLETION_PROMPT_READY) {
-        context.eventSource.on(
-            context.eventSource.on(
-    context.event_types.CHAT_COMPLETION_PROMPT_READY,
-    (eventData) => {
+    context.eventSource.on(
+        context.event_types.CHAT_COMPLETION_PROMPT_READY,
+        (eventData) => {
         if (!settings.enabled) return;
         
         try {
