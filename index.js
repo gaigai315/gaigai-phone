@@ -1037,167 +1037,130 @@ if (chatStartIndex === -1) {
     
     console.log('📍 聊天记录起始位置:', chatStartIndex);
     
-    // 🔥 按时间顺序注入
-const sortedIndices = Object.keys(activitiesByIndex)
-    .map(k => parseInt(k))
-    .sort((a, b) => a - b);
+    // 🔥🔥🔥 关键修复：强制注入到最后一条用户消息之前 🔥🔥🔥
+// ========================================
+// 策略：不再按时间分散插入，而是合并成一个醒目的消息块
+// ========================================
 
-let totalInjected = 0;
+// 1️⃣ 找到最后一条用户消息的位置
+let lastUserMessageIndex = -1;
+for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user' || messages[i].is_user === true) {
+        lastUserMessageIndex = i;
+        console.log(`📍 [手机注入] 找到最后一条用户消息，位置: ${i}`);
+        break;
+    }
+}
 
-// 🔥 对同一索引下的消息按时间排序
-Object.keys(activitiesByIndex).forEach(index => {
-    activitiesByIndex[index].sort((a, b) => a.timestamp - b.timestamp);
+if (lastUserMessageIndex === -1) {
+    console.warn('⚠️ [手机注入] 找不到用户消息，插入到末尾');
+    lastUserMessageIndex = messages.length;
+}
+
+// 2️⃣ 对所有手机消息按时间排序
+phoneActivities.sort((a, b) => {
+    // 先按索引排序
+    const indexA = a.tavernMessageIndex !== undefined ? a.tavernMessageIndex : 999999;
+    const indexB = b.tavernMessageIndex !== undefined ? b.tavernMessageIndex : 999999;
+    if (indexA !== indexB) return indexA - indexB;
+    
+    // 同一索引下按时间戳排序
+    return a.timestamp - b.timestamp;
 });
 
-sortedIndices.forEach(tavernIndex => {
-    const activities = activitiesByIndex[tavernIndex];
+// 3️⃣ 构建统一的手机消息块
+let phoneContextContent = `
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                          📱 手机活动记录（完整时间线）                    ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+⚠️ 重要：以下是角色通过手机（微信）进行的所有对话，按时间顺序排列
+⚠️ 这些消息的优先级 > 面对面对话，请仔细阅读并据此生成回复
+
+`;
+
+// 4️⃣ 按时间线添加所有消息
+let currentIndex = -1;
+phoneActivities.forEach((activity, idx) => {
+    const activityIndex = activity.tavernMessageIndex !== undefined ? activity.tavernMessageIndex : 999999;
     
-    // 🔥 动态计算插入位置
-    let timeDesc;
-    let insertPosition;
-    
-    // ========================================
-    // 策略：根据手机消息的索引智能插入
-    // ========================================
-    
-    if (tavernIndex === 0) {
-        // 情况A：手机消息在对话开始前
-        timeDesc = '（在酒馆对话开始之前）';
+    // 如果是新的时间点，添加分隔符
+    if (activityIndex !== currentIndex) {
+        currentIndex = activityIndex;
         
-        // 找到第一条真实用户消息
-        for (let i = 0; i < messages.length; i++) {
-            if (messages[i].role === 'user' && 
-                !messages[i].content?.includes('【Gaigai') &&
-                !messages[i].content?.includes('[Example') &&
-                !messages[i].content?.includes('"**我任务失败了')) {
-                insertPosition = i;
-                console.log(`📍 [位置计算] 索引=0，插入到第一条用户消息前: ${insertPosition}`);
-                break;
-            }
+        let timeDesc;
+        if (activityIndex === 0) {
+            timeDesc = '【酒馆对话开始前】';
+        } else if (activityIndex >= 999999) {
+            timeDesc = '【最新消息】';
+        } else {
+            timeDesc = `【第${activityIndex}句对话后】`;
         }
         
-        if (insertPosition === undefined) {
-            insertPosition = Math.max(0, chatStartIndex);
-        }
-        
-    } else if (tavernIndex >= 999999) {
-        // 情况B：时间未知的消息，放在最后
-        timeDesc = '（最新消息）';
-        insertPosition = messages.length;
-        console.log(`📍 [位置计算] 索引无效，插入到末尾: ${insertPosition}`);
-        
-    } else {
-        // 情况C：根据索引动态插入
-        timeDesc = `（在第${tavernIndex}句对话之后）`;
-        
-        // 🔥 关键修复：从聊天开始位置计算真实对话数
-        let messageCount = 0;
-        insertPosition = messages.length; // 默认末尾
-        
-        for (let i = 0; i < messages.length; i++) {
-            const msg = messages[i];
-            
-            // 跳过系统消息、提示词、示例
-            if (msg.role === 'system' || 
-                msg.content?.includes('【Gaigai') ||
-                msg.content?.includes('[Example') ||
-                msg.content?.includes('"**我任务失败了**')) {
-                continue;
-            }
-            
-            // 统计真实对话（user或assistant）
-            if (msg.role === 'user' || msg.role === 'assistant') {
-                messageCount++;
-                
-                // 🔥 找到第N句对话
-                if (messageCount === tavernIndex) {
-                    insertPosition = i + 1;  // 插入到这句对话之后
-                    console.log(`📍 [位置计算] 在第${tavernIndex}句对话后插入到位置: ${insertPosition}`);
-                    break;
-                }
-            }
-        }
-        
-        // 🔥 如果手机消息的索引超过当前对话数，说明是"未来"的消息
-        if (messageCount < tavernIndex) {
-            insertPosition = messages.length;
-            console.log(`📍 [位置计算] 索引${tavernIndex}超过当前对话数${messageCount}，插入到末尾: ${insertPosition}`);
-        }
+        phoneContextContent += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        phoneContextContent += `⏰ ${timeDesc}\n`;
+        phoneContextContent += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
     }
     
-    // 构建这个时间点的手机消息内容
-    let phoneContextContent = `
-═══════════════════════════════════════
-📱 手机活动${timeDesc}
-═══════════════════════════════════════
-`;
+    // 添加消息内容
+    let prefix = '';
+    if (activity.type === '群聊') {
+        prefix = `[群：${activity.chatName}]`;
+    } else if (activity.type === '私聊') {
+        prefix = `[私聊：${activity.chatName}]`;
+    } else if (activity.type === '动态') {
+        prefix = `[朋友圈]`;
+    } else {
+        prefix = `[${activity.type}]`;
+    }
     
-    const groupedByApp = {};
-    activities.forEach(activity => {
-        if (!groupedByApp[activity.app]) {
-            groupedByApp[activity.app] = [];
-        }
-        groupedByApp[activity.app].push(activity);
-    });
-    
-    Object.keys(groupedByApp).forEach(appName => {
-        phoneContextContent += `## ${appName}\n\n`;
-        
-        groupedByApp[appName].forEach(activity => {
-            let prefix = '';
-            if (activity.type === '群聊') {
-                prefix = `[群：${activity.chatName}]`;
-            } else if (activity.type === '私聊') {
-                prefix = `[私聊]`;
-            } else if (activity.type === '动态') {
-                prefix = `[朋友圈]`;
-            } else {
-                prefix = `[${activity.type}]`;
-            }
-            
-            phoneContextContent += `${prefix} ${activity.time} ${activity.speaker}: ${activity.content}\n`;
-        });
-    });
-    
-    phoneContextContent += `\n═══════════════════════════════════════\n`;
-    
-    // 插入手机消息
-    messages.splice(insertPosition, 0, {
-        role: 'system',
-        content: phoneContextContent
-    });
-    
-    totalInjected++;
-    
-    console.log(`✅ 已注入索引${tavernIndex}的手机消息到位置${insertPosition}（${activities.length}条）`);
+    phoneContextContent += `  ${prefix} ${activity.time} ${activity.speaker}: ${activity.content}\n`;
 });
-    
-    console.log(`🎉 总共注入了 ${totalInjected} 个时间点的手机消息`);
-    
+
+// 5️⃣ 添加警告提示
+phoneContextContent += `
+╔═══════════════════════════════════════════════════════════════════════════╗
+║  ⚠️  关键提醒：                                                           ║
+║  • 上述手机消息反映了角色的真实状态和位置                                ║
+║  • 如果消息显示角色在加班 → 角色【不在】用户身边                         ║
+║  • 如果消息显示角色在回家路上 → 回复应体现这个状态                       ║
+║  • 所有时间均为剧情时间，严格遵守                                        ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+`;
+
+// 6️⃣ 插入到最后一条用户消息之前
+messages.splice(lastUserMessageIndex, 0, {
+    role: 'system',
+    content: phoneContextContent
+});
+
+console.log(`🎉 [手机注入] 已注入手机消息块到位置 ${lastUserMessageIndex}（最后一条用户消息之前）`);
+console.log(`📊 [手机注入] 包含 ${phoneActivities.length} 条手机活动`);
+
 } else {
     console.log('📱 暂无手机活动记录');
 }
-                    
-                } catch (e) {
-                    console.error('❌ 手机活动注入失败:', e);
-                }
+                
+            } catch (e) {
+                console.error('❌ 手机活动注入失败:', e);
             }
-        );
-        
-        console.log('✅ 已注册手机活动注入监听器');
-    } else {
-        console.warn('⚠️ CHAT_COMPLETION_PROMPT_READY 事件不存在，手机活动将不会注入到酒馆');
-    }
+        }
+    );
     
-    console.log('✅ 已连接到酒馆事件系统');
+    console.log('✅ 已注册手机活动注入监听器');
+} else {
+    console.warn('⚠️ CHAT_COMPLETION_PROMPT_READY 事件不存在，手机活动将不会注入到酒馆');
 }
-        
-        console.log('🎉 虚拟手机初始化完成！');
-        console.log(`📊 状态: ${settings.enabled ? '已启用' : '已禁用'}`);
-        
-    } catch (e) {
-        console.error('❌ 虚拟手机初始化失败:', e);
-    }
+
+console.log('✅ 已连接到酒馆事件系统');
+}
+    
+    console.log('🎉 虚拟手机初始化完成！');
+    console.log(`📊 状态: ${settings.enabled ? '已启用' : '已禁用'}`);
+    
+} catch (e) {
+    console.error('❌ 虚拟手机初始化失败:', e);
+}
 }
     
     // 🔥 修复：改进初始化流程
