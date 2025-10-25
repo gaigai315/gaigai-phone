@@ -121,35 +121,48 @@ export class PhoneStorage {
     
     // 加载APP数据
     loadApps(defaultApps) {
-        try {
-            const key = this.getStorageKey('apps');
-            let saved = null;
-            
-            // 优先从服务器加载
-            if (this.useServerStorage) {
-                const extSettings = this.getExtensionSettings();
-                if (extSettings && extSettings[key]) {
-                    saved = extSettings[key];
-                    console.log(`📂 已从服务器加载手机数据 [${this.currentCharacterId}]`);
-                }
+    try {
+        const key = this.getStorageKey('apps');
+        let saved = null;
+        
+        // 优先从服务器加载
+        if (this.useServerStorage) {
+            const extSettings = this.getExtensionSettings();
+            if (extSettings && extSettings[key]) {
+                saved = extSettings[key];
+                console.log(`📂 已从服务器加载手机数据 [${this.currentCharacterId}]`);
             }
-            
-            // 降级到本地
-            if (!saved) {
-                saved = localStorage.getItem(`${this.storageKey}_${key}`);
-                if (saved) {
-                    console.log(`📂 已从本地加载手机数据 [${this.currentCharacterId}]`);
-                }
-            }
-            
-            if (saved) {
-                return JSON.parse(saved);
-            }
-        } catch (e) {
-            console.warn('加载失败，使用默认数据:', e);
         }
-        return defaultApps;
+        
+        // 降级到本地
+        if (!saved) {
+            saved = localStorage.getItem(`${this.storageKey}_${key}`);
+            if (saved) {
+                console.log(`📂 已从本地加载手机数据 [${this.currentCharacterId}]`);
+            }
+        }
+        
+        // 🔥 增加空值检查和容错
+        if (saved && typeof saved === 'string' && saved.trim() !== '') {
+            try {
+                return JSON.parse(saved);
+            } catch (parseError) {
+                console.error('❌ [Apps] JSON 解析失败:', parseError.message);
+                console.warn('损坏的数据:', saved.substring(0, 200));
+                
+                // 清空损坏数据
+                if (this.useServerStorage) {
+                    const extSettings = this.getExtensionSettings();
+                    if (extSettings) delete extSettings[key];
+                }
+                localStorage.removeItem(`${this.storageKey}_${key}`);
+            }
+        }
+    } catch (e) {
+        console.warn('加载失败，使用默认数据:', e);
     }
+    return defaultApps;
+}
     
     // 🔥 保存扩展设置（会自动同步到服务器）
     async saveExtensionSettings() {
@@ -200,36 +213,46 @@ export class PhoneStorage {
     
     // 加载设置
     loadSettings() {
-        try {
-            let saved = null;
-            
-            // 服务器存储
-            if (this.useServerStorage) {
-                const extSettings = this.getExtensionSettings();
-                if (extSettings && extSettings['global_settings']) {
-                    saved = extSettings['global_settings'];
-                }
+    const defaultSettings = {
+        enabled: true,
+        soundEnabled: true,
+        vibrationEnabled: true,
+        onlineMode: false,
+        promptTemplate: null
+    };
+    
+    try {
+        let saved = null;
+        
+        // 服务器存储
+        if (this.useServerStorage) {
+            const extSettings = this.getExtensionSettings();
+            if (extSettings && extSettings['global_settings']) {
+                saved = extSettings['global_settings'];
             }
-            
-            // 本地存储
-            if (!saved) {
-                saved = localStorage.getItem(`${this.storageKey}_global_settings`);
-            }
-            
-            if (saved) {
-                return JSON.parse(saved);
-            }
-        } catch (e) {
-            console.warn('加载设置失败:', e);
         }
-        return {
-            enabled: true,
-            soundEnabled: true,
-            vibrationEnabled: true,
-            onlineMode: false,
-            promptTemplate: null
-        };
+        
+        // 本地存储
+        if (!saved) {
+            saved = localStorage.getItem(`${this.storageKey}_global_settings`);
+        }
+        
+        // 🔥 增加空值检查和容错
+        if (saved && typeof saved === 'string' && saved.trim() !== '') {
+            try {
+                return JSON.parse(saved);
+            } catch (parseError) {
+                console.error('❌ [Settings] JSON 解析失败:', parseError.message);
+                // 清空损坏数据
+                localStorage.removeItem(`${this.storageKey}_global_settings`);
+            }
+        }
+    } catch (e) {
+        console.warn('加载设置失败:', e);
     }
+    
+    return defaultSettings;
+}
     
     // 清空当前角色的数据
     async clearCurrentData() {
