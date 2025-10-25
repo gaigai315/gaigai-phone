@@ -603,6 +603,20 @@ buildPhoneChatPrompt(context, contactName, userMessage) {
     // 🔥🔥🔥 新增：从 PromptManager 获取微信聊天提示词 🔥🔥🔥
     const promptManager = window.VirtualPhone?.promptManager;
     let chatPromptTemplate = '';
+
+    // 🔥 修复：添加容错处理
+if (promptManager) {
+    try {
+        if (promptManager.isEnabled('wechat', 'chat')) {
+            chatPromptTemplate = promptManager.getPromptForFeature('wechat', 'chat');
+            console.log('✅ 已加载微信聊天提示词，长度:', chatPromptTemplate.length);
+        }
+    } catch (e) {
+        console.warn('⚠️ 获取提示词失败:', e);
+    }
+} else {
+    console.warn('⚠️ PromptManager 未初始化');
+}
     
     if (promptManager && promptManager.isEnabled('wechat', 'chat')) {
         chatPromptTemplate = promptManager.getPromptForFeature('wechat', 'chat');
