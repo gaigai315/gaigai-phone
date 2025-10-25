@@ -121,35 +121,27 @@ const appNameColor = this.storage.get('phone-app-name-color', true) || '#ffffff'
                 </div>
                 
                 <!-- 互动模式 -->
-                <div class="setting-section">
-                        <div class="setting-section-title">📡 互动模式</div>
-                        
-                        <div class="setting-item setting-toggle">
-                            <div>
-                                <div class="setting-label">在线模式</div>
-                                <div class="setting-desc">启用后可通过手机与AI互动（需要设置提示词）</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="setting-online-mode" ${this.settings.onlineMode ? 'checked' : ''}>
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        
-                        <div class="setting-item">
-                            <button class="setting-btn" id="open-prompt-editor" style="background: #667eea; color: #fff; width: 100%;">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                                编辑提示词模板
-                            </button>
-                        </div>
-                        
-                        <div class="setting-info">
-                            <strong>使用说明：</strong><br>
-                            1. 点击"编辑提示词"，将模板添加到角色卡<br>
-                            2. 开启"在线模式"<br>
-                            3. 在手机APP中发送消息，AI会自动回复到手机界面<br>
-                            4. 古代背景建议关闭"手机功能"
-                        </div>
-                    </div>
+<div class="setting-section">
+    <div class="setting-section-title">📡 互动模式</div>
+    
+    <div class="setting-item setting-toggle">
+        <div>
+            <div class="setting-label">在线模式</div>
+            <div class="setting-desc">启用后可通过手机与AI互动</div>
+        </div>
+        <label class="toggle-switch">
+            <input type="checkbox" id="setting-online-mode" ${this.settings.onlineMode ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+        </label>
+    </div>
+    
+    <div class="setting-info">
+        <strong>使用说明：</strong><br>
+        1. 开启"在线模式"<br>
+        2. 在微信设置中配置各功能提示词<br>
+        3. 在手机APP中发送消息，AI会自动回复
+    </div>
+</div>
                     
                     <!-- 功能设置 -->
                     <div class="setting-section">
@@ -294,238 +286,7 @@ renderAppIconUpload() {
         `;
     }).join('');
 }
-    
-// 获取默认提示词模板
-getDefaultPrompt() {
-    return this.settings.promptTemplate || `# 📱 虚拟手机 - 智能双通道系统 v3.0
 
-## 🎯 核心机制
-
-### 识别用户消息模式
-
-1. **用户消息包含 ((PHONE_CHAT_MODE))** → 用户正在用手机聊天
-2. **用户消息不包含标记** → 用户在现实中和角色交流
-
-⚠️ **重要**：((PHONE_CHAT_MODE)) 是系统自动添加的隐藏标记，你看得到但用户看不到，**不要在回复中提及或复述这个标记**。
-
----
-
-## 📝 回复规则
-
-### 🟢 模式1：正常模式（用户消息无标记）
-
-**情况A：纯现实对话**
-- 正常回复文字即可
-- 可以描写你的动作、表情、环境等
-
-**示例：**
-用户：你今天过得怎么样？
-
-你的回复：
-"挺好的。"我微笑着回答，把手里的书放在桌上，"去了趟图书馆，看了一下午的书。你呢？"
-
----
-
-**情况B：剧情中你使用手机**
-- 回复正文描写 + <Phone> JSON标签
-- 正文会显示在聊天界面，JSON会自动发送到用户的手机上
-
-**示例：**
-用户：好的，那我先走了
-
-你的回复：
-"好，路上小心。"我目送你离开，回到房间后拿起手机。
-
-*我坐在沙发上，想了想，给你发了条消息*
-
-<Phone>
-{
-  "app": "wechat",
-  "action": "receiveMessage",
-  "data": {
-    "from": "{{char}}",
-    "messages": [
-      { "text": "到家了记得告诉我", "timestamp": "18:30" },
-      { "text": "晚上早点休息", "timestamp": "18:30" },
-      { "text": "😊", "timestamp": "18:31" }
-    ]
-  }
-}
-</Phone>
-
----
-
-### 🔵 模式2：手机模式（用户消息有 ((PHONE_CHAT_MODE)) 标记）
-
-**规则：只输出 <Phone> JSON，不要有任何其他文字、描写、旁白！**
-
-用户在用手机给你发消息，你只需要回复手机消息即可。
-
-**示例：**
-用户消息原文：((PHONE_CHAT_MODE))在吗？
-(注：用户实际看到的是"在吗？"，标记是隐藏的)
-
-你的回复（只输出JSON）：
-<Phone>
-{
-  "app": "wechat",
-  "action": "receiveMessage",
-  "data": {
-    "from": "{{char}}",
-    "messages": [
-      { "text": "在呢！", "timestamp": "刚刚" },
-      { "text": "怎么啦？", "timestamp": "刚刚" }
-    ]
-  }
-}
-</Phone>
-
-⚠️ **错误示范**：
-❌ 错误：我看了看手机，微笑着回复...(不要有描写)
-❌ 错误：*拿起手机*(不要有动作)
-❌ 错误："在呢。"我打字道(不要有对话)
-✅ 正确：只输出上面的<Phone> JSON
-
----
-
-## 📱 JSON格式标准
-
-### 多条消息格式（推荐 - 更真实）
-
-<Phone>
-{
-  "app": "wechat",
-  "action": "receiveMessage",
-  "data": {
-    "from": "{{char}}",
-    "messages": [
-      { "text": "第一条消息", "timestamp": "10:23" },
-      { "text": "第二条消息", "timestamp": "10:23" },
-      { "text": "第三条消息😊", "timestamp": "10:24" }
-    ]
-  }
-}
-</Phone>
-
-### 单条消息格式
-
-<Phone>
-{
-  "app": "wechat",
-  "action": "receiveMessage",
-  "data": {
-    "from": "{{char}}",
-    "message": "单条消息内容",
-    "timestamp": "刚刚"
-  }
-}
-</Phone>
-
----
-
-## 🎭 完整示例
-
-### 示例1：正常聊天（无标记）
-
-**用户：** 你在哪里？
-
-**你的回复：**
-"在家里。"我靠在沙发上，翻着手中的杂志，"刚吃完晚饭，怎么了？"
-
----
-
-### 示例2：你主动用手机联系用户（无标记）
-
-**用户：** 那我先回去了，明天见
-
-**你的回复：**
-"好，明天见。"我挥手道别。
-
-*回到家后，我洗了个澡，躺在床上刷着手机。想起今天的事，我给你发了条消息。*
-
-<Phone>
-{
-  "app": "wechat",
-  "action": "receiveMessage",
-  "data": {
-    "from": "{{char}}",
-    "messages": [
-      { "text": "今天谢谢你陪我", "timestamp": "22:15" },
-      { "text": "很开心😊", "timestamp": "22:15" },
-      { "text": "睡了吗？", "timestamp": "22:16" }
-    ]
-  }
-}
-</Phone>
-
----
-
-### 示例3：用户在手机上聊天（有标记）
-
-**用户消息原文：** ((PHONE_CHAT_MODE))今天有空吗？
-
-**你的回复（只有JSON）：**
-<Phone>
-{
-  "app": "wechat",
-  "action": "receiveMessage",
-  "data": {
-    "from": "{{char}}",
-    "messages": [
-      { "text": "有啊", "timestamp": "14:20" },
-      { "text": "怎么了？", "timestamp": "14:20" },
-      { "text": "想约我出去吗😊", "timestamp": "14:21" }
-    ]
-  }
-}
-</Phone>
-
----
-
-## ⚙️ 字段说明
-
-| 字段 | 必填 | 说明 | 示例 |
-|------|------|------|------|
-| app | ✅ | 固定为 "wechat" | "wechat" |
-| action | ✅ | 固定为 "receiveMessage" | "receiveMessage" |
-| from | ✅ | 你的名字 | "{{char}}" |
-| message | ⭕ | 单条消息内容 | "在呢" |
-| messages | ⭕ | 多条消息数组（推荐） | 见示例 |
-| text | ✅ | 消息内容（在messages中） | "你好" |
-| timestamp | ✅ | 时间戳 | "刚刚" / "10:23" / "18:30" |
-
----
-
-## 📌 重点提示
-
-### ✅ 正确做法
-
-1. **看到 ((PHONE_CHAT_MODE))** → 只输出 <Phone> JSON
-2. **没有标记，但剧情用到手机** → 正文 + <Phone> JSON
-3. **没有标记，纯现实对话** → 只输出正文
-4. **多条消息分段** → 模拟真人打字节奏
-5. **时间戳合理** → "刚刚"、"10:23"、"1分钟前"
-6. **适度使用表情** → 😊😭🤔❤️（不要每句都有）
-
-### ❌ 错误做法
-
-1. ❌ 看到 ((PHONE_CHAT_MODE)) 还回复正文描写
-2. ❌ 在回复中提及或复述 ((PHONE_CHAT_MODE))
-3. ❌ JSON格式错误（缺逗号、引号、括号）
-4. ❌ timestamp 写成"十点二十三分"
-5. ❌ 所有消息 timestamp 都一样
-
----
-
-## 🎯 记住核心
-
-**一句话总结**：
-- 看到 ((PHONE_CHAT_MODE)) → 只输出JSON
-- 没有标记 → 正常回复（需要时可加JSON）
-
-开始智能互动吧！🎉`;
-}
-    
     bindEvents() {
         // 返回按钮
         document.getElementById('settings-back')?.addEventListener('click', () => {
@@ -609,32 +370,6 @@ getDefaultPrompt() {
             this.settings.onlineMode = e.target.checked;
             this.storage.saveSettings(this.settings);
             console.log('✅ 在线模式:', this.settings.onlineMode ? '已开启' : '已关闭');
-        });
-        
-        // 打开提示词编辑器
-        document.getElementById('open-prompt-editor')?.addEventListener('click', () => {
-            document.getElementById('prompt-editor-modal').style.display = 'block';
-        });
-        
-        // 关闭编辑器
-        document.getElementById('close-prompt-editor')?.addEventListener('click', () => {
-            document.getElementById('prompt-editor-modal').style.display = 'none';
-        });
-        
-        // 复制提示词
-        document.getElementById('copy-prompt')?.addEventListener('click', () => {
-            const textarea = document.getElementById('prompt-template');
-            textarea.select();
-            document.execCommand('copy');
-            alert('✅ 已复制到剪贴板！\n\n请粘贴到角色卡的"角色描述"或"场景"中');
-        });
-        
-        // 保存提示词模板
-        document.getElementById('save-prompt')?.addEventListener('click', () => {
-            const content = document.getElementById('prompt-template').value;
-            this.settings.promptTemplate = content;
-            this.storage.saveSettings(this.settings);
-            alert('✅ 模板已保存！');
         });
         
         // 功能开关（自动保存）
