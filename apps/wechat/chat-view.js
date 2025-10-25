@@ -735,22 +735,33 @@ ${char.scenario ? `背景：${char.scenario.substring(0, 300)}` : ''}
         '# 场景：微信聊天',
         `你现在扮演${contactName}，正在微信上和${userName}聊天。`,
         '',
-        '## 关于' + contactName,
+        '## 背景信息（所有角色）',
         partnerInfo || `${contactName}是故事中的一个角色。根据上下文推测其身份和性格。`,
         '',
-        '## ⚠️ 重要：角色身份规则',
-        `1. 你是${contactName}本人，用第一人称"我"`,
-        `2. 你可以提到其他角色（如家人、朋友），这很正常`,
-        `3. 但你的说话风格、性格、立场必须是${contactName}的`,
-        `4. 绝对不能用其他角色的口气或性格说话`,
+        '## ⚠️ 重要：你的身份锁定',
+        `虽然你了解上述所有角色的信息，但你必须明确：`,
         '',
-        '错误示例：',
+        `【你是谁】`,
+        `你是 ${contactName} 本人`,
+        `用第一人称"我"来称呼自己`,
+        '',
+        `【你可以做什么】`,
+        `✅ 谈论你认识的人（家人、朋友、同事等）`,
+        `✅ 评价其他角色（基于${contactName}的立场）`,
+        `✅ 提到其他角色的名字和关系`,
+        '',
+        `【你不能做什么】`,
+        `❌ 用其他角色的性格、口气、立场说话`,
         `❌ 混淆${contactName}和其他角色的身份`,
-        `❌ 用其他角色的说话风格`,
+        `❌ 说出${contactName}不应该知道的信息`,
         '',
-        '正确示例：',
-        `✅ ${contactName}可以谈论认识的人`,
-        `✅ 但说话风格必须符合${contactName}的性格`,
+        `【示例】`,
+        `如果你是陈聿：`,
+        `✅ "我妹妹陈舒然最近..."（可以提到）`,
+        `✅ "周应淮那家伙..."（可以评价）`,
+        `✅ 用陈聿的性格：玩世不恭、戏谑调侃`,
+        `❌ 用陈舒然的口气说话`,
+        `❌ 说"我哥哥陈聿..."（身份混淆）`,
         ''
     );
 }
@@ -866,53 +877,39 @@ sections.push(
     return finalPrompt;
 }
 
-// 🔍 辅助方法：查找NPC信息
+// 🔍 辅助方法：查找NPC信息（改为提供完整背景）
 findNPCInfo(npcName, context) {
     let info = [];
     
-    // 1. 从联系人列表查找备注
+    // 1. 从联系人列表查找
     const contacts = this.app.wechatData.getContacts();
     const contact = contacts.find(c => c.name === npcName);
     if (contact) {
         if (contact.relation) {
-            info.push(`关系：${contact.relation}`);
+            info.push(`联系人备注 - ${npcName}：${contact.relation}`);
         }
         if (contact.remark) {
             info.push(`备注：${contact.remark}`);
         }
     }
     
-    // 2. 从世界书精确提取（只提取该NPC的段落）
+    // 2. 🔥 提供完整的世界书背景（不精确提取）
+    // 让AI了解所有NPC的关系，但在提示词中明确身份
     if (context.characters && context.characterId !== undefined) {
         const char = context.characters[context.characterId];
         if (char?.data?.character_book?.entries) {
             char.data.character_book.entries.forEach(entry => {
+                // 只要包含NPC名字的条目，都提供给AI
                 if (entry.content && entry.content.includes(npcName)) {
-                    const content = entry.content;
-                    
-                    // 🔥 精确提取：找到【NPC名字】开头的段落
-                    const npcPattern = new RegExp(`【${npcName}】([^【]*?)(?=【|$)`, 's');
-                    const match = content.match(npcPattern);
-                    
-                    if (match) {
-                        const npcSection = `【${npcName}】${match[1]}`.trim();
-                        // 避免重复
-                        if (!info.some(i => i.includes(npcSection))) {
-                            info.push(npcSection);
-                        }
-                    } else if (entry.comment === npcName) {
-                        // 如果整个条目就是关于这个NPC的
-                        const content = entry.content.substring(0, 500);
-                        if (!info.some(i => i.includes(content))) {
-                            info.push(content);
-                        }
-                    }
+                    // 提供完整的条目内容（截取前800字符，避免太长）
+                    const content = entry.content.substring(0, 800);
+                    info.push(content);
                 }
             });
         }
     }
     
-    // 3. 从记忆表格查找（保持原逻辑）
+    // 3. 从记忆表格查找
     if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
         window.Gaigai.m.s.forEach(section => {
             if (section.n === '人物档案' || section.n === '人物关系') {
@@ -926,7 +923,7 @@ findNPCInfo(npcName, context) {
         });
     }
     
-    return info.length > 0 ? info.join('\n') : '';
+    return info.length > 0 ? info.join('\n\n') : '';
 }
 
     // ✅ 静默调用AI（使用 context.generateRaw）
