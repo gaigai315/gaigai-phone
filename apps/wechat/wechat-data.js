@@ -734,8 +734,64 @@ parseAIResponse(text) {
             this.saveData();
         }
     }
-    
+
     // ========================================
+    // 🆕 群聊管理（新增）
+    // ========================================
+    
+    // 创建群聊
+    createGroupChat(groupInfo) {
+        const chatId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        const groupChat = {
+            id: chatId,
+            name: groupInfo.name || '群聊',
+            type: 'group',
+            avatar: groupInfo.avatar || '👥',
+            lastMessage: '',
+            time: '刚刚',
+            unread: 0,
+            members: groupInfo.members || [],
+            createdAt: new Date().toISOString()
+        };
+        
+        this.data.chats.push(groupChat);
+        
+        // 🔥 添加系统消息：谁创建了群聊
+        this.addMessage(chatId, {
+            from: 'system',
+            content: `你创建了群聊"${groupInfo.name}"`,
+            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            type: 'system',
+            avatar: '📢'
+        });
+        
+        this.saveData();
+        console.log('✅ 已创建群聊:', groupInfo.name);
+        return groupChat;
+    }
+    
+    // 添加群成员
+    addGroupMember(chatId, memberId) {
+        const chat = this.getChat(chatId);
+        if (chat && chat.type === 'group') {
+            if (!chat.members.includes(memberId)) {
+                chat.members.push(memberId);
+                this.saveData();
+            }
+        }
+    }
+    
+    // 移除群成员
+    removeGroupMember(chatId, memberId) {
+        const chat = this.getChat(chatId);
+        if (chat && chat.type === 'group') {
+            chat.members = chat.members.filter(id => id !== memberId);
+            this.saveData();
+        }
+    }    
+    
+// ========================================
 // 🎨 自定义表情管理
 // ========================================
 
