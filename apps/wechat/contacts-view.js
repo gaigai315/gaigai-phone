@@ -203,7 +203,6 @@ export class ContactsView {
     showOfficialAccounts() {
         this.app.phoneShell.showNotification('公众号', '关注的公众号列表', '📰');
     }
-}
 
     // ========================================
     // 🆕 手动添加好友（完整界面）
