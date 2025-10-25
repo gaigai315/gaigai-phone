@@ -12,10 +12,7 @@ import { ImageUploadManager } from './apps/settings/image-upload.js';
 import { TimeManager } from './config/time-manager.js';
 import { PromptManager } from './config/prompt-manager.js';
     
-    if (window.VirtualPhoneLoaded) {
-        console.warn('⚠️ 虚拟手机已加载，跳过重复初始化');
-        return;
-    }
+    if (!window.VirtualPhoneLoaded) {
     window.VirtualPhoneLoaded = true;
     
     console.log('📱 虚拟手机系统 v1.0.0 启动');
