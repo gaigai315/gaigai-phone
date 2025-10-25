@@ -908,27 +908,91 @@ if (chatStartIndex === -1) {
     console.log('📍 聊天记录起始位置:', chatStartIndex);
     
     // 🔥 按时间顺序注入
-    const sortedIndices = Object.keys(activitiesByIndex)
-        .map(k => parseInt(k))
-        .sort((a, b) => a - b);
-    
-    let totalInjected = 0;
+const sortedIndices = Object.keys(activitiesByIndex)
+    .map(k => parseInt(k))
+    .sort((a, b) => a - b);
 
-    // 🔥 对同一索引下的消息按时间排序，确保顺序正确
+let totalInjected = 0;
+
+// 🔥 对同一索引下的消息按时间排序
 Object.keys(activitiesByIndex).forEach(index => {
     activitiesByIndex[index].sort((a, b) => a.timestamp - b.timestamp);
 });
-    sortedIndices.forEach(tavernIndex => {
+
+sortedIndices.forEach(tavernIndex => {
     const activities = activitiesByIndex[tavernIndex];
     
-    // 🔥 改进的时间点描述
+    // 🔥 动态计算插入位置
     let timeDesc;
+    let insertPosition;
+    
+    // ========================================
+    // 策略：根据手机消息的索引智能插入
+    // ========================================
+    
     if (tavernIndex === 0) {
+        // 情况A：手机消息在对话开始前
         timeDesc = '（在酒馆对话开始之前）';
+        
+        // 找到第一条真实用户消息
+        for (let i = 0; i < messages.length; i++) {
+            if (messages[i].role === 'user' && 
+                !messages[i].content?.includes('【Gaigai') &&
+                !messages[i].content?.includes('[Example') &&
+                !messages[i].content?.includes('"**我任务失败了')) {
+                insertPosition = i;
+                console.log(`📍 [位置计算] 索引=0，插入到第一条用户消息前: ${insertPosition}`);
+                break;
+            }
+        }
+        
+        if (insertPosition === undefined) {
+            insertPosition = Math.max(0, chatStartIndex);
+        }
+        
     } else if (tavernIndex >= 999999) {
-        timeDesc = '（时间未知，放在对话最前）';
+        // 情况B：时间未知的消息，放在最后
+        timeDesc = '（最新消息）';
+        insertPosition = messages.length;
+        console.log(`📍 [位置计算] 索引无效，插入到末尾: ${insertPosition}`);
+        
     } else {
-        timeDesc = `（在酒馆第${tavernIndex}句对话之后）`;
+        // 情况C：根据索引动态插入
+        timeDesc = `（在第${tavernIndex}句对话之后）`;
+        
+        // 🔥 关键修复：从聊天开始位置计算真实对话数
+        let messageCount = 0;
+        insertPosition = messages.length; // 默认末尾
+        
+        for (let i = 0; i < messages.length; i++) {
+            const msg = messages[i];
+            
+            // 跳过系统消息、提示词、示例
+            if (msg.role === 'system' || 
+                msg.content?.includes('【Gaigai') ||
+                msg.content?.includes('[Example') ||
+                msg.content?.includes('"**我任务失败了**')) {
+                continue;
+            }
+            
+            // 统计真实对话（user或assistant）
+            if (msg.role === 'user' || msg.role === 'assistant') {
+                messageCount++;
+                
+                // 🔥 找到第N句对话
+                if (messageCount === tavernIndex) {
+                    insertPosition = i + 1;  // 插入到这句对话之后
+                    console.log(`📍 [位置计算] 在第${tavernIndex}句对话后插入到位置: ${insertPosition}`);
+                    break;
+                }
+            }
+        }
+        
+        // 🔥 如果手机消息的索引超过当前对话数，说明是"未来"的消息
+        if (messageCount < tavernIndex) {
+            insertPosition = messages.length;
+            console.log(`📍 [位置计算] 索引${tavernIndex}超过当前对话数${messageCount}，插入到末尾: ${insertPosition}`);
+        }
     }
     
     // 构建这个时间点的手机消息内容
