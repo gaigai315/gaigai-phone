@@ -22,14 +22,15 @@ import { PromptManager } from './config/prompt-manager.js';
     
     console.log('📱 虚拟手机系统 v1.0.0 启动');
     
-    let phoneShell = null;
-    let homeScreen = null;
-    let currentApp = null;
-    let totalNotifications = 0;
-    let currentApps = JSON.parse(JSON.stringify(APPS));
-    let storage = new PhoneStorage();
-    let settings = storage.loadSettings();
-    let timeManager = new TimeManager(storage);
+let phoneShell = null;
+let homeScreen = null;
+let currentApp = null;
+let totalNotifications = 0;
+let currentApps = JSON.parse(JSON.stringify(APPS));
+let storage = new PhoneStorage();
+let settings = storage.loadSettings();
+let timeManager = new TimeManager(storage);
+let promptManager = null;
     
     // 🔥 新版：统一的JSON格式手机标签
 const PHONE_TAG_REGEX = /<phone>([\s\S]*?)<\/phone>/gi;
@@ -632,7 +633,7 @@ function init() {
     try {
         loadData();
         initColors();
-        const promptManager = new PromptManager(storage);
+        promptManager = new PromptManager(storage);
         createTopPanel();
         
         // 监听返回主页
@@ -1113,19 +1114,23 @@ sortedIndices.forEach(tavernIndex => {
     }
 }
     
-    setTimeout(init, 1000);
+    // 🔥 先初始化，再挂载到全局
+setTimeout(() => {
+    init();
     
+    // 🔥 在初始化完成后挂载到全局
     window.VirtualPhone = {
-    phone: phoneShell,
-    home: homeScreen,
-    storage: storage,
-    settings: settings,
-    imageManager: new ImageUploadManager(storage),
-    timeManager: timeManager,
-    promptManager: promptManager,  // ← 新增这行
-    wechatApp: null,
-    version: '1.0.0'
-};
+        phone: phoneShell,
+        home: homeScreen,
+        storage: storage,
+        settings: settings,
+        imageManager: new ImageUploadManager(storage),
+        timeManager: timeManager,
+        promptManager: promptManager,  // ← 现在能访问到了
+        wechatApp: null,
+        version: '1.0.0'
+    };
+}, 1000);
     
     window.ImageUploadManager = ImageUploadManager;
     
