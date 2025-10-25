@@ -200,7 +200,7 @@ const appNameColor = this.storage.get('phone-app-name-color', true) || '#ffffff'
                         </div>
                     </div>
                     
-                    <!-- 关于 -->
+                   <!-- 关于 -->
                     <div class="setting-section">
                         <div class="setting-section-title">ℹ️ 关于</div>
                         <div class="setting-item">
@@ -214,10 +214,12 @@ const appNameColor = this.storage.get('phone-app-name-color', true) || '#ffffff'
                     </div>
                 </div>
             </div>
-            
-        this.phoneShell.setContent(html);
-        this.bindEvents();
-    }
+        </div>
+    `;
+    
+    this.phoneShell.setContent(html);
+    this.bindEvents();
+}
     
    // 渲染APP图标上传
 renderAppIconUpload() {
