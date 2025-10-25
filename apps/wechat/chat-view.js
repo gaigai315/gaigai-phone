@@ -2521,7 +2521,7 @@ showAddCustomEmojiDialog() {
         }
     });
     
-    document.getElementById('save-custom-emoji')?.addEventListener('click', () => {
+        document.getElementById('save-custom-emoji')?.addEventListener('click', () => {
         const name = document.getElementById('emoji-name-input').value.trim();
         
         if (!selectedImage) {
@@ -2543,7 +2543,6 @@ showAddCustomEmojiDialog() {
         this.emojiTab = 'custom';
         setTimeout(() => this.app.render(), 1000);
     });
-}
 }
 
 // 🔔 通用AI通知方法
