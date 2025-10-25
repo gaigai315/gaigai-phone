@@ -1054,14 +1054,6 @@ async sendToAIHidden(prompt, context) {
 });
 }
     
-    showRedPacketDialog() {
-        this.app.phoneShell.showNotification('红包', '红包功能开发中...', '🧧');
-    }
-    
-    startVideoCall() {
-        this.app.phoneShell.showNotification('视频通话', '正在呼叫...', '📹');
-    }
-    
     selectPhoto() {
     const input = document.getElementById('photo-upload-input');
     if (!input) {
@@ -1826,108 +1818,141 @@ startVoiceCall() {
     });
 }
 
-// 📹 视频通话界面
+// 📹 视频通话界面（带AI文字聊天）
 startVideoCall() {
     const contact = this.app.currentChat;
+    
     const html = `
         <div class="wechat-app">
-            <div class="wechat-header" style="background: transparent; position: absolute; z-index: 10; border: none;">
+            <div class="wechat-header" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);">
                 <div class="wechat-header-left"></div>
-                <div class="wechat-header-title" style="color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">视频通话</div>
+                <div class="wechat-header-title" style="color: #fff;">视频通话 - ${contact.name}</div>
                 <div class="wechat-header-right"></div>
             </div>
             
-            <div class="wechat-content" style="background: #000; display: flex; flex-direction: column; position: relative; overflow: hidden;">
-                <!-- 对方视频区域（占满） -->
-                <div style="flex: 1; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; align-items: center; justify-content: center; position: relative;">
+            <div class="wechat-content" style="background: #000; display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 0;">
+                
+                <!-- 📹 上方：对方视频区域 -->
+                <div style="height: 200px; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0;">
                     <div style="text-align: center;">
-                        <div style="width: 150px; height: 150px; border-radius: 75px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 80px; margin: 0 auto 20px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);">
+                        <div style="width: 100px; height: 100px; border-radius: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 50px; margin: 0 auto 10px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);">
                             ${contact.avatar || '👤'}
                         </div>
-                        <div style="font-size: 24px; font-weight: 600; color: #fff;">
+                        <div style="font-size: 16px; font-weight: 600; color: #fff;">
                             ${contact.name}
                         </div>
-                        <div id="video-status" style="font-size: 14px; color: rgba(255, 255, 255, 0.7); margin-top: 10px;">
+                        <div id="video-status" style="font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-top: 5px;">
                             正在呼叫...
                         </div>
                     </div>
+                    
+                    <!-- 右上角小窗口（自己） -->
+                    <div style="position: absolute; top: 10px; right: 10px; width: 60px; height: 80px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: center; font-size: 30px;">
+                        ${this.app.wechatData.getUserInfo().avatar || '😊'}
+                    </div>
                 </div>
                 
-                <!-- 小窗口（自己） -->
-                <div style="position: absolute; top: 60px; right: 15px; width: 100px; height: 140px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: center; font-size: 40px;">
-                    ${this.app.wechatData.getUserInfo().avatar || '😊'}
+                <!-- 💬 中间：聊天消息区域 -->
+                <div id="video-chat-messages" style="
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 15px;
+                    background: rgba(0, 0, 0, 0.3);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                ">
+                    <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 12px; margin: 10px 0;">
+                        ${window.VirtualPhone?.settings?.onlineMode ? '视频通话中，可以发送文字消息' : '离线模式，消息不会发送给AI'}
+                    </div>
                 </div>
                 
-                <!-- 底部控制栏 -->
-                <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 30px 20px; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);">
-                    <div style="display: flex; justify-content: center; gap: 30px;">
-                        <!-- 切换摄像头 -->
-                        <div style="text-align: center;">
-                            <button id="camera-switch-btn" style="
-                                width: 55px;
-                                height: 55px;
-                                border-radius: 28px;
-                                background: rgba(255, 255, 255, 0.2);
-                                backdrop-filter: blur(10px);
-                                border: none;
-                                color: #fff;
-                                font-size: 20px;
-                                cursor: pointer;
-                            ">
-                                <i class="fa-solid fa-camera-rotate"></i>
-                            </button>
-                        </div>
-                        
+                <!-- ⌨️ 底部：输入区 + 控制按钮 -->
+                <div style="background: rgba(0,0,0,0.9); padding: 10px; flex-shrink: 0;">
+                    <!-- 文字输入框 -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                        <input type="text" id="video-chat-input" placeholder="输入消息..." style="
+                            flex: 1;
+                            padding: 10px;
+                            border: 1px solid rgba(255,255,255,0.2);
+                            border-radius: 20px;
+                            background: rgba(255,255,255,0.1);
+                            color: #fff;
+                            font-size: 14px;
+                        ">
+                        <button id="video-send-btn" style="
+                            width: 60px;
+                            padding: 8px;
+                            background: #07c160;
+                            color: #fff;
+                            border: none;
+                            border-radius: 20px;
+                            font-size: 13px;
+                            cursor: pointer;
+                        ">发送</button>
+                    </div>
+                    
+                    <!-- 控制按钮 -->
+                    <div style="display: flex; justify-content: center; gap: 20px;">
                         <!-- 静音 -->
-                        <div style="text-align: center;">
-                            <button id="video-mute-btn" style="
-                                width: 55px;
-                                height: 55px;
-                                border-radius: 28px;
-                                background: rgba(255, 255, 255, 0.2);
-                                backdrop-filter: blur(10px);
-                                border: none;
-                                color: #fff;
-                                font-size: 20px;
-                                cursor: pointer;
-                            ">
-                                <i class="fa-solid fa-microphone"></i>
-                            </button>
-                        </div>
+                        <button id="video-mute-btn" style="
+                            width: 45px;
+                            height: 45px;
+                            border-radius: 23px;
+                            background: rgba(255, 255, 255, 0.2);
+                            backdrop-filter: blur(10px);
+                            border: none;
+                            color: #fff;
+                            font-size: 18px;
+                            cursor: pointer;
+                        ">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                        
+                        <!-- 摄像头 -->
+                        <button id="camera-off-btn" style="
+                            width: 45px;
+                            height: 45px;
+                            border-radius: 23px;
+                            background: rgba(255, 255, 255, 0.2);
+                            backdrop-filter: blur(10px);
+                            border: none;
+                            color: #fff;
+                            font-size: 18px;
+                            cursor: pointer;
+                        ">
+                            <i class="fa-solid fa-video"></i>
+                        </button>
                         
                         <!-- 挂断 -->
-                        <div style="text-align: center;">
-                            <button id="video-hangup-btn" style="
-                                width: 65px;
-                                height: 65px;
-                                border-radius: 33px;
-                                background: #ff3b30;
-                                border: none;
-                                color: #fff;
-                                font-size: 26px;
-                                cursor: pointer;
-                                box-shadow: 0 6px 20px rgba(255, 59, 48, 0.6);
-                            ">
-                                <i class="fa-solid fa-phone-slash"></i>
-                            </button>
-                        </div>
+                        <button id="video-hangup-btn" style="
+                            width: 55px;
+                            height: 55px;
+                            border-radius: 28px;
+                            background: #ff3b30;
+                            border: none;
+                            color: #fff;
+                            font-size: 22px;
+                            cursor: pointer;
+                            box-shadow: 0 6px 20px rgba(255, 59, 48, 0.6);
+                        ">
+                            <i class="fa-solid fa-phone-slash"></i>
+                        </button>
                         
-                        <!-- 关闭摄像头 -->
-                        <div style="text-align: center;">
-                            <button id="camera-off-btn" style="
-                                width: 55px;
-                                height: 55px;
-                                border-radius: 28px;
-                                background: rgba(255, 255, 255, 0.2);
-                                backdrop-filter: blur(10px);
-                                border: none;
-                                color: #fff;
-                                font-size: 20px;
-                                cursor: pointer;
-                            ">
-                                <i class="fa-solid fa-video"></i>
-                            </button>
-                        </div>
+                        <!-- 切换摄像头 -->
+                        <button id="camera-switch-btn" style="
+                            width: 45px;
+                            height: 45px;
+                            border-radius: 23px;
+                            background: rgba(255, 255, 255, 0.2);
+                            backdrop-filter: blur(10px);
+                            border: none;
+                            color: #fff;
+                            font-size: 18px;
+                            cursor: pointer;
+                        ">
+                            <i class="fa-solid fa-camera-rotate"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1936,45 +1961,182 @@ startVideoCall() {
     
     this.app.phoneShell.setContent(html);
     
-    // 模拟接通
+    // ========================================
+    // 功能绑定
+    // ========================================
+    
     let videoDuration = 0;
-    const videoTimer = setTimeout(() => {
+    let videoTimer = null;
+    const chatMessages = []; // 记录聊天内容
+    
+    // 📹 模拟接通
+    const connectTimer = setTimeout(() => {
         const statusDiv = document.getElementById('video-status');
         if (statusDiv) {
-            statusDiv.textContent = '00:00';
+            statusDiv.textContent = '通话中 00:00';
             
-            const timer = setInterval(() => {
+            videoTimer = setInterval(() => {
                 videoDuration++;
                 const minutes = Math.floor(videoDuration / 60).toString().padStart(2, '0');
                 const seconds = (videoDuration % 60).toString().padStart(2, '0');
                 if (statusDiv) {
-                    statusDiv.textContent = `${minutes}:${seconds}`;
+                    statusDiv.textContent = `通话中 ${minutes}:${seconds}`;
                 }
             }, 1000);
-            
-            statusDiv.dataset.timer = timer;
         }
     }, 2000);
     
-    // 挂断
-    document.getElementById('video-hangup-btn')?.addEventListener('click', () => {
-        clearTimeout(videoTimer);
-        const statusDiv = document.getElementById('video-status');
-        if (statusDiv?.dataset.timer) {
-            clearInterval(parseInt(statusDiv.dataset.timer));
+    // 💬 发送文字消息（调用AI）
+    const sendMessage = async () => {
+        const input = document.getElementById('video-chat-input');
+        const messagesDiv = document.getElementById('video-chat-messages');
+        
+        if (!input || !messagesDiv) return;
+        
+        const text = input.value.trim();
+        if (!text) return;
+        
+        // 显示自己的消息
+        const myMsgHtml = `
+            <div style="display: flex; justify-content: flex-end;">
+                <div style="
+                    max-width: 70%;
+                    padding: 10px 14px;
+                    background: #07c160;
+                    color: #fff;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    word-wrap: break-word;
+                ">${text}</div>
+            </div>
+        `;
+        
+        messagesDiv.insertAdjacentHTML('beforeend', myMsgHtml);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        
+        chatMessages.push({ from: 'me', text: text });
+        
+        // 清空输入框
+        const messageToSend = text;
+        input.value = '';
+        
+        // 🔥 如果开启在线模式，调用AI
+        if (window.VirtualPhone?.settings?.onlineMode) {
+            try {
+                // 显示"正在输入"
+                const typingHtml = `
+                    <div id="video-typing-indicator" style="display: flex; justify-content: flex-start;">
+                        <div style="
+                            padding: 10px 14px;
+                            background: rgba(255,255,255,0.2);
+                            color: rgba(255,255,255,0.7);
+                            border-radius: 8px;
+                            font-size: 12px;
+                        ">正在输入<span class="typing-dots">...</span></div>
+                    </div>
+                `;
+                messagesDiv.insertAdjacentHTML('beforeend', typingHtml);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                
+                // 调用AI（复用微信聊天的逻辑）
+                const aiReply = await this.sendVideoCallMessageToAI(messageToSend, contact.name, chatMessages);
+                
+                // 移除"正在输入"
+                document.getElementById('video-typing-indicator')?.remove();
+                
+                // 显示AI回复
+                const aiMsgHtml = `
+                    <div style="display: flex; justify-content: flex-start;">
+                        <div style="
+                            max-width: 70%;
+                            padding: 10px 14px;
+                            background: rgba(255,255,255,0.2);
+                            color: #fff;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            word-wrap: break-word;
+                        ">${aiReply}</div>
+                    </div>
+                `;
+                messagesDiv.insertAdjacentHTML('beforeend', aiMsgHtml);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                
+                chatMessages.push({ from: contact.name, text: aiReply });
+                
+            } catch (error) {
+                console.error('❌ 视频通话消息发送失败:', error);
+                document.getElementById('video-typing-indicator')?.remove();
+                
+                const errorHtml = `
+                    <div style="text-align: center; color: #ff3b30; font-size: 12px; margin: 10px 0;">
+                        消息发送失败
+                    </div>
+                `;
+                messagesDiv.insertAdjacentHTML('beforeend', errorHtml);
+            }
+        } else {
+            // 离线模式：模拟简单回复
+            setTimeout(() => {
+                const replyHtml = `
+                    <div style="display: flex; justify-content: flex-start;">
+                        <div style="
+                            max-width: 70%;
+                            padding: 10px 14px;
+                            background: rgba(255,255,255,0.2);
+                            color: #fff;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            word-wrap: break-word;
+                        ">收到（离线模式）</div>
+                    </div>
+                `;
+                messagesDiv.insertAdjacentHTML('beforeend', replyHtml);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }, 800);
         }
+    };
+    
+    // 发送按钮
+    document.getElementById('video-send-btn')?.addEventListener('click', sendMessage);
+    
+    // 回车发送
+    document.getElementById('video-chat-input')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+    
+    // 🔴 挂断
+    document.getElementById('video-hangup-btn')?.addEventListener('click', () => {
+        clearTimeout(connectTimer);
+        if (videoTimer) clearInterval(videoTimer);
         
-        this.app.phoneShell.showNotification('通话结束', `视频通话 ${Math.floor(videoDuration / 60)}分${videoDuration % 60}秒`, '📹');
+        const durationText = `${Math.floor(videoDuration / 60)}分${videoDuration % 60}秒`;
         
-        // 🔥 如果开启在线模式，通知AI
+        this.app.phoneShell.showNotification(
+            '通话结束', 
+            `视频通话 ${durationText}`, 
+            '📹'
+        );
+        
+        // 🔥 如果开启在线模式，通知AI（包含聊天记录）
         if (window.VirtualPhone?.settings?.onlineMode && videoDuration > 0) {
-            this.notifyAI(`[视频通话 ${Math.floor(videoDuration / 60)}分${videoDuration % 60}秒]`);
+            let summary = `[视频通话 ${durationText}]`;
+            
+            if (chatMessages.length > 0) {
+                summary += '\n通话中的对话：\n';
+                chatMessages.forEach(msg => {
+                    summary += `${msg.from === 'me' ? '我' : contact.name}: ${msg.text}\n`;
+                });
+            }
+            
+            this.notifyAI(summary);
         }
         
         setTimeout(() => this.app.render(), 1000);
     });
     
-    // 静音
+    // 🔇 静音
     let isVideoMuted = false;
     document.getElementById('video-mute-btn')?.addEventListener('click', (e) => {
         isVideoMuted = !isVideoMuted;
@@ -1982,13 +2144,55 @@ startVideoCall() {
         e.currentTarget.querySelector('i').className = isVideoMuted ? 'fa-solid fa-microphone-slash' : 'fa-solid fa-microphone';
     });
     
-    // 关闭摄像头
+    // 📹 摄像头
     let isCameraOff = false;
     document.getElementById('camera-off-btn')?.addEventListener('click', (e) => {
         isCameraOff = !isCameraOff;
         e.currentTarget.style.background = isCameraOff ? '#ff3b30' : 'rgba(255, 255, 255, 0.2)';
         e.currentTarget.querySelector('i').className = isCameraOff ? 'fa-solid fa-video-slash' : 'fa-solid fa-video';
     });
+}
+
+// 🔥 新增：视频通话专用AI调用方法
+async sendVideoCallMessageToAI(message, contactName, chatHistory) {
+    const context = window.SillyTavern?.getContext?.();
+    if (!context) {
+        throw new Error('无法获取酒馆上下文');
+    }
+    
+    const userName = context.name1 || '用户';
+    
+    // 构建提示词
+    const prompt = `
+# 场景：视频通话中的文字聊天
+
+你正在和${userName}进行视频通话，同时可以发送文字消息。
+
+## 当前情况
+- 正在视频通话中
+- 可以看到对方的画面
+- 同时通过文字交流
+
+## 聊天记录
+${chatHistory.map(msg => {
+    const speaker = msg.from === 'me' ? userName : contactName;
+    return `${speaker}: ${msg.text}`;
+}).join('\n')}
+
+## 用户刚发来的消息
+${userName}: ${message}
+
+---
+
+请以${contactName}的身份回复（只返回文字内容，不要旁白描写）：
+`.trim();
+    
+    console.log('📹 [视频通话] 发送给AI的提示词:', prompt);
+    
+    // 调用AI
+    const aiResponse = await this.sendToAIHidden(prompt, context);
+    
+    return aiResponse.trim();
 }
 
 // 💰 转账后通知AI
