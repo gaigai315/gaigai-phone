@@ -730,16 +730,30 @@ ${char.scenario ? `背景：${char.scenario.substring(0, 300)}` : ''}
             ''
         );
     } else {
-        // NPC聊天
-        sections.push(
-            '# 场景：微信聊天',
-            `你现在扮演${contactName}，正在微信上和${userName}聊天。`,
-            '',
-            '## 关于' + contactName,
-            partnerInfo || `${contactName}是故事中的一个角色。根据上下文推测其身份和性格。`,
-            ''
-        );
-    }
+    // NPC聊天
+    sections.push(
+        '# 场景：微信聊天',
+        `你现在扮演${contactName}，正在微信上和${userName}聊天。`,
+        '',
+        '## 关于' + contactName,
+        partnerInfo || `${contactName}是故事中的一个角色。根据上下文推测其身份和性格。`,
+        '',
+        '## ⚠️ 重要：角色身份规则',
+        `1. 你是${contactName}本人，用第一人称"我"`,
+        `2. 你可以提到其他角色（如家人、朋友），这很正常`,
+        `3. 但你的说话风格、性格、立场必须是${contactName}的`,
+        `4. 绝对不能用其他角色的口气或性格说话`,
+        '',
+        '错误示例：',
+        `❌ 混淆${contactName}和其他角色的身份`,
+        `❌ 用其他角色的说话风格`,
+        '',
+        '正确示例：',
+        `✅ ${contactName}可以谈论认识的人`,
+        `✅ 但说话风格必须符合${contactName}的性格`,
+        ''
+    );
+}
     
     // 添加用户信息
     if (userPersona) {
@@ -773,34 +787,34 @@ ${char.scenario ? `背景：${char.scenario.substring(0, 300)}` : ''}
     }
 
 // ========================================
-// 🔥 关键修复：明确注入剧情时间
+// 🔥 新增：明确注入剧情时间
 // ========================================
 const timeManager = window.VirtualPhone?.timeManager;
 const currentStoryTime = timeManager 
     ? timeManager.getCurrentStoryTime() 
     : { time: '21:30', date: '2044年10月28日' };
 
-// 计算AI应该回复的时间（比用户晚1-2分钟）
+// 计算AI应该回复的时间
 const userTime = currentStoryTime.time;
 const [hour, minute] = userTime.split(':').map(Number);
-const replyMinute = minute + 1 + Math.floor(Math.random() * 2); // 加1-2分钟
+const replyMinute = minute + 1 + Math.floor(Math.random() * 2);
 const replyHour = hour + Math.floor(replyMinute / 60);
 const replyTime = `${String(replyHour % 24).padStart(2, '0')}:${String(replyMinute % 60).padStart(2, '0')}`;
 
 sections.push(
-    '## ⏰ 当前剧情时间（重要！AI必须遵守）',
+    '## ⏰ 当前剧情时间（重要！必须遵守）',
     `剧情当前时间：${currentStoryTime.date} ${currentStoryTime.time}`,
     '',
-    '### 时间规则（必须严格遵守）：',
+    '### 时间规则：',
     `1. 用户发送消息的时间：${userTime}`,
-    `2. 你回复消息的时间必须是：${replyTime}`,
+    `2. 你回复消息的time字段必须是：${replyTime} 或稍后`,
     `3. 严禁使用现实时间（如07:16、08:00等早上时间）`,
     `4. 严禁使用"刚刚"、"5分钟前"等模糊时间`,
-    `5. 如果要发多条消息，每条递增1分钟`,
+    `5. 如果发多条消息，每条递增1分钟`,
     '',
-    '示例：',
-    `第1条消息 → time: "${replyTime}"`,
-    `第2条消息 → time: "${String(replyHour % 24).padStart(2, '0')}:${String((replyMinute + 1) % 60).padStart(2, '0')}"`,
+    '时间示例：',
+    `第1条 → time: "${replyTime}"`,
+    `第2条 → time: "${String(replyHour % 24).padStart(2, '0')}:${String((replyMinute + 1) % 60).padStart(2, '0')}"`,
     '',
     '---',
     ''
@@ -856,32 +870,49 @@ sections.push(
 findNPCInfo(npcName, context) {
     let info = [];
     
-    // 1. 从联系人列表查找
+    // 1. 从联系人列表查找备注
     const contacts = this.app.wechatData.getContacts();
     const contact = contacts.find(c => c.name === npcName);
     if (contact) {
-        info.push(`关系：${contact.relation || '联系人'}`);
+        if (contact.relation) {
+            info.push(`关系：${contact.relation}`);
+        }
         if (contact.remark) {
             info.push(`备注：${contact.remark}`);
         }
     }
     
-    // 2. 从世界书查找
+    // 2. 从世界书精确提取（只提取该NPC的段落）
     if (context.characters && context.characterId !== undefined) {
         const char = context.characters[context.characterId];
         if (char?.data?.character_book?.entries) {
             char.data.character_book.entries.forEach(entry => {
-                if (entry.comment === npcName || (entry.content && entry.content.includes(npcName))) {
-                    const content = entry.content.substring(0, 300);
-                    if (!info.some(i => i.includes(content))) {
-                        info.push(content);
+                if (entry.content && entry.content.includes(npcName)) {
+                    const content = entry.content;
+                    
+                    // 🔥 精确提取：找到【NPC名字】开头的段落
+                    const npcPattern = new RegExp(`【${npcName}】([^【]*?)(?=【|$)`, 's');
+                    const match = content.match(npcPattern);
+                    
+                    if (match) {
+                        const npcSection = `【${npcName}】${match[1]}`.trim();
+                        // 避免重复
+                        if (!info.some(i => i.includes(npcSection))) {
+                            info.push(npcSection);
+                        }
+                    } else if (entry.comment === npcName) {
+                        // 如果整个条目就是关于这个NPC的
+                        const content = entry.content.substring(0, 500);
+                        if (!info.some(i => i.includes(content))) {
+                            info.push(content);
+                        }
                     }
                 }
             });
         }
     }
     
-    // 3. 从记忆表格查找
+    // 3. 从记忆表格查找（保持原逻辑）
     if (window.Gaigai && window.Gaigai.m && Array.isArray(window.Gaigai.m.s)) {
         window.Gaigai.m.s.forEach(section => {
             if (section.n === '人物档案' || section.n === '人物关系') {
