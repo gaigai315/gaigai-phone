@@ -11,8 +11,6 @@ import { SettingsApp } from './apps/settings/settings-app.js';
 import { ImageUploadManager } from './apps/settings/image-upload.js';
 import { TimeManager } from './config/time-manager.js';
 import { PromptManager } from './config/prompt-manager.js';
-(function() {
-    'use strict';
     
     if (window.VirtualPhoneLoaded) {
         console.warn('⚠️ 虚拟手机已加载，跳过重复初始化');
@@ -1135,5 +1133,3 @@ setTimeout(() => {
 }, 1000);
     
     window.ImageUploadManager = ImageUploadManager;
-    
-})();
