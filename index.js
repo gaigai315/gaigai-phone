@@ -1031,58 +1031,6 @@ sortedIndices.forEach(tavernIndex => {
     
     phoneContextContent += `\n═══════════════════════════════════════\n`;
     
-    // 🔥 改进的插入位置计算
-let insertPosition;
-
-// 特殊情况1：索引为0，说明手机消息在酒馆对话之前
-if (tavernIndex === 0) {
-    // 🔥 找到第一条真实用户消息
-    for (let i = 0; i < messages.length; i++) {
-        if (messages[i].role === 'user' && 
-            !messages[i].content?.includes('【Gaigai') &&
-            !messages[i].content?.includes('[Example')) {
-            insertPosition = i;
-            console.log(`📍 [位置计算] 找到第一条用户消息，插入到位置: ${insertPosition}`);
-            break;
-        }
-    }
-    
-    // 如果没找到，使用chatStartIndex
-    if (insertPosition === undefined) {
-        insertPosition = Math.max(0, chatStartIndex);
-        console.log(`📍 [位置计算] 未找到用户消息，使用起始位置: ${insertPosition}`);
-    }
-}
-// 特殊情况2：索引无效（999999 或超大值），放在最后
-else if (tavernIndex >= 999999) {
-    insertPosition = messages.length;
-    console.log(`📍 [位置计算] 索引无效(${tavernIndex})，插入到最末尾: ${insertPosition}`);
-}
-// 正常情况：根据索引查找位置
-else {
-    insertPosition = chatStartIndex;
-    let messageCount = 0;
-    
-    for (let i = chatStartIndex; i < messages.length; i++) {
-        if (messages[i].role === 'user' || messages[i].role === 'assistant') {
-            messageCount++;
-            
-           // 🔥 关键：在第N句对话之后插入
-if (messageCount === tavernIndex) {
-    insertPosition = i + 1;
-    console.log(`📍 [位置计算] 找到匹配：第${tavernIndex}句之后 -> 位置${insertPosition}`);
-    break;
-}
-        }
-    }
-    
-    // 🔥 修复：如果遍历完了还没找到（说明手机消息在最新的对话之后）
-    if (messageCount < tavernIndex) {
-        insertPosition = messages.length;
-        console.log(`📍 [位置计算] 超出范围：目标=${tavernIndex}, 实际=${messageCount} -> 插入到末尾${insertPosition}`);
-    }
-}
-    
     // 插入手机消息
     messages.splice(insertPosition, 0, {
         role: 'system',
