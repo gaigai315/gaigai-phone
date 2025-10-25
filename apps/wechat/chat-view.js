@@ -600,6 +600,17 @@ buildPhoneChatPrompt(context, contactName, userMessage) {
     console.log('📝 开始构建手机聊天提示词...');
     console.log('💬 当前聊天对象:', contactName);
     
+    // 🔥🔥🔥 新增：从 PromptManager 获取微信聊天提示词 🔥🔥🔥
+    const promptManager = window.VirtualPhone?.promptManager;
+    let chatPromptTemplate = '';
+    
+    if (promptManager && promptManager.isEnabled('wechat', 'chat')) {
+        chatPromptTemplate = promptManager.getPromptForFeature('wechat', 'chat');
+        console.log('✅ 已加载微信聊天提示词，长度:', chatPromptTemplate.length);
+    } else {
+        console.warn('⚠️ 未找到微信聊天提示词或功能已禁用');
+    }
+    
     // ========================================
     // 1️⃣ 判断聊天对象类型
     // ========================================
