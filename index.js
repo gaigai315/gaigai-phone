@@ -247,7 +247,7 @@ function handleWechatTagData(data) {
     }
     
     // 🔥 强制获取剧情时间（不依赖AI）
-    let baseTime = '21:30'; // 默认时间
+    let baseTime = '21:30';
     let baseDate = '2044年10月28日';
     
     try {
@@ -263,59 +263,93 @@ function handleWechatTagData(data) {
         console.error('❌ [强制时间] 获取失败，使用默认时间:', e);
     }
     
-    // 传递给微信APP
-    if (window.currentWechatApp) {
+    // 🔥🔥🔥 关键修复：无论微信APP是否打开，都先存储消息 🔥🔥🔥
+    console.log('💾 [消息存储] 开始存储微信消息...');
+    
+    // 1️⃣ 直接操作数据层（不依赖微信APP）
+    const context = getContext();
+    const charId = context?.characterId || 'default';
+    const chatId = context?.chatId || 'default';
+    
+    // 导入 WechatData（确保消息被存储）
+    import('./apps/wechat/wechat-data.js').then(module => {
+        const wechatData = new module.WechatData(storage);
+        
+        // 确保聊天存在
+        let chat = wechatData.getChat(data.contact);
+        if (!chat) {
+            chat = wechatData.createChat({
+                id: data.contact,
+                name: data.contact,
+                type: 'single',
+                avatar: data.avatar || '👤'
+            });
+            console.log('✅ [消息存储] 创建新聊天:', data.contact);
+        }
+        
+        // 存储所有消息
         data.messages.forEach((msg, index) => {
-            // 🔥 强制替换时间（忽略AI返回的时间）
+            // 计算时间
             const [hour, minute] = baseTime.split(':').map(Number);
             const totalMinutes = hour * 60 + minute + index + 1;
             const newHour = Math.floor(totalMinutes / 60) % 24;
             const newMinute = totalMinutes % 60;
             const msgTime = `${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`;
             
-            // 🔥 如果AI给的时间明显错误（早上7点之类的），强制替换
+            // 时间验证
             let finalTime = msgTime;
             if (msg.time && msg.time.match(/^([01]\d|2[0-3]):([0-5]\d)$/)) {
                 const [aiHour, aiMinute] = msg.time.split(':').map(Number);
                 const timeDiff = Math.abs((aiHour * 60 + aiMinute) - (hour * 60 + minute));
                 
-                // 如果AI给的时间和剧情时间相差超过2小时，视为错误
                 if (timeDiff > 120) {
-                    console.warn(`⚠️ [强制时间] AI时间 ${msg.time} 与剧情时间 ${baseTime} 相差${Math.floor(timeDiff/60)}小时，已强制替换为 ${msgTime}`);
+                    console.warn(`⚠️ [时间] AI时间${msg.time}相差${Math.floor(timeDiff/60)}小时，替换为${msgTime}`);
                     finalTime = msgTime;
                 } else {
-                    // AI时间合理，使用AI的时间
                     finalTime = msg.time;
-                    console.log(`✅ [时间检查] AI时间 ${msg.time} 合理，保留`);
                 }
-            } else {
-                console.warn(`⚠️ [强制时间] AI未提供时间或格式错误，使用自动生成时间 ${msgTime}`);
             }
             
-            setTimeout(() => {
-                window.currentWechatApp.receiveMessage({
-                    chatId: data.contact,
-                    from: data.contact,
-                    message: msg.content,
-                    messageType: msg.type || 'text',
-                    timestamp: finalTime,
-                    avatar: data.avatar
-                });
-            }, index * 800);
+            // 🔥 存储消息到数据层
+            wechatData.addMessage(data.contact, {
+                from: data.contact,
+                content: msg.content,
+                time: finalTime,
+                type: msg.type || 'text',
+                avatar: data.avatar
+            });
+            
+            console.log(`💾 [消息存储] 已存储消息 ${index + 1}/${data.messages.length}: ${msg.content.substring(0, 20)}...`);
         });
         
-        console.log(`📱 已同步 ${data.messages.length} 条微信消息`);
-    }
-    
-    // 显示通知
-    if (data.notification) {
-        phoneShell?.showNotification('微信消息', data.notification, '💬');
+        console.log(`✅ [消息存储] 成功存储 ${data.messages.length} 条消息`);
+        
+        // 2️⃣ 如果微信APP正好打开，刷新界面
+        if (window.currentWechatApp) {
+            console.log('🔄 [界面刷新] 微信APP已打开，刷新界面');
+            
+            // 刷新整个微信APP（无论在哪个页面）
+            setTimeout(() => {
+                window.currentWechatApp.render();
+            }, 500);
+        } else {
+            console.log('📱 [消息存储] 微信APP未打开，消息已存储，下次打开时自动显示');
+        }
+        
+        // 3️⃣ 显示通知
+        if (data.notification) {
+            phoneShell?.showNotification('微信消息', data.notification, '💬');
+        }
+        
+        // 4️⃣ 更新红点
         updateAppBadge('wechat', data.messages.length);
         totalNotifications += data.messages.length;
         updateNotificationBadge(totalNotifications);
-    }
+    }).catch(err => {
+        console.error('❌ [消息存储] 导入WechatData失败:', err);
+    });
 }
-
+        
 // 🔥 处理联系人更新
 function handleContactsUpdate(data) {
     if (!data.contacts || !Array.isArray(data.contacts)) {
