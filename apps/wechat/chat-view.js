@@ -753,17 +753,18 @@ ${char.scenario ? `背景：${char.scenario.substring(0, 300)}` : ''}
     // 5️⃣ 构建提示词
     // ========================================
     const sections = [];
-    
-    // 🔥🔥🔥 新增：优先添加基础提示词模板 🔥🔥🔥
-    if (chatPromptTemplate) {
-        sections.push(chatPromptTemplate);
-        sections.push('\n---\n');
-        console.log('✅ 已添加基础提示词模板');
-    }
-    
-    // 然后添加动态上下文信息
-    sections.push('## 📋 当前对话上下文');
-    sections.push('');
+
+// 🔥 先添加基础提示词模板
+if (chatPromptTemplate) {
+    sections.push(chatPromptTemplate);
+    sections.push('\n---\n');
+}
+
+// 🔥 关键：添加手机聊天模式识别标记（触发提示词中的模式1规则）
+sections.push('## 📋 当前对话上下文');
+sections.push('');
+sections.push('⚠️ **用户正在手机微信上和你聊天**（参考上面的"模式1：手机聊天模式"规则）');
+sections.push('');
     
     if (chatMode === 'main_char') {
         // 与主角色聊天
