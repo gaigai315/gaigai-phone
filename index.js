@@ -633,8 +633,14 @@ function init() {
     try {
         loadData();
         initColors();
-        promptManager = new PromptManager(storage);
-        createTopPanel();
+        window.VirtualPhone = {
+          storage: storage,
+          settings: settings,
+          timeManager: timeManager,
+          promptManager: new PromptManager(storage)
+     };
+     promptManager = window.VirtualPhone.promptManager;
+     createTopPanel();
         
         // 监听返回主页
         window.addEventListener('phone:goHome', () => {
@@ -1114,22 +1120,18 @@ sortedIndices.forEach(tavernIndex => {
     }
 }
     
-    // 🔥 先初始化，再挂载到全局
+    // 🔥 修复：改进初始化流程
 setTimeout(() => {
     init();
     
-    // 🔥 在初始化完成后挂载到全局
-    window.VirtualPhone = {
-        phone: phoneShell,
-        home: homeScreen,
-        storage: storage,
-        settings: settings,
-        imageManager: new ImageUploadManager(storage),
-        timeManager: timeManager,
-        promptManager: promptManager,  // ← 现在能访问到了
-        wechatApp: null,
-        version: '1.0.0'
-    };
+    // 更新全局对象（不要重复创建）
+    if (window.VirtualPhone) {
+        window.VirtualPhone.phone = phoneShell;
+        window.VirtualPhone.home = homeScreen;
+        window.VirtualPhone.imageManager = new ImageUploadManager(storage);
+        window.VirtualPhone.wechatApp = null;
+        window.VirtualPhone.version = '1.0.0';
+    }
 }, 1000);
     
     window.ImageUploadManager = ImageUploadManager;
