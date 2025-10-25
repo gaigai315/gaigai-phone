@@ -6,8 +6,8 @@ export class MomentsView {
     }
     
     render() {
-        const moments = this.app.data.getMoments();
-        const userInfo = this.app.data.getUserInfo();
+        const moments = this.app.wechatData.getMoments();
+        const userInfo = this.app.wechatData.getUserInfo();
         
         const html = `
             <div class="wechat-moments">
@@ -185,7 +185,7 @@ export class MomentsView {
     }
     
     postMoment(text) {
-        const userInfo = this.app.data.getUserInfo();
+        const userInfo = this.app.wechatData.getUserInfo();
         const moment = {
             id: Date.now().toString(),
             name: userInfo.name,
@@ -197,7 +197,7 @@ export class MomentsView {
             liked: false
         };
         
-        this.app.data.addMoment(moment);
+        this.app.wechatData.addMoment(moment);
         document.getElementById('post-modal').style.display = 'none';
         document.getElementById('post-input').value = '';
         this.render();
@@ -206,12 +206,12 @@ export class MomentsView {
     }
     
     toggleLike(momentId) {
-        const moment = this.app.data.getMoment(momentId);
+        const moment = this.app.wechatData.getMoment(momentId);
         if (moment) {
             moment.liked = !moment.liked;
             moment.likes = moment.liked ? (moment.likes || 0) + 1 : Math.max(0, (moment.likes || 1) - 1);
             
-            const userInfo = this.app.data.getUserInfo();
+            const userInfo = this.app.wechatData.getUserInfo();
             if (!moment.likeList) moment.likeList = [];
             
             if (moment.liked) {
@@ -221,7 +221,7 @@ export class MomentsView {
                 if (index > -1) moment.likeList.splice(index, 1);
             }
             
-            this.app.data.saveData();
+            this.app.wechatData.saveData();
             this.render();
         }
     }
@@ -229,10 +229,10 @@ export class MomentsView {
     showCommentInput(momentId) {
         const comment = prompt('请输入评论：');
         if (comment) {
-            const moment = this.app.data.getMoment(momentId);
+            const moment = this.app.wechatData.getMoment(momentId);
             if (moment) {
                 if (!moment.commentList) moment.commentList = [];
-                const userInfo = this.app.data.getUserInfo();
+                const userInfo = this.app.wechatData.getUserInfo();
                 
                 moment.commentList.push({
                     name: userInfo.name,
@@ -240,7 +240,7 @@ export class MomentsView {
                 });
                 moment.comments = moment.commentList.length;
                 
-                this.app.data.saveData();
+                this.app.wechatData.saveData();
                 this.render();
             }
         }
