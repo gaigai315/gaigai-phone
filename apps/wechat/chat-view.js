@@ -2563,3 +2563,4 @@ async notifyAI(message) {
         console.error('❌ 通知AI失败:', error);
     }
   }
+}
