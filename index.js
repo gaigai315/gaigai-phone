@@ -819,7 +819,7 @@ if (context && context.eventSource) {
         onChatChanged
     );
     
-   // 🟢🟢🟢 手机消息注入监听器 🟢🟢🟢
+    // 🟢🟢🟢 手机消息注入监听器 🟢🟢🟢
     // ========================================
     // 📱 改用 CHAT_COMPLETION_PROMPT_READY 事件（有 chat 数据）
     // ========================================
