@@ -751,14 +751,13 @@ if (context && context.eventSource) {
                     
                     const phoneActivities = [];
                     
-                    // ========================================
+// ========================================
 // 1️⃣ 收集微信消息（直接从存储读取，不依赖wechatApp）
 // ========================================
 const storage = window.VirtualPhone?.storage;
 if (storage) {
     try {
         // 🔥 直接从存储读取微信数据
-        const context = getContext();
         const charId = context?.characterId || 'default';
         const chatId = context?.chatId || 'default';
         const storageKey = `wechat_data_${charId}_${chatId}`;
