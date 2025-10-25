@@ -76,6 +76,30 @@ export class ChatView {
         <div class="redpacket-wish">${msg.wish || '恭喜发财，大吉大利'}</div>
         <div class="redpacket-amount">¥${msg.amount}</div>
     </div>
+` : msg.type === 'call_record' ? `
+    <div class="message-call-record" style="
+        background: ${msg.status === 'answered' ? '#f0f9f4' : '#fff3cd'};
+        border: 1px solid ${msg.status === 'answered' ? '#07c160' : '#ffc107'};
+        border-radius: 8px;
+        padding: 12px 15px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    ">
+        <div style="font-size: 24px;">
+            ${msg.callType === 'video' ? '📹' : '📞'}
+        </div>
+        <div style="flex: 1;">
+            <div style="font-size: 14px; color: #000; font-weight: 500; margin-bottom: 3px;">
+                ${msg.callType === 'video' ? '视频通话' : '语音通话'}
+            </div>
+            <div style="font-size: 12px; color: #666;">
+                ${msg.status === 'answered' ? `通话时长 ${msg.duration}` : 
+                  msg.status === 'rejected' ? '对方已拒绝' : 
+                  msg.status === 'cancelled' ? '已取消' : '未接听'}
+            </div>
+        </div>
+    </div>
 ` : `
     <div class="message-text">${this.parseEmoji(msg.content)}</div>
 `}
@@ -1818,10 +1842,124 @@ startVoiceCall() {
     });
 }
 
-// 📹 视频通话界面（带AI文字聊天）
-startVideoCall() {
+// 📹 视频通话界面（带AI接听/拒绝逻辑）
+async startVideoCall() {
     const contact = this.app.currentChat;
     
+    // ========================================
+    // 阶段1：呼叫界面
+    // ========================================
+    const callingHtml = `
+        <div class="wechat-app">
+            <div class="wechat-header" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);">
+                <div class="wechat-header-left"></div>
+                <div class="wechat-header-title" style="color: #fff;">视频通话</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px;">
+                <div id="call-avatar" style="
+                    width: 120px;
+                    height: 120px;
+                    border-radius: 60px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 60px;
+                    margin-bottom: 30px;
+                    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+                    animation: pulse 2s infinite;
+                ">${contact.avatar || '👤'}</div>
+                
+                <div style="font-size: 26px; font-weight: 600; color: #fff; margin-bottom: 10px;">
+                    ${contact.name}
+                </div>
+                
+                <div id="call-status" style="font-size: 16px; color: rgba(255, 255, 255, 0.7); margin-bottom: 60px;">
+                    正在呼叫...
+                </div>
+                
+                <button id="cancel-call-btn" style="
+                    width: 70px;
+                    height: 70px;
+                    border-radius: 35px;
+                    background: #ff3b30;
+                    border: none;
+                    color: #fff;
+                    font-size: 28px;
+                    cursor: pointer;
+                    box-shadow: 0 6px 20px rgba(255, 59, 48, 0.5);
+                ">
+                    <i class="fa-solid fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+        
+        <style>
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+            }
+        </style>
+    `;
+    
+    this.app.phoneShell.setContent(callingHtml);
+    
+    // 取消呼叫
+    let isCancelled = false;
+    document.getElementById('cancel-call-btn')?.addEventListener('click', () => {
+        isCancelled = true;
+        this.addCallRecord('video', 'cancelled', '0分0秒');
+        this.app.phoneShell.showNotification('已取消', '视频通话已取消', '📹');
+        setTimeout(() => this.app.render(), 500);
+    });
+    
+    // ========================================
+    // 阶段2：AI决策（接听/拒绝）
+    // ========================================
+    
+    try {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 呼叫2秒
+        
+        if (isCancelled) return;
+        
+        // 🔥 调用AI决策
+        const decision = await this.askAIForCallDecision('video', contact.name);
+        
+        if (decision.action === 'reject') {
+            // 拒绝
+            const statusDiv = document.getElementById('call-status');
+            if (statusDiv) {
+                statusDiv.textContent = '对方已拒绝';
+                statusDiv.style.color = '#ff3b30';
+            }
+            
+            this.addCallRecord('video', 'rejected', '0分0秒');
+            
+            setTimeout(() => {
+                this.app.phoneShell.showNotification('通话结束', '对方拒绝了视频通话', '❌');
+                setTimeout(() => this.app.render(), 1000);
+            }, 2000);
+            
+            return;
+        }
+        
+        // ========================================
+        // 阶段3：接听成功，显示通话界面
+        // ========================================
+        
+        this.showVideoCallInterface(contact, decision.firstMessage);
+        
+    } catch (error) {
+        console.error('❌ 视频通话失败:', error);
+        this.app.phoneShell.showNotification('错误', '通话失败', '❌');
+        setTimeout(() => this.app.render(), 1000);
+    }
+}
+
+// 🔥 显示视频通话界面（接通后）
+showVideoCallInterface(contact, aiFirstMessage) {
     const html = `
         <div class="wechat-app">
             <div class="wechat-header" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);">
@@ -1830,46 +1968,29 @@ startVideoCall() {
                 <div class="wechat-header-right"></div>
             </div>
             
-            <div class="wechat-content" style="background: #000; display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 0;">
+            <div class="wechat-content" style="background: #000; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
                 
-                <!-- 📹 上方：对方视频区域 -->
                 <div style="height: 200px; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0;">
                     <div style="text-align: center;">
-                        <div style="width: 100px; height: 100px; border-radius: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 50px; margin: 0 auto 10px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);">
+                        <div style="width: 100px; height: 100px; border-radius: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 50px; margin: 0 auto 10px;">
                             ${contact.avatar || '👤'}
                         </div>
-                        <div style="font-size: 16px; font-weight: 600; color: #fff;">
-                            ${contact.name}
-                        </div>
-                        <div id="video-status" style="font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-top: 5px;">
-                            正在呼叫...
-                        </div>
+                        <div style="font-size: 16px; font-weight: 600; color: #fff;">${contact.name}</div>
+                        <div id="video-timer" style="font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-top: 5px;">00:00</div>
                     </div>
                     
-                    <!-- 右上角小窗口（自己） -->
-                    <div style="position: absolute; top: 10px; right: 10px; width: 60px; height: 80px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: center; font-size: 30px;">
+                    <div style="position: absolute; top: 10px; right: 10px; width: 60px; height: 80px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 30px;">
                         ${this.app.wechatData.getUserInfo().avatar || '😊'}
                     </div>
                 </div>
                 
-                <!-- 💬 中间：聊天消息区域 -->
-                <div id="video-chat-messages" style="
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 15px;
-                    background: rgba(0, 0, 0, 0.3);
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                ">
+                <div id="video-chat-messages" style="flex: 1; overflow-y: auto; padding: 15px; background: rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; gap: 10px;">
                     <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 12px; margin: 10px 0;">
-                        ${window.VirtualPhone?.settings?.onlineMode ? '视频通话中，可以发送文字消息' : '离线模式，消息不会发送给AI'}
+                        ${window.VirtualPhone?.settings?.onlineMode ? '视频通话中，可以发送文字消息' : '离线模式'}
                     </div>
                 </div>
                 
-                <!-- ⌨️ 底部：输入区 + 控制按钮 -->
                 <div style="background: rgba(0,0,0,0.9); padding: 10px; flex-shrink: 0;">
-                    <!-- 文字输入框 -->
                     <div style="display: flex; gap: 8px; margin-bottom: 10px;">
                         <input type="text" id="video-chat-input" placeholder="输入消息..." style="
                             flex: 1;
@@ -1892,65 +2013,17 @@ startVideoCall() {
                         ">发送</button>
                     </div>
                     
-                    <!-- 控制按钮 -->
                     <div style="display: flex; justify-content: center; gap: 20px;">
-                        <!-- 静音 -->
-                        <button id="video-mute-btn" style="
-                            width: 45px;
-                            height: 45px;
-                            border-radius: 23px;
-                            background: rgba(255, 255, 255, 0.2);
-                            backdrop-filter: blur(10px);
-                            border: none;
-                            color: #fff;
-                            font-size: 18px;
-                            cursor: pointer;
-                        ">
+                        <button id="video-mute-btn" style="width: 45px; height: 45px; border-radius: 23px; background: rgba(255, 255, 255, 0.2); border: none; color: #fff; font-size: 18px; cursor: pointer;">
                             <i class="fa-solid fa-microphone"></i>
                         </button>
-                        
-                        <!-- 摄像头 -->
-                        <button id="camera-off-btn" style="
-                            width: 45px;
-                            height: 45px;
-                            border-radius: 23px;
-                            background: rgba(255, 255, 255, 0.2);
-                            backdrop-filter: blur(10px);
-                            border: none;
-                            color: #fff;
-                            font-size: 18px;
-                            cursor: pointer;
-                        ">
+                        <button id="camera-off-btn" style="width: 45px; height: 45px; border-radius: 23px; background: rgba(255, 255, 255, 0.2); border: none; color: #fff; font-size: 18px; cursor: pointer;">
                             <i class="fa-solid fa-video"></i>
                         </button>
-                        
-                        <!-- 挂断 -->
-                        <button id="video-hangup-btn" style="
-                            width: 55px;
-                            height: 55px;
-                            border-radius: 28px;
-                            background: #ff3b30;
-                            border: none;
-                            color: #fff;
-                            font-size: 22px;
-                            cursor: pointer;
-                            box-shadow: 0 6px 20px rgba(255, 59, 48, 0.6);
-                        ">
+                        <button id="video-hangup-btn" style="width: 55px; height: 55px; border-radius: 28px; background: #ff3b30; border: none; color: #fff; font-size: 22px; cursor: pointer;">
                             <i class="fa-solid fa-phone-slash"></i>
                         </button>
-                        
-                        <!-- 切换摄像头 -->
-                        <button id="camera-switch-btn" style="
-                            width: 45px;
-                            height: 45px;
-                            border-radius: 23px;
-                            background: rgba(255, 255, 255, 0.2);
-                            backdrop-filter: blur(10px);
-                            border: none;
-                            color: #fff;
-                            font-size: 18px;
-                            cursor: pointer;
-                        ">
+                        <button id="camera-switch-btn" style="width: 45px; height: 45px; border-radius: 23px; background: rgba(255, 255, 255, 0.2); border: none; color: #fff; font-size: 18px; cursor: pointer;">
                             <i class="fa-solid fa-camera-rotate"></i>
                         </button>
                     </div>
@@ -1961,32 +2034,35 @@ startVideoCall() {
     
     this.app.phoneShell.setContent(html);
     
-    // ========================================
-    // 功能绑定
-    // ========================================
+    // 🔥 AI主动发第一句话
+    if (aiFirstMessage) {
+        const messagesDiv = document.getElementById('video-chat-messages');
+        const aiMsgHtml = `
+            <div style="display: flex; justify-content: flex-start;">
+                <div style="max-width: 70%; padding: 10px 14px; background: rgba(255,255,255,0.2); color: #fff; border-radius: 8px; font-size: 14px;">
+                    ${aiFirstMessage}
+                </div>
+            </div>
+        `;
+        messagesDiv.insertAdjacentHTML('beforeend', aiMsgHtml);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
     
+    // 计时器
     let videoDuration = 0;
-    let videoTimer = null;
-    const chatMessages = []; // 记录聊天内容
-    
-    // 📹 模拟接通
-    const connectTimer = setTimeout(() => {
-        const statusDiv = document.getElementById('video-status');
-        if (statusDiv) {
-            statusDiv.textContent = '通话中 00:00';
-            
-            videoTimer = setInterval(() => {
-                videoDuration++;
-                const minutes = Math.floor(videoDuration / 60).toString().padStart(2, '0');
-                const seconds = (videoDuration % 60).toString().padStart(2, '0');
-                if (statusDiv) {
-                    statusDiv.textContent = `通话中 ${minutes}:${seconds}`;
-                }
-            }, 1000);
+    const videoTimer = setInterval(() => {
+        videoDuration++;
+        const minutes = Math.floor(videoDuration / 60).toString().padStart(2, '0');
+        const seconds = (videoDuration % 60).toString().padStart(2, '0');
+        const timerDiv = document.getElementById('video-timer');
+        if (timerDiv) {
+            timerDiv.textContent = `${minutes}:${seconds}`;
         }
-    }, 2000);
+    }, 1000);
     
-    // 💬 发送文字消息（调用AI）
+    const chatMessages = aiFirstMessage ? [{ from: contact.name, text: aiFirstMessage }] : [];
+    
+    // 发送消息
     const sendMessage = async () => {
         const input = document.getElementById('video-chat-input');
         const messagesDiv = document.getElementById('video-chat-messages');
@@ -1996,18 +2072,9 @@ startVideoCall() {
         const text = input.value.trim();
         if (!text) return;
         
-        // 显示自己的消息
         const myMsgHtml = `
             <div style="display: flex; justify-content: flex-end;">
-                <div style="
-                    max-width: 70%;
-                    padding: 10px 14px;
-                    background: #07c160;
-                    color: #fff;
-                    border-radius: 8px;
-                    font-size: 14px;
-                    word-wrap: break-word;
-                ">${text}</div>
+                <div style="max-width: 70%; padding: 10px 14px; background: #07c160; color: #fff; border-radius: 8px; font-size: 14px;">${text}</div>
             </div>
         `;
         
@@ -2016,46 +2083,26 @@ startVideoCall() {
         
         chatMessages.push({ from: 'me', text: text });
         
-        // 清空输入框
         const messageToSend = text;
         input.value = '';
         
-        // 🔥 如果开启在线模式，调用AI
         if (window.VirtualPhone?.settings?.onlineMode) {
             try {
-                // 显示"正在输入"
                 const typingHtml = `
                     <div id="video-typing-indicator" style="display: flex; justify-content: flex-start;">
-                        <div style="
-                            padding: 10px 14px;
-                            background: rgba(255,255,255,0.2);
-                            color: rgba(255,255,255,0.7);
-                            border-radius: 8px;
-                            font-size: 12px;
-                        ">正在输入<span class="typing-dots">...</span></div>
+                        <div style="padding: 10px 14px; background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 8px; font-size: 12px;">正在输入...</div>
                     </div>
                 `;
                 messagesDiv.insertAdjacentHTML('beforeend', typingHtml);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 
-                // 调用AI（复用微信聊天的逻辑）
                 const aiReply = await this.sendVideoCallMessageToAI(messageToSend, contact.name, chatMessages);
                 
-                // 移除"正在输入"
                 document.getElementById('video-typing-indicator')?.remove();
                 
-                // 显示AI回复
                 const aiMsgHtml = `
                     <div style="display: flex; justify-content: flex-start;">
-                        <div style="
-                            max-width: 70%;
-                            padding: 10px 14px;
-                            background: rgba(255,255,255,0.2);
-                            color: #fff;
-                            border-radius: 8px;
-                            font-size: 14px;
-                            word-wrap: break-word;
-                        ">${aiReply}</div>
+                        <div style="max-width: 70%; padding: 10px 14px; background: rgba(255,255,255,0.2); color: #fff; border-radius: 8px; font-size: 14px;">${aiReply}</div>
                     </div>
                 `;
                 messagesDiv.insertAdjacentHTML('beforeend', aiMsgHtml);
@@ -2066,77 +2113,39 @@ startVideoCall() {
             } catch (error) {
                 console.error('❌ 视频通话消息发送失败:', error);
                 document.getElementById('video-typing-indicator')?.remove();
-                
-                const errorHtml = `
-                    <div style="text-align: center; color: #ff3b30; font-size: 12px; margin: 10px 0;">
-                        消息发送失败
-                    </div>
-                `;
-                messagesDiv.insertAdjacentHTML('beforeend', errorHtml);
             }
-        } else {
-            // 离线模式：模拟简单回复
-            setTimeout(() => {
-                const replyHtml = `
-                    <div style="display: flex; justify-content: flex-start;">
-                        <div style="
-                            max-width: 70%;
-                            padding: 10px 14px;
-                            background: rgba(255,255,255,0.2);
-                            color: #fff;
-                            border-radius: 8px;
-                            font-size: 14px;
-                            word-wrap: break-word;
-                        ">收到（离线模式）</div>
-                    </div>
-                `;
-                messagesDiv.insertAdjacentHTML('beforeend', replyHtml);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }, 800);
         }
     };
     
-    // 发送按钮
     document.getElementById('video-send-btn')?.addEventListener('click', sendMessage);
-    
-    // 回车发送
     document.getElementById('video-chat-input')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
+        if (e.key === 'Enter') sendMessage();
     });
     
-    // 🔴 挂断
+    // 挂断
     document.getElementById('video-hangup-btn')?.addEventListener('click', () => {
-        clearTimeout(connectTimer);
-        if (videoTimer) clearInterval(videoTimer);
+        clearInterval(videoTimer);
         
         const durationText = `${Math.floor(videoDuration / 60)}分${videoDuration % 60}秒`;
         
-        this.app.phoneShell.showNotification(
-            '通话结束', 
-            `视频通话 ${durationText}`, 
-            '📹'
-        );
+        this.addCallRecord('video', 'answered', durationText);
         
-        // 🔥 如果开启在线模式，通知AI（包含聊天记录）
         if (window.VirtualPhone?.settings?.onlineMode && videoDuration > 0) {
             let summary = `[视频通话 ${durationText}]`;
-            
             if (chatMessages.length > 0) {
                 summary += '\n通话中的对话：\n';
                 chatMessages.forEach(msg => {
                     summary += `${msg.from === 'me' ? '我' : contact.name}: ${msg.text}\n`;
                 });
             }
-            
             this.notifyAI(summary);
         }
         
+        this.app.phoneShell.showNotification('通话结束', `视频通话 ${durationText}`, '📹');
         setTimeout(() => this.app.render(), 1000);
     });
     
-    // 🔇 静音
+    // 静音/摄像头切换
     let isVideoMuted = false;
     document.getElementById('video-mute-btn')?.addEventListener('click', (e) => {
         isVideoMuted = !isVideoMuted;
@@ -2144,7 +2153,6 @@ startVideoCall() {
         e.currentTarget.querySelector('i').className = isVideoMuted ? 'fa-solid fa-microphone-slash' : 'fa-solid fa-microphone';
     });
     
-    // 📹 摄像头
     let isCameraOff = false;
     document.getElementById('camera-off-btn')?.addEventListener('click', (e) => {
         isCameraOff = !isCameraOff;
@@ -2153,7 +2161,96 @@ startVideoCall() {
     });
 }
 
-// 🔥 新增：视频通话专用AI调用方法
+// 🔥 新增：向AI询问是否接听
+async askAIForCallDecision(callType, contactName) {
+    try {
+        const context = window.SillyTavern?.getContext?.();
+        if (!context) {
+            return { action: 'answer', firstMessage: '喂？' };
+        }
+        
+        const callTypeName = callType === 'video' ? '视频通话' : '语音通话';
+        
+        const prompt = `
+【剧情事件】${context.name1 || '用户'}向你发起了${callTypeName}请求。
+
+你现在扮演${contactName}，请做出决定并回复：
+
+# 选项
+1. **接听**：如果你现在方便接电话，回复"接听"并说第一句话
+2. **拒绝**：如果你正忙/不想接，回复"拒绝"并说明原因（可选）
+
+# 格式要求
+只返回以下JSON格式，不要任何其他内容：
+
+\`\`\`json
+{
+  "action": "answer",
+  "firstMessage": "喂？怎么了？"
+}
+\`\`\`
+
+或
+
+\`\`\`json
+{
+  "action": "reject",
+  "reason": "我在开会，不方便"
+}
+\`\`\`
+
+请根据当前剧情和角色性格决定是否接听。
+`.trim();
+        
+        const aiResponse = await this.sendToAIHidden(prompt, context);
+        
+        console.log('📞 AI决策原文:', aiResponse);
+        
+        // 解析JSON
+        try {
+            let jsonText = aiResponse;
+            const codeBlockMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            if (codeBlockMatch) {
+                jsonText = codeBlockMatch[1];
+            }
+            
+            const decision = JSON.parse(jsonText.trim());
+            
+            if (decision.action === 'answer' || decision.action === 'reject') {
+                console.log('✅ AI决策:', decision);
+                return decision;
+            }
+        } catch (e) {
+            console.warn('⚠️ JSON解析失败，使用容错模式');
+        }
+        
+        // 容错：检查关键词
+        if (aiResponse.includes('拒绝') || aiResponse.includes('reject') || aiResponse.includes('忙')) {
+            return { action: 'reject', reason: '对方忙碌' };
+        }
+        
+        // 默认接听
+        return { action: 'answer', firstMessage: '喂？' };
+        
+    } catch (error) {
+        console.error('❌ AI决策失败:', error);
+        return { action: 'answer', firstMessage: '喂？' };
+    }
+}
+
+// 🔥 新增：添加通话记录到聊天
+addCallRecord(callType, status, duration) {
+    this.app.wechatData.addMessage(this.app.currentChat.id, {
+        from: 'me',
+        type: 'call_record',
+        callType: callType,
+        status: status,
+        duration: duration,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    });
+}
+
+// 🔥 视频通话专用AI调用方法（保持不变）
 async sendVideoCallMessageToAI(message, contactName, chatHistory) {
     const context = window.SillyTavern?.getContext?.();
     if (!context) {
@@ -2162,7 +2259,6 @@ async sendVideoCallMessageToAI(message, contactName, chatHistory) {
     
     const userName = context.name1 || '用户';
     
-    // 构建提示词
     const prompt = `
 # 场景：视频通话中的文字聊天
 
@@ -2189,10 +2285,248 @@ ${userName}: ${message}
     
     console.log('📹 [视频通话] 发送给AI的提示词:', prompt);
     
-    // 调用AI
     const aiResponse = await this.sendToAIHidden(prompt, context);
     
     return aiResponse.trim();
+}
+
+// 📞 语音通话界面（带AI接听/拒绝逻辑）
+async startVoiceCall() {
+    const contact = this.app.currentChat;
+    
+    // ========================================
+    // 阶段1：呼叫界面
+    // ========================================
+    const callingHtml = `
+        <div class="wechat-app">
+            <div class="wechat-header" style="background: #1a1a1a;">
+                <div class="wechat-header-left"></div>
+                <div class="wechat-header-title" style="color: #fff;">语音通话</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px;">
+                <div id="call-avatar" style="
+                    width: 120px;
+                    height: 120px;
+                    border-radius: 60px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 60px;
+                    margin-bottom: 30px;
+                    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+                    animation: pulse 2s infinite;
+                ">${contact.avatar || '👤'}</div>
+                
+                <div style="font-size: 26px; font-weight: 600; color: #fff; margin-bottom: 10px;">
+                    ${contact.name}
+                </div>
+                
+                <div id="call-status" style="font-size: 16px; color: rgba(255, 255, 255, 0.7); margin-bottom: 60px;">
+                    正在呼叫...
+                </div>
+                
+                <button id="cancel-call-btn" style="
+                    width: 70px;
+                    height: 70px;
+                    border-radius: 35px;
+                    background: #ff3b30;
+                    border: none;
+                    color: #fff;
+                    font-size: 28px;
+                    cursor: pointer;
+                    box-shadow: 0 6px 20px rgba(255, 59, 48, 0.5);
+                ">
+                    <i class="fa-solid fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+        
+        <style>
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+            }
+        </style>
+    `;
+    
+    this.app.phoneShell.setContent(callingHtml);
+    
+    // 取消呼叫
+    let isCancelled = false;
+    document.getElementById('cancel-call-btn')?.addEventListener('click', () => {
+        isCancelled = true;
+        this.addCallRecord('voice', 'cancelled', '0分0秒');
+        this.app.phoneShell.showNotification('已取消', '语音通话已取消', '📞');
+        setTimeout(() => this.app.render(), 500);
+    });
+    
+    // ========================================
+    // 阶段2：AI决策（接听/拒绝）
+    // ========================================
+    
+    try {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 呼叫2秒
+        
+        if (isCancelled) return;
+        
+        // 🔥 调用AI决策
+        const decision = await this.askAIForCallDecision('voice', contact.name);
+        
+        if (decision.action === 'reject') {
+            // 拒绝
+            const statusDiv = document.getElementById('call-status');
+            if (statusDiv) {
+                statusDiv.textContent = '对方已拒绝';
+                statusDiv.style.color = '#ff3b30';
+            }
+            
+            this.addCallRecord('voice', 'rejected', '0分0秒');
+            
+            setTimeout(() => {
+                this.app.phoneShell.showNotification('通话结束', '对方拒绝了语音通话', '❌');
+                setTimeout(() => this.app.render(), 1000);
+            }, 2000);
+            
+            return;
+        }
+        
+        // ========================================
+        // 阶段3：接听成功，显示通话界面
+        // ========================================
+        
+        this.showVoiceCallInterface(contact);
+        
+    } catch (error) {
+        console.error('❌ 语音通话失败:', error);
+        this.app.phoneShell.showNotification('错误', '通话失败', '❌');
+        setTimeout(() => this.app.render(), 1000);
+    }
+}
+
+// 🔥 显示语音通话界面（接通后）
+showVoiceCallInterface(contact) {
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header" style="background: #1a1a1a;">
+                <div class="wechat-header-left"></div>
+                <div class="wechat-header-title" style="color: #fff;">语音通话</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px;">
+                <div style="width: 120px; height: 120px; border-radius: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 60px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);">
+                    ${contact.avatar || '👤'}
+                </div>
+                
+                <div style="font-size: 26px; font-weight: 600; color: #fff; margin-bottom: 10px;">
+                    ${contact.name}
+                </div>
+                
+                <div id="call-timer" style="font-size: 16px; color: rgba(255, 255, 255, 0.7); margin-bottom: 60px;">
+                    00:00
+                </div>
+                
+                <div style="display: flex; gap: 40px; margin-top: 40px;">
+                    <div style="text-align: center;">
+                        <button id="mute-btn" style="
+                            width: 60px;
+                            height: 60px;
+                            border-radius: 30px;
+                            background: rgba(255, 255, 255, 0.2);
+                            border: none;
+                            color: #fff;
+                            font-size: 24px;
+                            cursor: pointer;
+                        ">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;">静音</div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button id="voice-hangup-btn" style="
+                            width: 70px;
+                            height: 70px;
+                            border-radius: 35px;
+                            background: #ff3b30;
+                            border: none;
+                            color: #fff;
+                            font-size: 28px;
+                            cursor: pointer;
+                            box-shadow: 0 6px 20px rgba(255, 59, 48, 0.5);
+                        ">
+                            <i class="fa-solid fa-phone-slash"></i>
+                        </button>
+                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;">挂断</div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button id="speaker-btn" style="
+                            width: 60px;
+                            height: 60px;
+                            border-radius: 30px;
+                            background: rgba(255, 255, 255, 0.2);
+                            border: none;
+                            color: #fff;
+                            font-size: 24px;
+                            cursor: pointer;
+                        ">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </button>
+                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;">免提</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.app.phoneShell.setContent(html);
+    
+    // 计时器
+    let callDuration = 0;
+    const callTimer = setInterval(() => {
+        callDuration++;
+        const minutes = Math.floor(callDuration / 60).toString().padStart(2, '0');
+        const seconds = (callDuration % 60).toString().padStart(2, '0');
+        const timerDiv = document.getElementById('call-timer');
+        if (timerDiv) {
+            timerDiv.textContent = `${minutes}:${seconds}`;
+        }
+    }, 1000);
+    
+    // 挂断
+    document.getElementById('voice-hangup-btn')?.addEventListener('click', () => {
+        clearInterval(callTimer);
+        
+        const durationText = `${Math.floor(callDuration / 60)}分${callDuration % 60}秒`;
+        
+        this.addCallRecord('voice', 'answered', durationText);
+        
+        if (window.VirtualPhone?.settings?.onlineMode && callDuration > 0) {
+            this.notifyAI(`[语音通话 ${durationText}]`);
+        }
+        
+        this.app.phoneShell.showNotification('通话结束', `通话时长 ${durationText}`, '📞');
+        setTimeout(() => this.app.render(), 1000);
+    });
+    
+    // 静音
+    let isMuted = false;
+    document.getElementById('mute-btn')?.addEventListener('click', (e) => {
+        isMuted = !isMuted;
+        e.currentTarget.style.background = isMuted ? '#ff3b30' : 'rgba(255, 255, 255, 0.2)';
+        e.currentTarget.querySelector('i').className = isMuted ? 'fa-solid fa-microphone-slash' : 'fa-solid fa-microphone';
+    });
+    
+    // 免提
+    let isSpeaker = false;
+    document.getElementById('speaker-btn')?.addEventListener('click', (e) => {
+        isSpeaker = !isSpeaker;
+        e.currentTarget.style.background = isSpeaker ? '#07c160' : 'rgba(255, 255, 255, 0.2)';
+    });
 }
 
 // 💰 转账后通知AI
