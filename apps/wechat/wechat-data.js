@@ -327,16 +327,24 @@ buildContactPrompt(context) {
     const charName = context.name2 || context.name || '角色';
     const userName = context.name1 || '用户';
 
-     // 🔥🔥🔥 新增：从 PromptManager 获取联系人生成提示词 🔥🔥🔥
+    // 🔥🔥🔥 新增：从 PromptManager 获取联系人生成提示词 🔥🔥🔥
     const promptManager = window.VirtualPhone?.promptManager;
-    let contactPromptTemplate = '';
+    let useTemplate = false;
+    let templateContent = '';
     
-    if (promptManager && promptManager.isEnabled('wechat', 'loadContacts')) {
-        contactPromptTemplate = promptManager.getPromptForFeature('wechat', 'loadContacts');
-        console.log('✅ [联系人生成] 已加载提示词模板，长度:', contactPromptTemplate.length);
-    } else {
-        console.warn('⚠️ [联系人生成] 未找到提示词或功能已禁用');
-        contactPromptTemplate = '请根据提供的信息生成微信联系人列表，返回JSON格式。';
+    // 尝试获取模板
+    if (promptManager) {
+        try {
+            if (promptManager.isEnabled('wechat', 'loadContacts')) {
+                templateContent = promptManager.getPromptForFeature('wechat', 'loadContacts');
+                useTemplate = true;
+                console.log('✅ [联系人生成] 使用提示词模板');
+            } else {
+                console.log('⚠️ [联系人生成] 功能已禁用，使用内置提示词');
+            }
+        } catch (e) {
+            console.warn('⚠️ [联系人生成] 获取模板失败:', e);
+        }
     }
     
     console.log('📝 [联系人生成] 开始收集数据...');
@@ -441,57 +449,31 @@ buildContactPrompt(context) {
     // ========================================
     // 6️⃣ 构建提示词
     // ========================================
-    return `【数据提取任务】你是一个数据分析助手，不是角色扮演AI。
-
-# 基础信息
-${charInfo}
-${userInfo}
-
-# 已识别的人名
-${namesList.length > 0 ? namesList.map(n => `- ${n}`).join('\n') : '（未识别到具体人名）'}
-
-# 世界书和记忆内容（包含NPC信息）
-${allNPCInfo.substring(0, 1500)}
-
-# 聊天历史
-${chatHistory || '（暂无聊天记录）'}
-
----
-
-# 任务
-根据上述信息，生成5-10个微信联系人的JSON数据。
-
-# 要求
-1. 第一个联系人必须是"${charName}"
-2. 优先使用"已识别的人名"
-3. 从"世界书和记忆内容"中提取更多NPC
-4. 不要使用这些词：时代、天气、地点、年龄、全局时间、待办、区域、方位、主线剧情、支线追踪、角色状态、物品、服装
-5. 如果人名不够，使用通用中文名（张伟、李娜、王强、陈静）
-
-# 输出格式（只返回JSON，不要任何解释、旁白或其他文字）
-\`\`\`json
-{
-  "contacts": [
-    {"name": "${charName}", "avatar": "⭐", "relation": "主角", "remark": ""},
-    {"name": "具体人名", "avatar": "👨", "relation": "关系", "remark": ""}
-  ],
-  "groups": [],
-  "initialTime": {
-    "date": "2044年10月28日",
-    "time": "21:30",
-    "weekday": "星期一",
-    "period": "晚上"
-  }
-}
-\`\`\`
-
-# 关于 initialTime（初始时间）
-1. 根据上述信息推断故事开始的时间
-2. 如果世界书/角色卡中明确了时间，使用明确的时间
-3. 如果没有明确，根据故事氛围推断（例如：校园故事→早上8点，都市故事→晚上8点）
-4. period 可选值：凌晨、早上、上午、中午、下午、傍晚、晚上、深夜
-
-**重要**：你是数据提取助手，不要进行角色扮演，不要输出剧情或对话，只返回JSON格式的联系人列表。`;
+    
+    // 从 PromptManager 获取模板
+    if (useTemplate && templateContent) {
+        // 准备数据
+        const namesListText = namesList.length > 0 
+            ? namesList.map(n => `- ${n}`).join('\n') 
+            : '（未识别到具体人名）';
+        
+        // 替换所有占位符
+        const finalPrompt = templateContent
+            .replace(/\{\{charName\}\}/g, charName)
+            .replace(/\{\{userName\}\}/g, userName)
+            .replace(/\{\{charInfo\}\}/g, charInfo)
+            .replace(/\{\{userInfo\}\}/g, userInfo)
+            .replace(/\{\{namesList\}\}/g, namesListText)
+            .replace(/\{\{allNPCInfo\}\}/g, allNPCInfo.substring(0, 1500))
+            .replace(/\{\{chatHistory\}\}/g, chatHistory || '（暂无聊天记录）');
+        
+        console.log('✅ 使用提示词模板，最终长度:', finalPrompt.length);
+        return finalPrompt;
+    }
+    
+    // 如果没有模板或功能禁用，返回错误
+    console.error('❌ 智能加载联系人功能未启用或提示词缺失');
+    throw new Error('智能加载联系人功能未启用，请在微信设置中启用');
 }
 
 // 🔧 辅助方法：判断是否可能是人名
