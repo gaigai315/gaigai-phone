@@ -232,7 +232,6 @@ export class PromptManager {
 
 **重要**：你是数据提取助手，不要进行角色扮演，不要输出剧情或对话，只返回JSON格式的联系人列表。`,
     order: 5
-}
 },
 
                 moments: {
@@ -252,7 +251,7 @@ export class PromptManager {
 决定是否接听电话`,
         order: 4
     }
-},
+           },
             
             // 未来扩展：其他APP
             sms: {
