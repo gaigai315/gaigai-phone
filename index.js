@@ -983,18 +983,42 @@ for (let i = messages.length - 1; i >= 0; i--) {
     }
 }
 
-// 2. 修改消息内容（不是插入新消息）
-if (lastUserIndex >= 0 && messages[lastUserIndex]) {
-    // 将手机消息附加到用户消息的末尾
-    const originalContent = messages[lastUserIndex].content || '';
-    messages[lastUserIndex].content = originalContent + '\n\n' + phoneContent;
-    console.log(`✅ [手机] 已将手机消息附加到用户消息（位置${lastUserIndex}）`);
-} else {
-    // 如果找不到用户消息，尝试修改最后一条system消息
-    for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === 'system' && !messages[i].isGaigaiData) {
+// 2. 优先附加到 system 消息（不污染用户正文）
+let injected = false;
+
+// 🔥 优先：查找最后一个非Gaigai的system消息
+for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'system' && 
+        !messages[i].isGaigaiData && 
+        !messages[i].isPhoneMessage) {
+        
+        messages[i].content = messages[i].content + '\n\n' + phoneContent;
+        messages[i].isPhoneMessage = true; // 标记已注入，避免重复
+        console.log(`✅ [手机] 已将手机消息附加到系统消息（位置${i}）`);
+        injected = true;
+        break;
+    }
+}
+
+// 🔥 备用方案：如果没有合适的system消息，创建一个新的（在用户消息后）
+if (!injected && lastUserIndex >= 0) {
+    // 在用户消息后插入一个新的 system 消息
+    messages.splice(lastUserIndex + 1, 0, {
+        role: 'system',
+        content: phoneContent,
+        isPhoneMessage: true
+    });
+    console.log(`✅ [手机] 已在用户消息后创建新的系统消息（位置${lastUserIndex + 1}）`);
+    injected = true;
+}
+
+// 🔥 最终兜底：附加到第一条system消息
+if (!injected) {
+    for (let i = 0; i < messages.length; i++) {
+        if (messages[i].role === 'system') {
             messages[i].content = messages[i].content + '\n\n' + phoneContent;
-            console.log(`✅ [手机] 已将手机消息附加到系统消息（位置${i}）`);
+            messages[i].isPhoneMessage = true;
+            console.log(`⚠️ [手机] 已附加到第一条system消息（位置${i}）`);
             break;
         }
     }
