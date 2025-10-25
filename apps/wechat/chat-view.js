@@ -1937,6 +1937,12 @@ showVideoCallInterface(contact, aiFirstMessage) {
         
         const durationText = `${Math.floor(callDuration / 60)}分${callDuration % 60}秒`;
         
+        // 挂断
+    document.getElementById('voice-hangup-btn')?.addEventListener('click', () => {
+        clearInterval(callTimer);
+        
+        const durationText = `${Math.floor(callDuration / 60)}分${callDuration % 60}秒`;
+        
         // 🔥 使用通话开始的剧情时间
         this.app.wechatData.addMessage(this.app.currentChat.id, {
             from: 'me',
@@ -1946,15 +1952,6 @@ showVideoCallInterface(contact, aiFirstMessage) {
             duration: durationText,
             time: callStartTime.time  // ✅ 使用剧情时间
         });
-        
-        // 🔥 如果开启在线模式，通知AI
-        if (window.VirtualPhone?.settings?.onlineMode && callDuration > 0) {
-            this.notifyAI(`刚才和你语音通话了${durationText}`);
-        }
-        
-        this.app.phoneShell.showNotification('通话结束', `语音通话 ${durationText}`, '📞');
-        setTimeout(() => this.app.render(), 1000);
-    });  // ← 这个括号和分号是关键！
     
     if (window.VirtualPhone?.settings?.onlineMode && videoDuration > 0) {
         ...
