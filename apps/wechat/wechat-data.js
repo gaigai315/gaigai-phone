@@ -105,37 +105,37 @@ export class WechatData {
         this.data.messages[chatId] = [];
     }
     
-    // 🔥 改进的索引记录逻辑
-    try {
-        const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
-            ? SillyTavern.getContext() 
-            : null;
-        
-        if (context && context.chat && Array.isArray(context.chat)) {
-            // 🔥 核心修复：统计实际对话数量
-            let messageCount = 0;
-            for (let i = 0; i < context.chat.length; i++) {
-                if (context.chat[i].is_user || context.chat[i].name) {
-                    messageCount++;
-                }
+    // 🔥 记录消息在酒馆对话中的位置
+try {
+    const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
+        ? SillyTavern.getContext() 
+        : null;
+    
+    if (context && context.chat && Array.isArray(context.chat)) {
+        // 🔥 统计真实对话数量（只计算用户和AI的对话）
+        let messageCount = 0;
+        for (let i = 0; i < context.chat.length; i++) {
+            if (context.chat[i].is_user !== undefined) {
+                messageCount++;
             }
-            
-            // 🔥 关键：记录的是"第几句对话之后"
-            message.tavernMessageIndex = messageCount;
-            message.realTimestamp = Date.now();
-            
-            console.log(`📍 [手机消息] 记录索引: ${message.tavernMessageIndex} (当前对话数=${messageCount}, 总消息=${context.chat.length})`);
-        } else {
-            // 如果获取不到上下文，标记为0（对话开始前）
-            message.tavernMessageIndex = 0;
-            message.realTimestamp = Date.now();
-            console.warn('⚠️ 无法获取酒馆上下文，标记为对话开始前');
         }
-    } catch (e) {
-        console.error('❌ 记录索引失败:', e);
+        
+        // 🔥 记录：这条手机消息发生在第几句对话之后
+        message.tavernMessageIndex = messageCount;
+        message.realTimestamp = Date.now();
+        
+        console.log(`📍 [手机消息] 位置标记: 第${messageCount}句对话后 (酒馆消息总数=${context.chat.length})`);
+    } else {
+        // 如果无法获取上下文，标记为0（对话开始前）
         message.tavernMessageIndex = 0;
         message.realTimestamp = Date.now();
+        console.warn('⚠️ 无法获取酒馆上下文，标记为对话开始前(0)');
     }
+} catch (e) {
+    console.error('❌ 记录索引失败:', e);
+    message.tavernMessageIndex = 0;
+    message.realTimestamp = Date.now();
+}
     
     this.data.messages[chatId].push(message);
     
