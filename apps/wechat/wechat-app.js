@@ -2127,20 +2127,16 @@ showSettings() {
             </div>
             
             <div class="wechat-content" style="background: #ededed;">
-                <!-- 基础设置 -->
-                <div style="background: #fff; border-radius: 12px; padding: 15px; margin: 15px; margin-bottom: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-size: 16px; font-weight: 500; color: #000;">在线模式</div>
-                            <div style="font-size: 12px; color: #999; margin-top: 4px;">开启后，手机消息会发送给AI</div>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="online-mode-toggle" 
-                                   ${window.VirtualPhone?.settings?.onlineMode ? 'checked' : ''}>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
+                <!-- 模式提示 -->
+<div style="background: #e3f2fd; border-radius: 12px; padding: 15px; margin: 15px;">
+    <div style="font-size: 14px; color: #1976d2;">
+        <i class="fa-solid fa-info-circle"></i> 
+        在线模式状态：${window.VirtualPhone?.settings?.onlineMode ? '✅ 已开启' : '❌ 未开启'}
+        <div style="font-size: 12px; margin-top: 5px; color: #666;">
+            如需修改，请前往手机"设置"APP
+        </div>
+    </div>
+</div>
                 
                 <!-- 功能提示词设置 -->
                 <div style="background: #fff; border-radius: 12px; margin: 15px; padding: 15px;">
@@ -2300,20 +2296,6 @@ showSettings() {
     // 返回按钮
     document.getElementById('back-from-settings')?.addEventListener('click', () => {
         this.render();
-    });
-    
-    // 在线模式开关
-    document.getElementById('online-mode-toggle')?.addEventListener('change', (e) => {
-        if (window.VirtualPhone?.settings) {
-            window.VirtualPhone.settings.onlineMode = e.target.checked;
-            window.VirtualPhone.storage.saveSettings(window.VirtualPhone.settings);
-            
-            this.phoneShell.showNotification(
-                e.target.checked ? '已开启' : '已关闭',
-                e.target.checked ? '手机消息将发送给AI' : '手机消息不会发送给AI',
-                '✅'
-            );
-        }
     });
     
     // 折叠展开功能
