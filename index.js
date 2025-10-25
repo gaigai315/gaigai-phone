@@ -1130,3 +1130,4 @@ setTimeout(() => {
 }, 1000);
     
     window.ImageUploadManager = ImageUploadManager;
+}
