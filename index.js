@@ -819,31 +819,24 @@ if (context && context.eventSource) {
         onChatChanged
     );
     
-    // 🟢🟢🟢 在这里添加新的监听器 🟢🟢🟢
-    // ========================================
-    // 📱 监听提示词准备事件，注入手机活动记录
-    // ========================================
-    if (context.event_types.CHAT_COMPLETION_PROMPT_READY) {
-    context.eventSource.on(
-        context.event_types.CHAT_COMPLETION_PROMPT_READY,
-        (eventData) => {
+   // 🟢🟢🟢 手机消息注入（使用早期事件） 🟢🟢🟢
+context.eventSource.on(
+    'generate_after_combine_prompts',
+    (eventData) => {
         if (!settings.enabled) return;
         
         try {
-            // 🔥🔥🔥 新增：注入手机功能提示词 🔥🔥🔥
-            // ========================================
-            // 📝 第一步：注入启用的提示词规则
-            // ========================================
+            console.log('🔥 [手机系统] 开始注入（早期事件）');
+            
+            // 注入手机提示词
             const promptManager = window.VirtualPhone?.promptManager;
             if (promptManager) {
                 const enabledPrompts = promptManager.getEnabledPromptsForChat();
                 
                 if (enabledPrompts && enabledPrompts.trim()) {
-                    // 插入到 system 消息区域（通常在最后一个 system 之后）
                     const messages = eventData.chat;
                     
                     if (messages && Array.isArray(messages)) {
-                        // 找到最后一个 system 消息的位置
                         let lastSystemIndex = -1;
                         for (let i = messages.length - 1; i >= 0; i--) {
                             if (messages[i].role === 'system') {
@@ -852,302 +845,114 @@ if (context && context.eventSource) {
                             }
                         }
                         
-                        // 插入提示词
                         const insertPosition = lastSystemIndex >= 0 ? lastSystemIndex + 1 : 0;
                         messages.splice(insertPosition, 0, {
                             role: 'system',
                             content: enabledPrompts
                         });
                         
-                        console.log('📝 已注入手机功能提示词到位置:', insertPosition);
-                        console.log('📝 启用的功能:', promptManager.prompts);
+                        console.log('📝 已注入手机提示词');
                     }
-                } else {
-                    console.log('⚠️ 没有启用的提示词');
                 }
-            } else {
-                console.warn('⚠️ PromptManager 未初始化');
             }
             
-            // ========================================
-            // 📱 第二步：收集手机活动记录
-            // ========================================
-            console.log('\n📱 [手机→酒馆] 开始收集手机活动记录...');
-            
+            // 收集手机消息
             const phoneActivities = [];
-                    
-// ========================================
-// 1️⃣ 收集微信消息（直接从存储读取，不依赖wechatApp）
-// ========================================
-const storage = window.VirtualPhone?.storage;
-if (storage) {
-    try {
-        // 🔥 修复：使用正确的键名格式
-        const savedData = storage.get('wechat_data', false);
-        
-        if (savedData) {
-            console.log('📂 [手机活动] 成功读取微信数据，长度:', savedData.length);
+            const storage = window.VirtualPhone?.storage;
             
-            const wechatDataParsed = JSON.parse(savedData);
-            const allChats = wechatDataParsed.chats || [];
-            
-            console.log('💬 [手机活动] 微信聊天数量:', allChats.length);
-            
-            allChats.forEach(chat => {
-                const messages = wechatDataParsed.messages?.[chat.id] || [];
-                if (messages && messages.length > 0) {
-                    console.log(`📱 [手机活动] 聊天"${chat.name}"有 ${messages.length} 条消息`);
+            if (storage) {
+                try {
+                    const savedData = storage.get('wechat_data', false);
                     
-                    // 取每个聊天的最近10条消息
-                    const recentMessages = messages.slice(-10);
-                    
-                    recentMessages.forEach(msg => {
-                        const speaker = msg.from === 'me' 
-                            ? (context.name1 || '用户') 
-                            : chat.name;
+                    if (savedData) {
+                        const wechatDataParsed = JSON.parse(savedData);
+                        const allChats = wechatDataParsed.chats || [];
                         
-                        let content = '';
-                        switch (msg.type) {
-                            case 'text':
-                                content = msg.content;
-                                break;
-                            case 'image':
-                                content = '[图片]';
-                                break;
-                            case 'voice':
-                                content = `[语音 ${msg.duration || '3秒'}]`;
-                                break;
-                            case 'video':
-                                content = '[视频通话]';
-                                break;
-                            case 'transfer':
-                                content = `[转账 ¥${msg.amount}]`;
-                                break;
-                            case 'redpacket':
-                                content = `[红包 ¥${msg.amount}]`;
-                                break;
-                            case 'call_record':
-                                content = `[${msg.callType === 'video' ? '视频' : '语音'}通话 ${msg.duration}]`;
-                                break;
-                            default:
-                                content = `[${msg.type}]`;
-                        }
-                        
-                        phoneActivities.push({
-                            app: '微信',
-                            type: chat.type === 'group' ? '群聊' : '私聊',
-                            chatName: chat.name,
-                            speaker: speaker,
-                            content: content,
-                            time: msg.time,
-                            timestamp: msg.realTimestamp || Date.now(),
-                            tavernMessageIndex: msg.tavernMessageIndex !== undefined ? msg.tavernMessageIndex : 999999
-                        });
-                    });
-                }
-            });
-            
-            console.log('✅ [手机活动] 收集了微信消息:', phoneActivities.length, '条');
-        } else {
-            console.log('📱 [手机活动] 没有保存的微信数据');
-        }
-    } catch (e) {
-        console.error('❌ [手机活动] 读取微信数据失败:', e);
-        console.error('错误堆栈:', e.stack);
-    }
-} else {
-    console.warn('⚠️ [手机活动] 无法访问storage');
-}
-                    
-                    // ========================================
-                    // 2️⃣ 收集朋友圈（如果有）
-                    // ========================================
-                    if (window.VirtualPhone?.wechatApp?.wechatData) {
-                        const wechatData = window.VirtualPhone.wechatApp.wechatData;
-                        const moments = wechatData.getMoments();
-                        
-                        if (moments && moments.length > 0) {
-                            moments.slice(-5).forEach(moment => {
-                                phoneActivities.push({
-                                    app: '微信朋友圈',
-                                    type: '动态',
-                                    chatName: moment.author || '未知',
-                                    speaker: moment.author || '未知',
-                                    content: moment.content || '',
-                                    time: moment.time || '刚刚',
-                                    timestamp: Date.now()
+                        allChats.forEach(chat => {
+                            const messages = wechatDataParsed.messages?.[chat.id] || [];
+                            if (messages && messages.length > 0) {
+                                const recentMessages = messages.slice(-10);
+                                
+                                recentMessages.forEach(msg => {
+                                    const speaker = msg.from === 'me' 
+                                        ? (context.name1 || '用户') 
+                                        : chat.name;
+                                    
+                                    let content = msg.content || '[未知消息]';
+                                    if (msg.type !== 'text') {
+                                        const typeMap = {
+                                            'image': '[图片]',
+                                            'voice': `[语音 ${msg.duration || '3秒'}]`,
+                                            'video': '[视频通话]',
+                                            'transfer': `[转账 ¥${msg.amount}]`,
+                                            'redpacket': `[红包 ¥${msg.amount}]`,
+                                            'call_record': `[${msg.callType === 'video' ? '视频' : '语音'}通话 ${msg.duration}]`
+                                        };
+                                        content = typeMap[msg.type] || `[${msg.type}]`;
+                                    }
+                                    
+                                    phoneActivities.push({
+                                        chatName: chat.name,
+                                        speaker: speaker,
+                                        content: content,
+                                        time: msg.time
+                                    });
                                 });
-                            });
-                            
-                            console.log('✅ 收集了朋友圈:', moments.length, '条');
-                        }
+                            }
+                        });
+                        
+                        console.log('✅ 收集了', phoneActivities.length, '条手机消息');
                     }
-                    
-                    // ========================================
-                    // 3️⃣ 预留：其他APP（短信、电话等）
-                    // ========================================
-                    // 未来可以在这里添加其他APP的数据收集
-                    
-                    // ========================================
-// 4️⃣ 按时间线智能注入手机消息
-// ========================================
-if (phoneActivities.length > 0) {
-    console.log('📊 总共收集到', phoneActivities.length, '条手机活动');
-    
-    const messages = eventData.chat;
-    
-    if (!messages || !Array.isArray(messages)) {
-        console.error('❌ eventData.chat 不是数组');
-        return;
-    }
-    
-    // 🔥 按消息索引分组手机活动
-    const activitiesByIndex = {};
-    
-    phoneActivities.forEach(activity => {
-    // 使用记录的索引，如果没有则默认为最新（修复：0 不应该被当成无效值）
-    const index = activity.tavernMessageIndex !== undefined 
-        ? activity.tavernMessageIndex 
-        : 999999;  // ← 正确判断！
-    
-    if (!activitiesByIndex[index]) {
-        activitiesByIndex[index] = [];
-    }
-    activitiesByIndex[index].push(activity);
-});
-    
-    console.log('📊 手机消息分组:', Object.keys(activitiesByIndex).length, '个时间点');
-    
-    // 🔥 找到聊天记录的起始位置（兼容多种格式）
-let chatStartIndex = -1;
-for (let i = 0; i < messages.length; i++) {
-    if (messages[i].role === 'user' || 
-        messages[i].role === 'assistant' ||
-        messages[i].is_user !== undefined ||
-        messages[i].name !== undefined) {
-        chatStartIndex = i;
-        break;
-    }
-}
-
-if (chatStartIndex === -1) {
-    console.warn('⚠️ 找不到聊天记录起始位置，插入到开头');
-    chatStartIndex = 0;
-}
-    
-    console.log('📍 聊天记录起始位置:', chatStartIndex);
-    
-    // 🔥🔥🔥 关键修复：强制注入到最后一条用户消息之前 🔥🔥🔥
-// ========================================
-// 策略：不再按时间分散插入，而是合并成一个醒目的消息块
-// ========================================
-
-// 1️⃣ 找到最后一条用户消息的位置
-let lastUserMessageIndex = -1;
-for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role === 'user' || messages[i].is_user === true) {
-        lastUserMessageIndex = i;
-        console.log(`📍 [手机注入] 找到最后一条用户消息，位置: ${i}`);
-        break;
-    }
-}
-
-if (lastUserMessageIndex === -1) {
-    console.warn('⚠️ [手机注入] 找不到用户消息，插入到末尾');
-    lastUserMessageIndex = messages.length;
-}
-
-// 2️⃣ 对所有手机消息按时间排序
-phoneActivities.sort((a, b) => {
-    // 先按索引排序
-    const indexA = a.tavernMessageIndex !== undefined ? a.tavernMessageIndex : 999999;
-    const indexB = b.tavernMessageIndex !== undefined ? b.tavernMessageIndex : 999999;
-    if (indexA !== indexB) return indexA - indexB;
-    
-    // 同一索引下按时间戳排序
-    return a.timestamp - b.timestamp;
-});
-
-// 3️⃣ 构建统一的手机消息块
-let phoneContextContent = `
+                } catch (e) {
+                    console.error('❌ 读取微信数据失败:', e);
+                }
+            }
+            
+            // 注入手机消息
+            if (phoneActivities.length > 0) {
+                const messages = eventData.chat;
+                
+                if (messages && Array.isArray(messages)) {
+                    let phoneContent = `
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║                          📱 手机活动记录（完整时间线）                    ║
+║                          📱 手机微信消息记录                              ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-⚠️ 重要：以下是角色通过手机（微信）进行的所有对话，按时间顺序排列
-⚠️ 这些消息的优先级 > 面对面对话，请仔细阅读并据此生成回复
+⚠️ 重要：以下是角色通过手机进行的真实对话
+⚠️ 这些消息的优先级 > 面对面对话，请据此生成回复
 
 `;
-
-// 4️⃣ 按时间线添加所有消息
-let currentIndex = -1;
-phoneActivities.forEach((activity, idx) => {
-    const activityIndex = activity.tavernMessageIndex !== undefined ? activity.tavernMessageIndex : 999999;
-    
-    // 如果是新的时间点，添加分隔符
-    if (activityIndex !== currentIndex) {
-        currentIndex = activityIndex;
-        
-        let timeDesc;
-        if (activityIndex === 0) {
-            timeDesc = '【酒馆对话开始前】';
-        } else if (activityIndex >= 999999) {
-            timeDesc = '【最新消息】';
-        } else {
-            timeDesc = `【第${activityIndex}句对话后】`;
-        }
-        
-        phoneContextContent += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        phoneContextContent += `⏰ ${timeDesc}\n`;
-        phoneContextContent += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    }
-    
-    // 添加消息内容
-    let prefix = '';
-    if (activity.type === '群聊') {
-        prefix = `[群：${activity.chatName}]`;
-    } else if (activity.type === '私聊') {
-        prefix = `[私聊：${activity.chatName}]`;
-    } else if (activity.type === '动态') {
-        prefix = `[朋友圈]`;
-    } else {
-        prefix = `[${activity.type}]`;
-    }
-    
-    phoneContextContent += `  ${prefix} ${activity.time} ${activity.speaker}: ${activity.content}\n`;
-});
-
-// 5️⃣ 添加警告提示
-phoneContextContent += `
+                    
+                    phoneActivities.forEach(activity => {
+                        phoneContent += `  [私聊：${activity.chatName}] ${activity.time} ${activity.speaker}: ${activity.content}\n`;
+                    });
+                    
+                    phoneContent += `
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║  ⚠️  关键提醒：                                                           ║
 ║  • 上述手机消息反映了角色的真实状态和位置                                ║
 ║  • 如果消息显示角色在加班 → 角色【不在】用户身边                         ║
-║  • 如果消息显示角色在回家路上 → 回复应体现这个状态                       ║
 ║  • 所有时间均为剧情时间，严格遵守                                        ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 `;
-
-// 6️⃣ 插入到最后一条用户消息之前
-messages.splice(lastUserMessageIndex, 0, {
-    role: 'system',
-    content: phoneContextContent
-});
-
-console.log(`🎉 [手机注入] 已注入手机消息块到位置 ${lastUserMessageIndex}（最后一条用户消息之前）`);
-console.log(`📊 [手机注入] 包含 ${phoneActivities.length} 条手机活动`);
-
-} else {
-    console.log('📱 暂无手机活动记录');
-}
-                
-            } catch (e) {
-                console.error('❌ 手机活动注入失败:', e);
+                    
+                    // 插入到末尾
+                    messages.push({
+                        role: 'system',
+                        content: phoneContent
+                    });
+                    
+                    console.log(`🎉 已注入手机消息到位置 ${messages.length - 1}`);
+                }
             }
+            
+        } catch (e) {
+            console.error('❌ 手机注入失败:', e);
         }
-    );
-    
-    console.log('✅ 已注册手机活动注入监听器');
+    }
+);
+
+console.log('✅ 手机系统已注册（早期事件）');
 } else {
     console.warn('⚠️ CHAT_COMPLETION_PROMPT_READY 事件不存在，手机活动将不会注入到酒馆');
 }
