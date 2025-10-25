@@ -605,24 +605,19 @@ buildPhoneChatPrompt(context, contactName, userMessage) {
     let chatPromptTemplate = '';
 
     // 🔥 修复：添加容错处理
-if (promptManager) {
-    try {
-        if (promptManager.isEnabled('wechat', 'chat')) {
-            chatPromptTemplate = promptManager.getPromptForFeature('wechat', 'chat');
-            console.log('✅ 已加载微信聊天提示词，长度:', chatPromptTemplate.length);
+    if (promptManager) {
+        try {
+            if (promptManager.isEnabled('wechat', 'chat')) {
+                chatPromptTemplate = promptManager.getPromptForFeature('wechat', 'chat');
+                console.log('✅ 已加载微信聊天提示词，长度:', chatPromptTemplate.length);
+            } else {
+                console.warn('⚠️ 微信聊天提示词功能已禁用');
+            }
+        } catch (e) {
+            console.warn('⚠️ 获取提示词失败:', e);
         }
-    } catch (e) {
-        console.warn('⚠️ 获取提示词失败:', e);
-    }
-} else {
-    console.warn('⚠️ PromptManager 未初始化');
-}
-    
-    if (promptManager && promptManager.isEnabled('wechat', 'chat')) {
-        chatPromptTemplate = promptManager.getPromptForFeature('wechat', 'chat');
-        console.log('✅ 已加载微信聊天提示词，长度:', chatPromptTemplate.length);
     } else {
-        console.warn('⚠️ 未找到微信聊天提示词或功能已禁用');
+        console.warn('⚠️ PromptManager 未初始化');
     }
     
     // ========================================
