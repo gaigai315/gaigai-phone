@@ -51,25 +51,9 @@ export class WechatData {
 }
     
     getStorageKey() {
-    // 🔥 容错：如果 storage.getContext 不存在，尝试全局获取
-    let context = null;
-    
-    try {
-        if (this.storage.getContext) {
-            context = this.storage.getContext();
-        } else if (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) {
-            context = SillyTavern.getContext();
-        }
-    } catch (e) {
-        console.warn('⚠️ 无法获取上下文:', e.message);
-    }
-    
-    const charId = context?.characterId || 'default';
-    const chatId = context?.chatId || 'default';
-    const key = `${this.storageKey}_${charId}_${chatId}`;
-    
-    console.log('🔑 存储键:', key);
-    return key;
+    // 🔥 修复：这个方法只应该返回数据类型，而不是完整的键。
+    // 完整的键由 storage.js 统一构建。
+    return this.storageKey; // this.storageKey 在构造函数中定义为 'wechat_data'
 }
     
     async saveData() {
