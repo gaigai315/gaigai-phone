@@ -1931,35 +1931,30 @@ showVideoCallInterface(contact, aiFirstMessage) {
         if (e.key === 'Enter') sendMessage();
     });
     
-   // 挂断
-    document.getElementById('voice-hangup-btn')?.addEventListener('click', () => {
-        clearInterval(callTimer);
+       // 挂断
+    document.getElementById('video-hangup-btn')?.addEventListener('click', () => {
+        clearInterval(videoTimer);
         
-        const durationText = `${Math.floor(callDuration / 60)}分${callDuration % 60}秒`;
-        
-        // 挂断
-    document.getElementById('voice-hangup-btn')?.addEventListener('click', () => {
-        clearInterval(callTimer);
-        
-        const durationText = `${Math.floor(callDuration / 60)}分${callDuration % 60}秒`;
+        const durationText = `${Math.floor(videoDuration / 60)}分${videoDuration % 60}秒`;
         
         // 🔥 使用通话开始的剧情时间
         this.app.wechatData.addMessage(this.app.currentChat.id, {
             from: 'me',
             type: 'call_record',
-            callType: 'voice',
+            callType: 'video',
             status: 'answered',
             duration: durationText,
-            time: callStartTime.time  // ✅ 使用剧情时间
+            time: callStartTime.time
         });
-    
-    if (window.VirtualPhone?.settings?.onlineMode && videoDuration > 0) {
-        ...
-    }
-    
-    this.app.phoneShell.showNotification('通话结束', `视频通话 ${durationText}`, '📹');
-    setTimeout(() => this.app.render(), 1000);
-});
+        
+        // 🔥 如果开启在线模式，通知AI
+        if (window.VirtualPhone?.settings?.onlineMode && videoDuration > 0) {
+            this.notifyAI(`刚才和你视频通话了${durationText}`);
+        }
+        
+        this.app.phoneShell.showNotification('通话结束', `视频通话 ${durationText}`, '📹');
+        setTimeout(() => this.app.render(), 1000);
+    });
     
     // 静音/摄像头切换
     let isVideoMuted = false;
@@ -2280,7 +2275,7 @@ showVoiceCallInterface(contact) {
         }
     }, 1000);
     
-    // 挂断
+       // 挂断
     document.getElementById('voice-hangup-btn')?.addEventListener('click', () => {
         clearInterval(callTimer);
         
@@ -2293,8 +2288,17 @@ showVoiceCallInterface(contact) {
             callType: 'voice',
             status: 'answered',
             duration: durationText,
-            time: callStartTime.time  // ✅ 使用剧情时间
+            time: callStartTime.time
         });
+        
+        // 🔥 如果开启在线模式，通知AI
+        if (window.VirtualPhone?.settings?.onlineMode && callDuration > 0) {
+            this.notifyAI(`刚才和你语音通话了${durationText}`);
+        }
+        
+        this.app.phoneShell.showNotification('通话结束', `语音通话 ${durationText}`, '📞');
+        setTimeout(() => this.app.render(), 1000);
+    });
     
     // 静音
     let isMuted = false;
