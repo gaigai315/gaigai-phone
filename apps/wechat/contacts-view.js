@@ -605,4 +605,6 @@ export class ContactsView {
                 this.app.render();
             }, 1000);
         });
+     }
     }
+    
