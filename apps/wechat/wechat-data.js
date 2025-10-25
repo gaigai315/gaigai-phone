@@ -326,6 +326,18 @@ async loadContactsFromCharacter() {
 buildContactPrompt(context) {
     const charName = context.name2 || context.name || '角色';
     const userName = context.name1 || '用户';
+
+     // 🔥🔥🔥 新增：从 PromptManager 获取联系人生成提示词 🔥🔥🔥
+    const promptManager = window.VirtualPhone?.promptManager;
+    let contactPromptTemplate = '';
+    
+    if (promptManager && promptManager.isEnabled('wechat', 'loadContacts')) {
+        contactPromptTemplate = promptManager.getPromptForFeature('wechat', 'loadContacts');
+        console.log('✅ [联系人生成] 已加载提示词模板，长度:', contactPromptTemplate.length);
+    } else {
+        console.warn('⚠️ [联系人生成] 未找到提示词或功能已禁用');
+        contactPromptTemplate = '请根据提供的信息生成微信联系人列表，返回JSON格式。';
+    }
     
     console.log('📝 [联系人生成] 开始收集数据...');
     
