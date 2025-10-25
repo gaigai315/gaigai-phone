@@ -1763,6 +1763,12 @@ async startVideoCall() {
 
 // 🔥 显示视频通话界面（接通后）
 showVideoCallInterface(contact, aiFirstMessage) {
+    // 🔥 记录通话开始的剧情时间
+    const timeManager = window.VirtualPhone?.timeManager;
+    const callStartTime = timeManager 
+        ? timeManager.getCurrentStoryTime() 
+        : { time: '21:30', date: '2044年10月28日' };
+    
     const html = `
         <div class="wechat-app">
             <div class="wechat-header" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);">
@@ -2173,6 +2179,12 @@ ${chatHistory.map(h => `${h.from === 'me' ? context.name1 : contactName}: ${h.te
 
 // 🔥 显示语音通话界面（接通后）
 showVoiceCallInterface(contact) {
+    // 🔥 记录通话开始的剧情时间
+    const timeManager = window.VirtualPhone?.timeManager;
+    const callStartTime = timeManager 
+        ? timeManager.getCurrentStoryTime() 
+        : { time: '21:30', date: '2044年10月28日' };
+    
     const html = `
         <div class="wechat-app">
             <div class="wechat-header" style="background: #1a1a1a;">
