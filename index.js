@@ -743,14 +743,57 @@ if (context && context.eventSource) {
     // ========================================
     if (context.event_types.CHAT_COMPLETION_PROMPT_READY) {
         context.eventSource.on(
-            context.event_types.CHAT_COMPLETION_PROMPT_READY,
-            (eventData) => {
-                if (!settings.enabled) return;
+            context.eventSource.on(
+    context.event_types.CHAT_COMPLETION_PROMPT_READY,
+    (eventData) => {
+        if (!settings.enabled) return;
+        
+        try {
+            // 🔥🔥🔥 新增：注入手机功能提示词 🔥🔥🔥
+            // ========================================
+            // 📝 第一步：注入启用的提示词规则
+            // ========================================
+            const promptManager = window.VirtualPhone?.promptManager;
+            if (promptManager) {
+                const enabledPrompts = promptManager.getEnabledPromptsForChat();
                 
-                try {
-                    console.log('\n📱 [手机→酒馆] 开始收集手机活动记录...');
+                if (enabledPrompts && enabledPrompts.trim()) {
+                    // 插入到 system 消息区域（通常在最后一个 system 之后）
+                    const messages = eventData.chat;
                     
-                    const phoneActivities = [];
+                    if (messages && Array.isArray(messages)) {
+                        // 找到最后一个 system 消息的位置
+                        let lastSystemIndex = -1;
+                        for (let i = messages.length - 1; i >= 0; i--) {
+                            if (messages[i].role === 'system') {
+                                lastSystemIndex = i;
+                                break;
+                            }
+                        }
+                        
+                        // 插入提示词
+                        const insertPosition = lastSystemIndex >= 0 ? lastSystemIndex + 1 : 0;
+                        messages.splice(insertPosition, 0, {
+                            role: 'system',
+                            content: enabledPrompts
+                        });
+                        
+                        console.log('📝 已注入手机功能提示词到位置:', insertPosition);
+                        console.log('📝 启用的功能:', promptManager.prompts);
+                    }
+                } else {
+                    console.log('⚠️ 没有启用的提示词');
+                }
+            } else {
+                console.warn('⚠️ PromptManager 未初始化');
+            }
+            
+            // ========================================
+            // 📱 第二步：收集手机活动记录
+            // ========================================
+            console.log('\n📱 [手机→酒馆] 开始收集手机活动记录...');
+            
+            const phoneActivities = [];
                     
 // ========================================
 // 1️⃣ 收集微信消息（直接从存储读取，不依赖wechatApp）
