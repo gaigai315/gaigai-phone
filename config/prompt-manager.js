@@ -218,6 +218,25 @@ export class PromptManager {
         order: 5
     }
 },
+
+                moments: {
+        enabled: false,
+        name: '📸 朋友圈',
+        description: '朋友圈动态生成规则',
+        content: `# 朋友圈功能提示词
+当需要生成朋友圈内容时使用`,
+        order: 3
+    },
+    
+    call: {
+        enabled: true,
+        name: '📞 语音/视频通话',
+        description: '通话决策和对话规则',
+        content: `# 通话功能提示词
+决定是否接听电话`,
+        order: 4
+    }
+},
             
             // 未来扩展：其他APP
             sms: {
