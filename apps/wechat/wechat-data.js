@@ -7,53 +7,95 @@ export class WechatData {
     }
     
     loadData() {
-        try {
-            const key = this.getStorageKey();
-            const saved = this.storage.get(key, false);
-            
-            if (saved) {
+    try {
+        const key = this.getStorageKey();
+        const saved = this.storage.get(key, false);
+        
+        // 🔥 修复1：增加严格的空值检查
+        if (saved && saved.trim() !== '') {
+            try {
                 const data = JSON.parse(saved);
                 console.log('📂 已加载微信数据');
                 return data;
+            } catch (parseError) {
+                // 🔥 修复2：JSON解析失败时，记录错误并清空损坏数据
+                console.error('❌ JSON解析失败:', parseError.message);
+                console.warn('⚠️ 损坏的数据:', saved.substring(0, 200));
+                
+                // 清空损坏的数据
+                this.storage.set(key, null, false);
+                console.warn('⚠️ 已清空损坏的数据，将创建新数据');
             }
-        } catch (e) {
-            console.error('加载微信数据失败:', e);
         }
-        
-        console.log('🆕 新用户，创建空数据');
-    return {
-    userInfo: {
-        name: '我',
-        wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
-        avatar: '😊',
-        signature: '',
-        coverImage: null
-    },
-    chats: [],
-    contacts: [],
-    messages: {},
-    moments: [],
-    customEmojis: [] // ← 新增：自定义表情数组
-      };
+    } catch (e) {
+        console.error('❌ 加载微信数据失败:', e);
+        console.error('错误堆栈:', e.stack);
     }
+    
+    // 🔥 修复3：无论如何都返回有效数据
+    console.log('🆕 新用户，创建空数据');
+    return {
+        userInfo: {
+            name: '我',
+            wxid: 'wxid_' + Math.random().toString(36).substr(2, 9),
+            avatar: '😊',
+            signature: '',
+            coverImage: null
+        },
+        chats: [],
+        contacts: [],
+        messages: {},
+        moments: [],
+        customEmojis: []
+    };
+}
     
     getStorageKey() {
-        const context = this.storage.getContext();
-        const charId = context?.characterId || 'default';
-        const chatId = context?.chatId || 'default';
-        return `${this.storageKey}_${charId}_${chatId}`;
+    // 🔥 容错：如果 storage.getContext 不存在，尝试全局获取
+    let context = null;
+    
+    try {
+        if (this.storage.getContext) {
+            context = this.storage.getContext();
+        } else if (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) {
+            context = SillyTavern.getContext();
+        }
+    } catch (e) {
+        console.warn('⚠️ 无法获取上下文:', e.message);
     }
+    
+    const charId = context?.characterId || 'default';
+    const chatId = context?.chatId || 'default';
+    const key = `${this.storageKey}_${charId}_${chatId}`;
+    
+    console.log('🔑 存储键:', key);
+    return key;
+}
     
     async saveData() {
-        try {
-            const key = this.getStorageKey();
-            await this.storage.set(key, JSON.stringify(this.data), false);
-            console.log('💾 微信数据已保存');
-        } catch (e) {
-            console.error('保存微信数据失败:', e);
+    try {
+        // 🔥 验证数据有效性
+        if (!this.data) {
+            console.error('❌ 无效的数据，无法保存');
+            return;
         }
+        
+        const key = this.getStorageKey();
+        const jsonStr = JSON.stringify(this.data);
+        
+        // 🔥 验证 JSON 字符串
+        if (!jsonStr || jsonStr === 'null' || jsonStr === 'undefined') {
+            console.error('❌ JSON序列化失败:', jsonStr);
+            return;
+        }
+        
+        await this.storage.set(key, jsonStr, false);
+        console.log('💾 微信数据已保存 (大小:', jsonStr.length, '字节)');
+    } catch (e) {
+        console.error('❌ 保存微信数据失败:', e);
+        console.error('错误堆栈:', e.stack);
     }
-    
+}
     getUserInfo() {
         return this.data.userInfo;
     }
