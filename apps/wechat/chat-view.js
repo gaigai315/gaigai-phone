@@ -848,47 +848,34 @@ sections.push(
     ''
 );
     
-    // 添加当前消息
-    sections.push(
-        '## 用户刚发来的微信消息',
-        `${userName}: ${userMessage}`,
-        '',
-        '---',
-        ''
-    );
-    
-    // 回复要求
-    if (chatMode === 'group') {
-        sections.push(
-            '## 回复要求',
-            '1. 可以模拟1-3个群成员回复',
-            '2. 用【名字】开头标识说话人',
-            '3. 符合群聊的氛围（可能有人开玩笑、有人认真回复）',
-            '4. 每个人用|||分隔',
-            '',
-            '示例格式：',
-            '【张三】这事我知道|||【李四】真的假的？|||【王五】[图片]',
-            ''
-        );
-    } else {
-        sections.push(
-            '## 回复要求',
-            `1. 你是${contactName}本人，用第一人称说话`,
-            `2. 符合${contactName}的身份、性格和说话方式`,
-            '3. 基于聊天历史保持话题连贯',
-            '4. 只返回微信消息内容，不要旁白描写',
-            '5. 多条消息用|||分隔',
-            '6. 可以适当使用表情，但要符合角色性格',
-            ''
-        );
-    }
-    
     sections.push(`现在请以${contactName}的身份回复：`);
     
-    const finalPrompt = sections.join('\n');
-    console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
+    // 🔥🔥🔥 替换时间占位符 🔥🔥🔥
+    const timeManager = window.VirtualPhone?.timeManager;
+    const currentStoryTime = timeManager 
+        ? timeManager.getCurrentStoryTime() 
+        : { time: '21:30', date: '2044年10月28日' };
     
-    // 保存供调试
+    // 计算AI应该回复的时间（当前时间+1分钟）
+    const [hour, minute] = currentStoryTime.time.split(':').map(Number);
+    const replyMinute = minute + 1;
+    const replyHour = hour + Math.floor(replyMinute / 60);
+    const replyTime = `${String(replyHour % 24).padStart(2, '0')}:${String(replyMinute % 60).padStart(2, '0')}`;
+    
+    // 拼接最终提示词
+    let finalPrompt = sections.join('\n');
+    
+    // 替换占位符
+    finalPrompt = finalPrompt
+        .replace(/\{\{STORY_TIME\}\}/g, currentStoryTime.time)
+        .replace(/\{\{STORY_DATE\}\}/g, currentStoryTime.date)
+        .replace(/\{\{STORY_TIME\+1\}\}/g, replyTime)
+        .replace(/\{\{char\}\}/g, contactName)
+        .replace(/\{\{user\}\}/g, userName);
+    
+    console.log('📤 最终提示词长度:', finalPrompt.length, '字符');
+    console.log('⏰ 注入的时间:', currentStoryTime.time, '→ 回复时间:', replyTime);
+    
     window.lastPhonePrompt = finalPrompt;
     
     return finalPrompt;
@@ -1966,27 +1953,28 @@ showVideoCallInterface(contact, aiFirstMessage) {
     });
     
     // 挂断
-    document.getElementById('video-hangup-btn')?.addEventListener('click', () => {
-        clearInterval(videoTimer);
-        
-        const durationText = `${Math.floor(videoDuration / 60)}分${videoDuration % 60}秒`;
-        
-        this.addCallRecord('video', 'answered', durationText);
-        
-        if (window.VirtualPhone?.settings?.onlineMode && videoDuration > 0) {
-            let summary = `[视频通话 ${durationText}]`;
-            if (chatMessages.length > 0) {
-                summary += '\n通话中的对话：\n';
-                chatMessages.forEach(msg => {
-                    summary += `${msg.from === 'me' ? '我' : contact.name}: ${msg.text}\n`;
-                });
-            }
-            this.notifyAI(summary);
-        }
-        
-        this.app.phoneShell.showNotification('通话结束', `视频通话 ${durationText}`, '📹');
-        setTimeout(() => this.app.render(), 1000);
+document.getElementById('video-hangup-btn')?.addEventListener('click', () => {
+    clearInterval(videoTimer);
+    
+    const durationText = `${Math.floor(videoDuration / 60)}分${videoDuration % 60}秒`;
+    
+    // 🔥 使用通话开始的剧情时间（而不是当前时间）
+    this.app.wechatData.addMessage(this.app.currentChat.id, {
+        from: 'me',
+        type: 'call_record',
+        callType: 'video',
+        status: 'answered',
+        duration: durationText,
+        time: callStartTime.time  // ✅ 使用通话开始时的剧情时间
     });
+    
+    if (window.VirtualPhone?.settings?.onlineMode && videoDuration > 0) {
+        ...
+    }
+    
+    this.app.phoneShell.showNotification('通话结束', `视频通话 ${durationText}`, '📹');
+    setTimeout(() => this.app.render(), 1000);
+});
     
     // 静音/摄像头切换
     let isVideoMuted = false;
@@ -2081,16 +2069,24 @@ async askAIForCallDecision(callType, contactName) {
     }
 }
 
-// 🔥 新增：添加通话记录到聊天
+// 🔥 添加通话记录到聊天（使用剧情时间）
 addCallRecord(callType, status, duration) {
+    // 获取剧情时间
+    const timeManager = window.VirtualPhone?.timeManager;
+    const currentTime = timeManager 
+        ? timeManager.getCurrentStoryTime().time 
+        : new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    
     this.app.wechatData.addMessage(this.app.currentChat.id, {
         from: 'me',
         type: 'call_record',
         callType: callType,
         status: status,
         duration: duration,
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        time: currentTime  // ✅ 使用剧情时间
     });
+    
+    console.log(`📞 通话记录已添加，时间: ${currentTime}, 时长: ${duration}`);
 }
 
 // 📞 语音通话（新增完整方法）
@@ -2299,15 +2295,15 @@ showVoiceCallInterface(contact) {
         
         const durationText = `${Math.floor(callDuration / 60)}分${callDuration % 60}秒`;
         
-        this.addCallRecord('voice', 'answered', durationText);
-        
-        if (window.VirtualPhone?.settings?.onlineMode && callDuration > 0) {
-            this.notifyAI(`[语音通话 ${durationText}]`);
-        }
-        
-        this.app.phoneShell.showNotification('通话结束', `通话时长 ${durationText}`, '📞');
-        setTimeout(() => this.app.render(), 1000);
-    });
+        // 🔥 使用通话开始的剧情时间
+        this.app.wechatData.addMessage(this.app.currentChat.id, {
+            from: 'me',
+            type: 'call_record',
+            callType: 'voice',
+            status: 'answered',
+            duration: durationText,
+            time: callStartTime.time  // ✅ 使用剧情时间
+        });
     
     // 静音
     let isMuted = false;
