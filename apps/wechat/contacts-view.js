@@ -179,13 +179,13 @@ export class ContactsView {
         }
     }
     
-    handleFunction(func) {
+       handleFunction(func) {
         switch (func) {
             case 'new-friends':
-                this.showNewFriends();
+                this.showAddFriendPage();
                 break;
             case 'groups':
-                this.showGroups();
+                this.showCreateGroupPage();
                 break;
             case 'tags':
                 this.showTags();
@@ -196,14 +196,6 @@ export class ContactsView {
         }
     }
     
-    showNewFriends() {
-        this.app.phoneShell.showNotification('新的朋友', '暂无新好友请求', '👥');
-    }
-    
-    showGroups() {
-        this.app.phoneShell.showNotification('群聊', '你加入了3个群聊', '👥');
-    }
-    
     showTags() {
         this.app.phoneShell.showNotification('标签', '管理联系人标签', '🏷️');
     }
@@ -212,3 +204,406 @@ export class ContactsView {
         this.app.phoneShell.showNotification('公众号', '关注的公众号列表', '📰');
     }
 }
+
+    // ========================================
+    // 🆕 手动添加好友（完整界面）
+    // ========================================
+    showAddFriendPage() {
+        const html = `
+            <div class="wechat-app">
+                <div class="wechat-header">
+                    <div class="wechat-header-left">
+                        <button class="wechat-back-btn" id="back-from-add-friend">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    <div class="wechat-header-title">添加好友</div>
+                    <div class="wechat-header-right"></div>
+                </div>
+                
+                <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                    <div style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 15px;">
+                        <div style="font-size: 14px; color: #999; margin-bottom: 15px;">
+                            <i class="fa-solid fa-user-plus"></i> 填写好友信息
+                        </div>
+                        
+                        <!-- 头像选择 -->
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <div id="friend-avatar-preview" style="
+                                width: 80px;
+                                height: 80px;
+                                border-radius: 10px;
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                margin: 0 auto 12px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 40px;
+                                cursor: pointer;
+                            ">👤</div>
+                            <input type="file" id="friend-avatar-upload" accept="image/*" style="display: none;">
+                            <button id="upload-friend-avatar" style="
+                                padding: 8px 16px;
+                                background: #f0f0f0;
+                                border: none;
+                                border-radius: 6px;
+                                font-size: 13px;
+                                cursor: pointer;
+                            ">
+                                <i class="fa-solid fa-camera"></i> 选择头像
+                            </button>
+                        </div>
+                        
+                        <!-- 姓名 -->
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 13px; color: #999; margin-bottom: 8px;">好友昵称 *</div>
+                            <input type="text" id="friend-name-input" placeholder="输入好友昵称" maxlength="20" style="
+                                width: 100%;
+                                padding: 12px;
+                                border: 1.5px solid #e5e5e5;
+                                border-radius: 8px;
+                                font-size: 15px;
+                                box-sizing: border-box;
+                            ">
+                        </div>
+                        
+                        <!-- 备注 -->
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 13px; color: #999; margin-bottom: 8px;">备注名</div>
+                            <input type="text" id="friend-remark-input" placeholder="可选" maxlength="20" style="
+                                width: 100%;
+                                padding: 12px;
+                                border: 1.5px solid #e5e5e5;
+                                border-radius: 8px;
+                                font-size: 15px;
+                                box-sizing: border-box;
+                            ">
+                        </div>
+                        
+                        <!-- 关系 -->
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 13px; color: #999; margin-bottom: 8px;">关系/身份</div>
+                            <input type="text" id="friend-relation-input" placeholder="如：朋友、同事、家人" maxlength="20" style="
+                                width: 100%;
+                                padding: 12px;
+                                border: 1.5px solid #e5e5e5;
+                                border-radius: 8px;
+                                font-size: 15px;
+                                box-sizing: border-box;
+                            ">
+                        </div>
+                    </div>
+                    
+                    <button id="save-friend-btn" style="
+                        width: 100%;
+                        padding: 14px;
+                        background: #07c160;
+                        color: #fff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 500;
+                        cursor: pointer;
+                    ">添加好友</button>
+                </div>
+            </div>
+        `;
+        
+        this.app.phoneShell.setContent(html);
+        
+        let selectedAvatar = '👤';
+        
+        // 返回
+        document.getElementById('back-from-add-friend')?.addEventListener('click', () => {
+            this.app.currentView = 'contacts';
+            this.app.render();
+        });
+        
+        // 上传头像
+        document.getElementById('upload-friend-avatar')?.addEventListener('click', () => {
+            document.getElementById('friend-avatar-upload').click();
+        });
+        
+        document.getElementById('friend-avatar-upload')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    this.app.phoneShell.showNotification('提示', '图片太大，请选择小于2MB的图片', '⚠️');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    selectedAvatar = e.target.result;
+                    const preview = document.getElementById('friend-avatar-preview');
+                    preview.innerHTML = `<img src="${selectedAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // 保存好友
+        document.getElementById('save-friend-btn')?.addEventListener('click', () => {
+            const name = document.getElementById('friend-name-input').value.trim();
+            const remark = document.getElementById('friend-remark-input').value.trim();
+            const relation = document.getElementById('friend-relation-input').value.trim();
+            
+            if (!name) {
+                this.app.phoneShell.showNotification('提示', '请输入好友昵称', '⚠️');
+                return;
+            }
+            
+            // 检查是否已存在
+            const exists = this.app.wechatData.getContacts().find(c => c.name === name);
+            if (exists) {
+                this.app.phoneShell.showNotification('提示', '该好友已存在', '⚠️');
+                return;
+            }
+            
+            // 添加联系人
+            this.app.wechatData.addContact({
+                id: `contact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                name: name,
+                avatar: selectedAvatar,
+                remark: remark,
+                relation: relation,
+                letter: this.app.wechatData.getFirstLetter(name)
+            });
+            
+            this.app.phoneShell.showNotification('添加成功', `已添加好友：${name}`, '✅');
+            
+            setTimeout(() => {
+                this.app.currentView = 'contacts';
+                this.app.render();
+            }, 1000);
+        });
+    }
+    
+    // ========================================
+    // 🆕 发起群聊（完整界面）
+    // ========================================
+    showCreateGroupPage() {
+        const contacts = this.app.wechatData.getContacts();
+        
+        const html = `
+            <div class="wechat-app">
+                <div class="wechat-header">
+                    <div class="wechat-header-left">
+                        <button class="wechat-back-btn" id="back-from-create-group">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    <div class="wechat-header-title">
+                        选择联系人 (<span id="selected-count">0</span>)
+                    </div>
+                    <div class="wechat-header-right">
+                        <button class="wechat-header-btn" id="create-group-btn" style="color: #07c160; font-size: 14px; font-weight: 500;">
+                            创建
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="wechat-content" style="background: #ededed;">
+                    <!-- 已选择的成员 -->
+                    <div id="selected-members" style="
+                        background: #fff;
+                        padding: 12px 15px;
+                        border-bottom: 0.5px solid #e5e5e5;
+                        display: none;
+                        flex-wrap: wrap;
+                        gap: 10px;
+                    "></div>
+                    
+                    <!-- 联系人列表 -->
+                    <div style="background: #fff; padding: 10px 0;">
+                        ${contacts.map(contact => `
+                            <div class="group-contact-item" data-contact-id="${contact.id}" style="
+                                display: flex;
+                                align-items: center;
+                                padding: 10px 15px;
+                                cursor: pointer;
+                                transition: background 0.2s;
+                            ">
+                                <input type="checkbox" class="contact-checkbox" data-contact-name="${contact.name}" data-contact-avatar="${contact.avatar || '👤'}" style="
+                                    width: 20px;
+                                    height: 20px;
+                                    margin-right: 12px;
+                                    cursor: pointer;
+                                ">
+                                <div style="
+                                    width: 44px;
+                                    height: 44px;
+                                    border-radius: 6px;
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 22px;
+                                    margin-right: 12px;
+                                ">${contact.avatar || '👤'}</div>
+                                <div style="flex: 1;">
+                                    <div style="font-size: 16px; color: #000;">${contact.name}</div>
+                                    ${contact.relation ? `<div style="font-size: 12px; color: #999;">${contact.relation}</div>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.app.phoneShell.setContent(html);
+        
+        const selectedMembers = new Map(); // name -> avatar
+        
+        // 返回
+        document.getElementById('back-from-create-group')?.addEventListener('click', () => {
+            this.app.currentView = 'contacts';
+            this.app.render();
+        });
+        
+        // 勾选联系人
+        document.querySelectorAll('.contact-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const name = e.target.dataset.contactName;
+                const avatar = e.target.dataset.contactAvatar;
+                
+                if (e.target.checked) {
+                    selectedMembers.set(name, avatar);
+                } else {
+                    selectedMembers.delete(name);
+                }
+                
+                updateSelectedUI();
+            });
+        });
+        
+        // 更新已选择UI
+        function updateSelectedUI() {
+            const countSpan = document.getElementById('selected-count');
+            const selectedDiv = document.getElementById('selected-members');
+            
+            countSpan.textContent = selectedMembers.size;
+            
+            if (selectedMembers.size > 0) {
+                selectedDiv.style.display = 'flex';
+                selectedDiv.innerHTML = Array.from(selectedMembers.entries()).map(([name, avatar]) => `
+                    <div style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 60px;
+                    ">
+                        <div style="
+                            width: 48px;
+                            height: 48px;
+                            border-radius: 6px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 24px;
+                            margin-bottom: 4px;
+                        ">${avatar}</div>
+                        <div style="font-size: 11px; color: #666; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px;">
+                            ${name}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                selectedDiv.style.display = 'none';
+            }
+        }
+        
+        // 创建群聊
+        document.getElementById('create-group-btn')?.addEventListener('click', () => {
+            if (selectedMembers.size === 0) {
+                this.app.phoneShell.showNotification('提示', '请至少选择1个联系人', '⚠️');
+                return;
+            }
+            
+            this.showGroupNameInput(Array.from(selectedMembers.entries()));
+        });
+    }
+    
+    // 输入群名称
+    showGroupNameInput(members) {
+        const defaultName = members.slice(0, 3).map(([name]) => name).join('、') + (members.length > 3 ? '...' : '');
+        
+        const html = `
+            <div class="wechat-app">
+                <div class="wechat-header">
+                    <div class="wechat-header-left">
+                        <button class="wechat-back-btn" id="back-from-group-name">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    <div class="wechat-header-title">设置群聊名称</div>
+                    <div class="wechat-header-right"></div>
+                </div>
+                
+                <div class="wechat-content" style="background: #ededed; padding: 20px;">
+                    <div style="background: #fff; border-radius: 12px; padding: 25px;">
+                        <div style="font-size: 14px; color: #999; margin-bottom: 12px;">群聊名称</div>
+                        <input type="text" id="group-name-input" placeholder="输入群聊名称" 
+                               value="${defaultName}" maxlength="30" style="
+                            width: 100%;
+                            padding: 12px;
+                            border: 1.5px solid #e5e5e5;
+                            border-radius: 8px;
+                            font-size: 15px;
+                            box-sizing: border-box;
+                            margin-bottom: 15px;
+                        ">
+                        
+                        <div style="font-size: 12px; color: #999; margin-bottom: 20px;">
+                            成员：${members.map(([name]) => name).join('、')} (共${members.length}人)
+                        </div>
+                        
+                        <button id="confirm-create-group" style="
+                            width: 100%;
+                            padding: 14px;
+                            background: #07c160;
+                            color: #fff;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: 500;
+                            cursor: pointer;
+                        ">创建群聊</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.app.phoneShell.setContent(html);
+        
+        document.getElementById('back-from-group-name')?.addEventListener('click', () => {
+            this.showCreateGroupPage();
+        });
+        
+        document.getElementById('confirm-create-group')?.addEventListener('click', () => {
+            const groupName = document.getElementById('group-name-input').value.trim();
+            
+            if (!groupName) {
+                this.app.phoneShell.showNotification('提示', '请输入群聊名称', '⚠️');
+                return;
+            }
+            
+            // 创建群聊
+            const group = this.app.wechatData.createGroupChat({
+                name: groupName,
+                avatar: '👥',
+                members: members.map(([name]) => name)
+            });
+            
+            this.app.phoneShell.showNotification('创建成功', `已创建群聊：${groupName}`, '✅');
+            
+            setTimeout(() => {
+                // 打开群聊
+                this.app.currentChat = group;
+                this.app.currentView = 'chats';
+                this.app.render();
+            }, 1000);
+        });
+    }
