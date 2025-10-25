@@ -172,110 +172,6 @@ loadStyles() {
     text-align: center;
 }
 
-// 显示提示词编辑器
-showPromptEditor(app, feature) {
-    const promptManager = window.VirtualPhone?.promptManager;
-    const prompt = promptManager?.prompts[app]?.[feature];
-    
-    if (!prompt) return;
-    
-    const html = `
-        <div class="wechat-app">
-            <div class="wechat-header">
-                <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-editor">
-                        <i class="fa-solid fa-chevron-left"></i>
-                    </button>
-                </div>
-                <div class="wechat-header-title">编辑提示词</div>
-                <div class="wechat-header-right">
-                    <button class="wechat-header-btn" id="save-prompt" style="color: #07c160; font-size: 14px;">
-                        保存
-                    </button>
-                </div>
-            </div>
-            
-            <div class="wechat-content" style="background: #ededed; padding: 15px;">
-                <div style="background: #fff; border-radius: 12px; padding: 15px;">
-                    <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
-                        ${prompt.name}
-                    </div>
-                    <div style="font-size: 12px; color: #666; margin-bottom: 15px;">
-                        ${prompt.description}
-                    </div>
-                    
-                    <textarea id="prompt-editor" style="
-                        width: 100%;
-                        min-height: 300px;
-                        padding: 12px;
-                        border: 1px solid #e5e5e5;
-                        border-radius: 8px;
-                        font-size: 14px;
-                        font-family: monospace;
-                        resize: vertical;
-                        box-sizing: border-box;
-                    ">${prompt.content}</textarea>
-                    
-                    <div style="margin-top: 15px; display: flex; gap: 10px;">
-                        <button id="reset-prompt" style="
-                            flex: 1;
-                            padding: 10px;
-                            background: #f0f0f0;
-                            color: #666;
-                            border: none;
-                            border-radius: 6px;
-                            font-size: 14px;
-                            cursor: pointer;
-                        ">恢复默认</button>
-                        
-                        <button id="copy-prompt" style="
-                            flex: 1;
-                            padding: 10px;
-                            background: #f0f0f0;
-                            color: #666;
-                            border: none;
-                            border-radius: 6px;
-                            font-size: 14px;
-                            cursor: pointer;
-                        ">复制内容</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    this.phoneShell.setContent(html);
-    
-    // 返回按钮
-    document.getElementById('back-from-editor')?.addEventListener('click', () => {
-        this.showSettings();
-    });
-    
-    // 保存按钮
-    document.getElementById('save-prompt')?.addEventListener('click', () => {
-        const content = document.getElementById('prompt-editor').value;
-        promptManager?.updatePrompt(app, feature, content);
-        this.phoneShell.showNotification('保存成功', '提示词已更新', '✅');
-        setTimeout(() => this.showSettings(), 1000);
-    });
-    
-    // 恢复默认按钮
-    document.getElementById('reset-prompt')?.addEventListener('click', () => {
-        const defaultPrompts = promptManager?.getDefaultPrompts();
-        const defaultContent = defaultPrompts?.[app]?.[feature]?.content || '';
-        document.getElementById('prompt-editor').value = defaultContent;
-        this.phoneShell.showNotification('已恢复', '已恢复为默认提示词', '🔄');
-    });
-    
-    // 复制按钮
-    document.getElementById('copy-prompt')?.addEventListener('click', () => {
-        const textarea = document.getElementById('prompt-editor');
-        textarea.select();
-        document.execCommand('copy');
-        this.phoneShell.showNotification('已复制', '提示词已复制到剪贴板', '📋');
-    });
-}
-
 /* ========================================
    聊天列表样式
    ======================================== */
@@ -1522,6 +1418,110 @@ showPromptEditor(app, feature) {
         document.head.appendChild(style);
         console.log('✅ 微信样式已内联加载（优化版）');
     }
+}
+
+    // 显示提示词编辑器
+showPromptEditor(app, feature) {
+    const promptManager = window.VirtualPhone?.promptManager;
+    const prompt = promptManager?.prompts[app]?.[feature];
+    
+    if (!prompt) return;
+    
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-editor">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">编辑提示词</div>
+                <div class="wechat-header-right">
+                    <button class="wechat-header-btn" id="save-prompt" style="color: #07c160; font-size: 14px;">
+                        保存
+                    </button>
+                </div>
+            </div>
+            
+            <div class="wechat-content" style="background: #ededed; padding: 15px;">
+                <div style="background: #fff; border-radius: 12px; padding: 15px;">
+                    <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
+                        ${prompt.name}
+                    </div>
+                    <div style="font-size: 12px; color: #666; margin-bottom: 15px;">
+                        ${prompt.description}
+                    </div>
+                    
+                    <textarea id="prompt-editor" style="
+                        width: 100%;
+                        min-height: 300px;
+                        padding: 12px;
+                        border: 1px solid #e5e5e5;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-family: monospace;
+                        resize: vertical;
+                        box-sizing: border-box;
+                    ">${prompt.content}</textarea>
+                    
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button id="reset-prompt" style="
+                            flex: 1;
+                            padding: 10px;
+                            background: #f0f0f0;
+                            color: #666;
+                            border: none;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            cursor: pointer;
+                        ">恢复默认</button>
+                        
+                        <button id="copy-prompt" style="
+                            flex: 1;
+                            padding: 10px;
+                            background: #f0f0f0;
+                            color: #666;
+                            border: none;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            cursor: pointer;
+                        ">复制内容</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.phoneShell.setContent(html);
+    
+    // 返回按钮
+    document.getElementById('back-from-editor')?.addEventListener('click', () => {
+        this.showSettings();
+    });
+    
+    // 保存按钮
+    document.getElementById('save-prompt')?.addEventListener('click', () => {
+        const content = document.getElementById('prompt-editor').value;
+        promptManager?.updatePrompt(app, feature, content);
+        this.phoneShell.showNotification('保存成功', '提示词已更新', '✅');
+        setTimeout(() => this.showSettings(), 1000);
+    });
+    
+    // 恢复默认按钮
+    document.getElementById('reset-prompt')?.addEventListener('click', () => {
+        const defaultPrompts = promptManager?.getDefaultPrompts();
+        const defaultContent = defaultPrompts?.[app]?.[feature]?.content || '';
+        document.getElementById('prompt-editor').value = defaultContent;
+        this.phoneShell.showNotification('已恢复', '已恢复为默认提示词', '🔄');
+    });
+    
+    // 复制按钮
+    document.getElementById('copy-prompt')?.addEventListener('click', () => {
+        const textarea = document.getElementById('prompt-editor');
+        textarea.select();
+        document.execCommand('copy');
+        this.phoneShell.showNotification('已复制', '提示词已复制到剪贴板', '📋');
+    });
 }
 
     // 🔥 新增：批量添加联系人（支持AI生成的联系人）
