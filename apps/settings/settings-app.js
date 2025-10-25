@@ -215,41 +215,6 @@ const appNameColor = this.storage.get('phone-app-name-color', true) || '#ffffff'
                 </div>
             </div>
             
-            <!-- 提示词编辑器弹窗 -->
-            <div id="prompt-editor-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-                 background: rgba(0,0,0,0.8); z-index: 10000; overflow-y: auto;">
-                <div style="max-width: 600px; margin: 20px auto; background: #fff; border-radius: 12px; padding: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="margin: 0;">📝 手机互动提示词模板</h3>
-                        <button id="close-prompt-editor" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">提示词内容：</label>
-                        <textarea id="prompt-template" style="width: 100%; height: 300px; padding: 10px; 
-                                 border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px;">${this.getDefaultPrompt()}</textarea>
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px;">
-                        <button id="copy-prompt" class="setting-btn" style="flex: 1; background: #667eea; color: #fff;">
-                            <i class="fa-solid fa-copy"></i> 复制到剪贴板
-                        </button>
-                        <button id="save-prompt" class="setting-btn" style="flex: 1; background: #52c41a; color: #fff;">
-                            <i class="fa-solid fa-save"></i> 保存模板
-                        </button>
-                    </div>
-                    
-                    <div style="margin-top: 15px; padding: 10px; background: #f0f9ff; border-radius: 6px; font-size: 12px;">
-                        <strong>📌 使用步骤：</strong><br>
-                        1. 点击"复制到剪贴板"<br>
-                        2. 打开角色卡编辑器<br>
-                        3. 粘贴到"角色描述"或"场景"中<br>
-                        4. 保存角色卡
-                    </div>
-                </div>
-            </div>
-        `;
-        
         this.phoneShell.setContent(html);
         this.bindEvents();
     }
