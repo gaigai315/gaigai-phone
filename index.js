@@ -662,24 +662,70 @@ function init() {
                 const settingsApp = new SettingsApp(phoneShell, storage, settings);
                 settingsApp.render();
             } else if (appId === 'wechat') {
-    import('./apps/wechat/wechat-app.js').then(module => {
-        const wechatApp = new module.WechatApp(phoneShell, storage);
-        window.currentWechatApp = wechatApp;
-        window.VirtualPhone.wechatApp = wechatApp;
-        
-        // 🔥 新增：加载待处理的联系人
-        const pendingContacts = storage.get('pending-contacts') || [];
-        if (pendingContacts.length > 0 && wechatApp.addContacts) {
-            wechatApp.addContacts(pendingContacts);
-            storage.set('pending-contacts', []); // 清空
-            console.log(`📱 已加载 ${pendingContacts.length} 个待处理联系人`);
-        }
-        
-        wechatApp.render();
-    }).catch(err => {
-        console.error('加载微信APP失败:', err);
-        phoneShell?.showNotification('错误', '微信加载失败', '❌');
-    });
+    console.log('🔍 [调试] 开始加载微信APP...');
+    
+    import('./apps/wechat/wechat-app.js')
+        .then(module => {
+            console.log('✅ [调试] wechat-app.js 模块加载成功');
+            console.log('📦 [调试] module 内容:', module);
+            
+            try {
+                console.log('🏗️ [调试] 开始创建 WechatApp 实例...');
+                const wechatApp = new module.WechatApp(phoneShell, storage);
+                console.log('✅ [调试] WechatApp 实例创建成功');
+                
+                window.currentWechatApp = wechatApp;
+                window.VirtualPhone.wechatApp = wechatApp;
+                
+                // 🔥 新增：加载待处理的联系人
+                const pendingContacts = storage.get('pending-contacts') || [];
+                if (pendingContacts.length > 0 && wechatApp.addContacts) {
+                    wechatApp.addContacts(pendingContacts);
+                    storage.set('pending-contacts', []); // 清空
+                    console.log(`📱 已加载 ${pendingContacts.length} 个待处理联系人`);
+                }
+                
+                console.log('🎨 [调试] 开始渲染微信界面...');
+                wechatApp.render();
+                console.log('✅ [调试] 微信APP加载完成！');
+                
+            } catch (initError) {
+                console.error('❌ [调试] 创建 WechatApp 实例失败:');
+                console.error('错误类型:', initError.constructor.name);
+                console.error('错误消息:', initError.message);
+                console.error('错误堆栈:', initError.stack);
+                console.error('完整错误对象:', initError);
+                phoneShell?.showNotification('错误', '微信初始化失败: ' + initError.message, '❌');
+            }
+        })
+        .catch(importError => {
+            console.error('❌ [调试] 导入 wechat-app.js 失败:');
+            console.error('错误类型:', importError.constructor.name);
+            console.error('错误消息:', importError.message);
+            console.error('错误堆栈:', importError.stack);
+            console.error('完整错误对象:', importError);
+            
+            // 🔥 尝试逐个导入子模块，定位问题
+            console.log('🔍 [调试] 尝试单独导入子模块...');
+            
+            import('./apps/wechat/chat-view.js')
+                .then(() => console.log('✅ chat-view.js 加载成功'))
+                .catch(e => console.error('❌ chat-view.js 加载失败:', e.message));
+            
+            import('./apps/wechat/contacts-view.js')
+                .then(() => console.log('✅ contacts-view.js 加载成功'))
+                .catch(e => console.error('❌ contacts-view.js 加载失败:', e.message));
+            
+            import('./apps/wechat/moments-view.js')
+                .then(() => console.log('✅ moments-view.js 加载成功'))
+                .catch(e => console.error('❌ moments-view.js 加载失败:', e.message));
+            
+            import('./apps/wechat/wechat-data.js')
+                .then(() => console.log('✅ wechat-data.js 加载成功'))
+                .catch(e => console.error('❌ wechat-data.js 加载失败:', e.message));
+            
+            phoneShell?.showNotification('错误', '微信模块加载失败', '❌');
+        });
 } else {
                 phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
             }
