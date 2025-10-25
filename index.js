@@ -882,21 +882,22 @@ if (context && context.eventSource) {
 const storage = window.VirtualPhone?.storage;
 if (storage) {
     try {
-        // 🔥 直接从存储读取微信数据
-        const charId = context?.characterId || 'default';
-        const chatId = context?.chatId || 'default';
-        const storageKey = `wechat_data_${charId}_${chatId}`;
+        // 🔥 修复：使用正确的键名格式
+        const savedData = storage.get('wechat_data', false);
         
-        const savedData = storage.get(storageKey, false);
         if (savedData) {
+            console.log('📂 [手机活动] 成功读取微信数据，长度:', savedData.length);
+            
             const wechatDataParsed = JSON.parse(savedData);
             const allChats = wechatDataParsed.chats || [];
             
-            console.log('💬 微信聊天数量:', allChats.length);
+            console.log('💬 [手机活动] 微信聊天数量:', allChats.length);
             
             allChats.forEach(chat => {
                 const messages = wechatDataParsed.messages?.[chat.id] || [];
                 if (messages && messages.length > 0) {
+                    console.log(`📱 [手机活动] 聊天"${chat.name}"有 ${messages.length} 条消息`);
+                    
                     // 取每个聊天的最近10条消息
                     const recentMessages = messages.slice(-10);
                     
@@ -925,6 +926,9 @@ if (storage) {
                             case 'redpacket':
                                 content = `[红包 ¥${msg.amount}]`;
                                 break;
+                            case 'call_record':
+                                content = `[${msg.callType === 'video' ? '视频' : '语音'}通话 ${msg.duration}]`;
+                                break;
                             default:
                                 content = `[${msg.type}]`;
                         }
@@ -937,21 +941,22 @@ if (storage) {
                             content: content,
                             time: msg.time,
                             timestamp: msg.realTimestamp || Date.now(),
-                            tavernMessageIndex: msg.tavernMessageIndex
+                            tavernMessageIndex: msg.tavernMessageIndex !== undefined ? msg.tavernMessageIndex : 999999
                         });
                     });
                 }
             });
             
-            console.log('✅ 收集了微信消息:', phoneActivities.length, '条');
+            console.log('✅ [手机活动] 收集了微信消息:', phoneActivities.length, '条');
         } else {
-            console.log('📱 没有保存的微信数据');
+            console.log('📱 [手机活动] 没有保存的微信数据');
         }
     } catch (e) {
-        console.error('❌ 读取微信数据失败:', e);
+        console.error('❌ [手机活动] 读取微信数据失败:', e);
+        console.error('错误堆栈:', e.stack);
     }
 } else {
-    console.warn('⚠️ 无法访问storage');
+    console.warn('⚠️ [手机活动] 无法访问storage');
 }
                     
                     // ========================================
