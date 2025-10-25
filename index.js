@@ -10,7 +10,7 @@ import { PhoneStorage } from './config/storage.js';
 import { SettingsApp } from './apps/settings/settings-app.js';
 import { ImageUploadManager } from './apps/settings/image-upload.js';
 import { TimeManager } from './config/time-manager.js';
-
+import { PromptManager } from './config/prompt-manager.js';
 (function() {
     'use strict';
     
@@ -632,6 +632,7 @@ function init() {
     try {
         loadData();
         initColors();
+        const promptManager = new PromptManager(storage);
         createTopPanel();
         
         // 监听返回主页
@@ -1079,6 +1080,7 @@ sortedIndices.forEach(tavernIndex => {
     settings: settings,
     imageManager: new ImageUploadManager(storage),
     timeManager: timeManager,
+    promptManager: promptManager,  // ← 新增这行
     wechatApp: null,
     version: '1.0.0'
 };
