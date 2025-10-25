@@ -745,10 +745,20 @@ ${char.scenario ? `背景：${char.scenario.substring(0, 300)}` : ''}
     // ========================================
     const sections = [];
     
+    // 🔥🔥🔥 新增：优先添加基础提示词模板 🔥🔥🔥
+    if (chatPromptTemplate) {
+        sections.push(chatPromptTemplate);
+        sections.push('\n---\n');
+        console.log('✅ 已添加基础提示词模板');
+    }
+    
+    // 然后添加动态上下文信息
+    sections.push('## 📋 当前对话上下文');
+    sections.push('');
+    
     if (chatMode === 'main_char') {
         // 与主角色聊天
         sections.push(
-            '# 场景：微信聊天',
             `你现在扮演${contactName}，正在微信上和${userName}聊天。`,
             '',
             '## 角色信息',
@@ -758,48 +768,20 @@ ${char.scenario ? `背景：${char.scenario.substring(0, 300)}` : ''}
     } else if (chatMode === 'group') {
         // 群聊
         sections.push(
-            '# 场景：微信群聊',
             `这是一个名为"${contactName}"的微信群。`,
             `你需要扮演群里的一个或多个成员回复${userName}的消息。`,
-            '可以模拟多人对话，用"【名字】内容"格式区分不同人。',
             ''
         );
     } else {
-    // NPC聊天
-    sections.push(
-        '# 场景：微信聊天',
-        `你现在扮演${contactName}，正在微信上和${userName}聊天。`,
-        '',
-        '## 背景信息（所有角色）',
-        partnerInfo || `${contactName}是故事中的一个角色。根据上下文推测其身份和性格。`,
-        '',
-        '## ⚠️ 重要：你的身份锁定',
-        `虽然你了解上述所有角色的信息，但你必须明确：`,
-        '',
-        `【你是谁】`,
-        `你是 ${contactName} 本人`,
-        `用第一人称"我"来称呼自己`,
-        '',
-        `【你可以做什么】`,
-        `✅ 谈论你认识的人（家人、朋友、同事等）`,
-        `✅ 评价其他角色（基于${contactName}的立场）`,
-        `✅ 提到其他角色的名字和关系`,
-        '',
-        `【你不能做什么】`,
-        `❌ 用其他角色的性格、口气、立场说话`,
-        `❌ 混淆${contactName}和其他角色的身份`,
-        `❌ 说出${contactName}不应该知道的信息`,
-        '',
-        `【示例】`,
-        `如果你是陈聿：`,
-        `✅ "我妹妹陈舒然最近..."（可以提到）`,
-        `✅ "周应淮那家伙..."（可以评价）`,
-        `✅ 用陈聿的性格：玩世不恭、戏谑调侃`,
-        `❌ 用陈舒然的口气说话`,
-        `❌ 说"我哥哥陈聿..."（身份混淆）`,
-        ''
-    );
-}
+        // NPC聊天
+        sections.push(
+            `你现在扮演${contactName}，正在微信上和${userName}聊天。`,
+            '',
+            '## 背景信息',
+            partnerInfo || `${contactName}是故事中的一个角色。`,
+            ''
+        );
+    }
     
     // 添加用户信息
     if (userPersona) {
