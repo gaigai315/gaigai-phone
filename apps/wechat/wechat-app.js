@@ -172,6 +172,110 @@ loadStyles() {
     text-align: center;
 }
 
+// 显示提示词编辑器
+showPromptEditor(app, feature) {
+    const promptManager = window.VirtualPhone?.promptManager;
+    const prompt = promptManager?.prompts[app]?.[feature];
+    
+    if (!prompt) return;
+    
+    const html = `
+        <div class="wechat-app">
+            <div class="wechat-header">
+                <div class="wechat-header-left">
+                    <button class="wechat-back-btn" id="back-from-editor">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="wechat-header-title">编辑提示词</div>
+                <div class="wechat-header-right">
+                    <button class="wechat-header-btn" id="save-prompt" style="color: #07c160; font-size: 14px;">
+                        保存
+                    </button>
+                </div>
+            </div>
+            
+            <div class="wechat-content" style="background: #ededed; padding: 15px;">
+                <div style="background: #fff; border-radius: 12px; padding: 15px;">
+                    <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
+                        ${prompt.name}
+                    </div>
+                    <div style="font-size: 12px; color: #666; margin-bottom: 15px;">
+                        ${prompt.description}
+                    </div>
+                    
+                    <textarea id="prompt-editor" style="
+                        width: 100%;
+                        min-height: 300px;
+                        padding: 12px;
+                        border: 1px solid #e5e5e5;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-family: monospace;
+                        resize: vertical;
+                        box-sizing: border-box;
+                    ">${prompt.content}</textarea>
+                    
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button id="reset-prompt" style="
+                            flex: 1;
+                            padding: 10px;
+                            background: #f0f0f0;
+                            color: #666;
+                            border: none;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            cursor: pointer;
+                        ">恢复默认</button>
+                        
+                        <button id="copy-prompt" style="
+                            flex: 1;
+                            padding: 10px;
+                            background: #f0f0f0;
+                            color: #666;
+                            border: none;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            cursor: pointer;
+                        ">复制内容</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    this.phoneShell.setContent(html);
+    
+    // 返回按钮
+    document.getElementById('back-from-editor')?.addEventListener('click', () => {
+        this.showSettings();
+    });
+    
+    // 保存按钮
+    document.getElementById('save-prompt')?.addEventListener('click', () => {
+        const content = document.getElementById('prompt-editor').value;
+        promptManager?.updatePrompt(app, feature, content);
+        this.phoneShell.showNotification('保存成功', '提示词已更新', '✅');
+        setTimeout(() => this.showSettings(), 1000);
+    });
+    
+    // 恢复默认按钮
+    document.getElementById('reset-prompt')?.addEventListener('click', () => {
+        const defaultPrompts = promptManager?.getDefaultPrompts();
+        const defaultContent = defaultPrompts?.[app]?.[feature]?.content || '';
+        document.getElementById('prompt-editor').value = defaultContent;
+        this.phoneShell.showNotification('已恢复', '已恢复为默认提示词', '🔄');
+    });
+    
+    // 复制按钮
+    document.getElementById('copy-prompt')?.addEventListener('click', () => {
+        const textarea = document.getElementById('prompt-editor');
+        textarea.select();
+        document.execCommand('copy');
+        this.phoneShell.showNotification('已复制', '提示词已复制到剪贴板', '📋');
+    });
+}
+
 /* ========================================
    聊天列表样式
    ======================================== */
@@ -2007,6 +2111,9 @@ showEditProfile() {
 }
 
 showSettings() {
+    const promptManager = window.VirtualPhone?.promptManager;
+    const prompts = promptManager?.prompts?.wechat || {};
+    
     const html = `
         <div class="wechat-app">
             <div class="wechat-header">
@@ -2019,10 +2126,10 @@ showSettings() {
                 <div class="wechat-header-right"></div>
             </div>
             
-            <div class="wechat-content" style="background: #ededed; padding: 20px;">
-                <!-- 在线模式 -->
-                <div style="background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div class="wechat-content" style="background: #ededed;">
+                <!-- 基础设置 -->
+                <div style="background: #fff; border-radius: 12px; padding: 15px; margin: 15px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <div style="font-size: 16px; font-weight: 500; color: #000;">在线模式</div>
                             <div style="font-size: 12px; color: #999; margin-top: 4px;">开启后，手机消息会发送给AI</div>
@@ -2035,8 +2142,139 @@ showSettings() {
                     </div>
                 </div>
                 
+                <!-- 功能提示词设置 -->
+                <div style="background: #fff; border-radius: 12px; margin: 15px; padding: 15px;">
+                    <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 15px;">
+                        📝 功能提示词（按需启用）
+                    </div>
+                    
+                    <!-- 微信聊天 -->
+                    <div class="prompt-item" style="border-bottom: 1px solid #f0f0f0; padding-bottom: 12px; margin-bottom: 12px;">
+                        <div class="prompt-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;" 
+                             data-feature="chat">
+                            <div style="display: flex; align-items: center; flex: 1;">
+                                <i class="fa-solid fa-chevron-right prompt-arrow" 
+                                   style="color: #999; font-size: 12px; margin-right: 8px; transition: transform 0.2s;"></i>
+                                <span style="font-size: 15px;">${prompts.chat?.name || '💬 微信聊天'}</span>
+                            </div>
+                            <label class="toggle-switch" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="feature-toggle" data-feature="chat" 
+                                       ${prompts.chat?.enabled !== false ? 'checked' : ''}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="prompt-content" style="display: none; margin-top: 10px; padding-left: 20px;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                                ${prompts.chat?.description || '一对一聊天和群聊规则'}
+                            </div>
+                            <button class="edit-prompt-btn" data-feature="chat" style="
+                                padding: 6px 12px;
+                                background: #f0f0f0;
+                                border: none;
+                                border-radius: 4px;
+                                font-size: 12px;
+                                color: #333;
+                                cursor: pointer;
+                            ">编辑提示词</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 朋友圈 -->
+                    <div class="prompt-item" style="border-bottom: 1px solid #f0f0f0; padding-bottom: 12px; margin-bottom: 12px;">
+                        <div class="prompt-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;" 
+                             data-feature="moments">
+                            <div style="display: flex; align-items: center; flex: 1;">
+                                <i class="fa-solid fa-chevron-right prompt-arrow" 
+                                   style="color: #999; font-size: 12px; margin-right: 8px; transition: transform 0.2s;"></i>
+                                <span style="font-size: 15px;">${prompts.moments?.name || '📸 朋友圈'}</span>
+                            </div>
+                            <label class="toggle-switch" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="feature-toggle" data-feature="moments" 
+                                       ${prompts.moments?.enabled ? 'checked' : ''}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="prompt-content" style="display: none; margin-top: 10px; padding-left: 20px;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                                ${prompts.moments?.description || '朋友圈动态生成规则'}
+                            </div>
+                            <button class="edit-prompt-btn" data-feature="moments" style="
+                                padding: 6px 12px;
+                                background: #f0f0f0;
+                                border: none;
+                                border-radius: 4px;
+                                font-size: 12px;
+                                color: #333;
+                                cursor: pointer;
+                            ">编辑提示词</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 通话功能 -->
+                    <div class="prompt-item" style="border-bottom: 1px solid #f0f0f0; padding-bottom: 12px; margin-bottom: 12px;">
+                        <div class="prompt-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;" 
+                             data-feature="call">
+                            <div style="display: flex; align-items: center; flex: 1;">
+                                <i class="fa-solid fa-chevron-right prompt-arrow" 
+                                   style="color: #999; font-size: 12px; margin-right: 8px; transition: transform 0.2s;"></i>
+                                <span style="font-size: 15px;">${prompts.call?.name || '📞 语音/视频通话'}</span>
+                            </div>
+                            <label class="toggle-switch" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="feature-toggle" data-feature="call" 
+                                       ${prompts.call?.enabled !== false ? 'checked' : ''}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="prompt-content" style="display: none; margin-top: 10px; padding-left: 20px;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                                ${prompts.call?.description || '通话决策和对话规则'}
+                            </div>
+                            <button class="edit-prompt-btn" data-feature="call" style="
+                                padding: 6px 12px;
+                                background: #f0f0f0;
+                                border: none;
+                                border-radius: 4px;
+                                font-size: 12px;
+                                color: #333;
+                                cursor: pointer;
+                            ">编辑提示词</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 智能加载联系人 -->
+                    <div class="prompt-item">
+                        <div class="prompt-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;" 
+                             data-feature="loadContacts">
+                            <div style="display: flex; align-items: center; flex: 1;">
+                                <i class="fa-solid fa-chevron-right prompt-arrow" 
+                                   style="color: #999; font-size: 12px; margin-right: 8px; transition: transform 0.2s;"></i>
+                                <span style="font-size: 15px;">${prompts.loadContacts?.name || '🤖 智能加载联系人'}</span>
+                            </div>
+                            <label class="toggle-switch" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="feature-toggle" data-feature="loadContacts" 
+                                       ${prompts.loadContacts?.enabled !== false ? 'checked' : ''}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="prompt-content" style="display: none; margin-top: 10px; padding-left: 20px;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                                ${prompts.loadContacts?.description || '从角色卡生成联系人'}
+                            </div>
+                            <button class="edit-prompt-btn" data-feature="loadContacts" style="
+                                padding: 6px 12px;
+                                background: #f0f0f0;
+                                border: none;
+                                border-radius: 4px;
+                                font-size: 12px;
+                                color: #333;
+                                cursor: pointer;
+                            ">编辑提示词</button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 数据管理 -->
-                <div style="background: #fff3cd; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #ffc107;">
+                <div style="background: #fff3cd; border-radius: 12px; padding: 15px; margin: 15px; border: 1px solid #ffc107;">
                     <div style="font-size: 14px; font-weight: 600; color: #856404; margin-bottom: 12px;">
                         <i class="fa-solid fa-triangle-exclamation"></i> 数据管理
                     </div>
@@ -2052,7 +2290,6 @@ showSettings() {
                         cursor: pointer;
                         margin-bottom: 8px;
                     ">清空当前角色微信数据</button>
-                    <div style="font-size: 11px; color: #856404;">⚠️ 将删除所有聊天记录和联系人</div>
                 </div>
             </div>
         </div>
@@ -2066,24 +2303,61 @@ showSettings() {
     });
     
     // 在线模式开关
-    const checkbox = document.getElementById('online-mode-toggle');
-    checkbox?.addEventListener('change', () => {
+    document.getElementById('online-mode-toggle')?.addEventListener('change', (e) => {
         if (window.VirtualPhone?.settings) {
-            window.VirtualPhone.settings.onlineMode = checkbox.checked;
+            window.VirtualPhone.settings.onlineMode = e.target.checked;
             window.VirtualPhone.storage.saveSettings(window.VirtualPhone.settings);
             
             this.phoneShell.showNotification(
-                checkbox.checked ? '已开启' : '已关闭',
-                checkbox.checked ? '手机消息将发送给AI' : '手机消息不会发送给AI',
+                e.target.checked ? '已开启' : '已关闭',
+                e.target.checked ? '手机消息将发送给AI' : '手机消息不会发送给AI',
                 '✅'
             );
         }
     });
     
-// 清空数据按钮
-document.getElementById('clear-wechat-data')?.addEventListener('click', () => {
-    this.showClearDataConfirm();
-});
+    // 折叠展开功能
+    document.querySelectorAll('.prompt-header').forEach(header => {
+        header.addEventListener('click', (e) => {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('.prompt-arrow');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                arrow.style.transform = 'rotate(90deg)';
+            } else {
+                content.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        });
+    });
+    
+    // 功能开关切换
+    document.querySelectorAll('.feature-toggle').forEach(toggle => {
+        toggle.addEventListener('change', (e) => {
+            const feature = e.target.dataset.feature;
+            promptManager?.toggleFeature('wechat', feature);
+            
+            this.phoneShell.showNotification(
+                e.target.checked ? '已启用' : '已禁用',
+                `${feature} 功能${e.target.checked ? '已启用' : '已禁用'}`,
+                e.target.checked ? '✅' : '❌'
+            );
+        });
+    });
+    
+    // 编辑提示词按钮
+    document.querySelectorAll('.edit-prompt-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const feature = e.target.dataset.feature;
+            this.showPromptEditor('wechat', feature);
+        });
+    });
+    
+    // 清空数据按钮
+    document.getElementById('clear-wechat-data')?.addEventListener('click', () => {
+        this.showClearDataConfirm();
+    });
 }
 
     // 📋 显示智能加载联系人确认界面
