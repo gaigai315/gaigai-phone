@@ -887,13 +887,48 @@ if (context && context.eventSource) {
                     const messages = eventData.chat;
                     
                     if (messages && Array.isArray(messages)) {
-                        let phoneContent = `
+                       // 🔥 获取手机消息中的最新时间
+let latestPhoneTime = '未知';
+let latestPhoneDate = '未知';
+if (phoneActivities.length > 0) {
+    // 获取最后一条消息的时间
+    const lastActivity = phoneActivities[phoneActivities.length - 1];
+    latestPhoneTime = lastActivity.time;
+    
+    // 尝试从time-manager获取日期
+    const timeManager = window.VirtualPhone?.timeManager;
+    if (timeManager) {
+        try {
+            const currentTime = timeManager.getCurrentTime();
+            latestPhoneDate = currentTime.date || '2044年09月05日';
+        } catch (e) {
+            latestPhoneDate = '2044年09月05日';
+        }
+    }
+}
+
+let phoneContent = `
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║                          📱 手机微信消息记录                              ║
+║                    🚨🚨🚨 手机微信消息记录 🚨🚨🚨                         ║
+║                    【优先级：绝对最高】                                   ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-⚠️ 重要：以下是角色通过手机进行的真实对话
-⚠️ 这些消息的优先级 > 面对面对话，请据此生成回复
+🔴🔴🔴 当前剧情时间（强制更新）🔴🔴🔴
+
+**当前日期**: ${latestPhoneDate}
+**当前时刻**: ${latestPhoneTime}
+
+⚠️ 关键规则：
+1. 以上时间是**手机最后一条消息的时间**
+2. 这是当前剧情的**真实时间**，必须遵守
+3. 你的回复必须基于这个时间点（${latestPhoneTime}）
+4. 如果之前的剧情时间更早（如20:15），现在已经推进到 ${latestPhoneTime}
+
+---
+
+🔥 手机对话内容：
+以下是角色通过手机进行的【真实对话】
+这些消息反映角色的【真实位置和状态】
 
 `;
                         
@@ -903,10 +938,24 @@ if (context && context.eventSource) {
                         
                         phoneContent += `
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║  ⚠️  关键提醒：                                                           ║
-║  • 上述手机消息反映了角色的真实状态和位置                                ║
-║  • 如果消息显示角色在加班 → 角色【不在】用户身边                         ║
-║  • 所有时间均为剧情时间，严格遵守                                        ║
+║  🚨 回复规则（强制执行）                                                  ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+【时间同步规则】
+✅ 当前剧情时间已推进到: ${latestPhoneTime}
+✅ 你的回复必须使用这个时间（${latestPhoneTime}）或之后的时间
+❌ 严禁倒退时间（例如回到20:15）
+
+【状态同步规则】
+根据上述手机消息，角色的当前状态：
+• 最后互动时间: ${latestPhoneTime}
+• 最后对话内容: ${phoneActivities[phoneActivities.length - 1]?.content || '无'}
+
+【回复生成要求】
+1. 时间必须 >= ${latestPhoneTime}
+2. 状态必须符合手机消息中的描述
+3. 如果角色在手机里说"在外面"，正文不能让他突然出现在用户身边
+
 ╚═══════════════════════════════════════════════════════════════════════════╝
 `;
                         
