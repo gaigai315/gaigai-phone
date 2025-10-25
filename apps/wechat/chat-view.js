@@ -2100,6 +2100,115 @@ addCallRecord(callType, status, duration) {
     });
 }
 
+// 📞 语音通话（新增完整方法）
+async startVoiceCall() {
+    const contact = this.app.currentChat;
+    
+    // 呼叫界面
+    const callingHtml = `
+        <div class="wechat-app">
+            <div class="wechat-header" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);">
+                <div class="wechat-header-left"></div>
+                <div class="wechat-header-title" style="color: #fff;">语音通话</div>
+                <div class="wechat-header-right"></div>
+            </div>
+            
+            <div class="wechat-content" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px;">
+                <div style="width: 120px; height: 120px; border-radius: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 60px; margin-bottom: 30px; animation: pulse 2s infinite;">
+                    ${contact.avatar || '👤'}
+                </div>
+                
+                <div style="font-size: 26px; font-weight: 600; color: #fff; margin-bottom: 10px;">
+                    ${contact.name}
+                </div>
+                
+                <div id="call-status" style="font-size: 16px; color: rgba(255, 255, 255, 0.7); margin-bottom: 60px;">
+                    正在呼叫...
+                </div>
+                
+                <button id="cancel-call-btn" style="width: 70px; height: 70px; border-radius: 35px; background: #ff3b30; border: none; color: #fff; font-size: 28px; cursor: pointer;">
+                    <i class="fa-solid fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+        
+        <style>
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+            }
+        </style>
+    `;
+    
+    this.app.phoneShell.setContent(callingHtml);
+    
+    let isCancelled = false;
+    document.getElementById('cancel-call-btn')?.addEventListener('click', () => {
+        isCancelled = true;
+        this.addCallRecord('voice', 'cancelled', '0分0秒');
+        this.app.phoneShell.showNotification('已取消', '语音通话已取消', '📞');
+        setTimeout(() => this.app.render(), 500);
+    });
+    
+    try {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        if (isCancelled) return;
+        
+        const decision = await this.askAIForCallDecision('voice', contact.name);
+        
+        if (decision.action === 'reject') {
+            const statusDiv = document.getElementById('call-status');
+            if (statusDiv) {
+                statusDiv.textContent = '对方已拒绝';
+                statusDiv.style.color = '#ff3b30';
+            }
+            
+            this.addCallRecord('voice', 'rejected', '0分0秒');
+            
+            setTimeout(() => {
+                this.app.phoneShell.showNotification('通话结束', '对方拒绝了语音通话', '❌');
+                setTimeout(() => this.app.render(), 1000);
+            }, 2000);
+            
+            return;
+        }
+        
+        this.showVoiceCallInterface(contact);
+        
+    } catch (error) {
+        console.error('❌ 语音通话失败:', error);
+        this.app.phoneShell.showNotification('错误', '通话失败', '❌');
+        setTimeout(() => this.app.render(), 1000);
+    }
+}
+
+// 📹 视频通话中发送消息给AI
+async sendVideoCallMessageToAI(message, contactName, chatHistory) {
+    try {
+        const context = window.SillyTavern?.getContext?.();
+        if (!context) return '...';
+        
+        const prompt = `
+你正在与${context.name1 || '用户'}进行视频通话。
+作为${contactName}，请回复他的消息。
+
+通话历史：
+${chatHistory.map(h => `${h.from === 'me' ? context.name1 : contactName}: ${h.text}`).join('\n')}
+
+用户刚说：${message}
+
+请以${contactName}的身份简短回复（视频通话中的文字消息）：`;
+        
+        const aiResponse = await this.sendToAIHidden(prompt, context);
+        return aiResponse.trim();
+        
+    } catch (error) {
+        console.error('❌ 视频通话消息发送失败:', error);
+        return '...';
+    }
+}
+
 // 🔥 显示语音通话界面（接通后）
 showVoiceCallInterface(contact) {
     const html = `
