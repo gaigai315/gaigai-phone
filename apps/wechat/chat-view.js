@@ -2562,5 +2562,6 @@ async notifyAI(message) {
     } catch (error) {
         console.error('❌ 通知AI失败:', error);
     }
-  }
+}
+
 }
