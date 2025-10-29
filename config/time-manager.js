@@ -16,27 +16,50 @@ export class TimeManager {
         return this.getRealTime();
     }
     
-    // 🔹 情况2：从聊天记录提取时间（优先级最高）
+    // 🔥 新增：情况2：从手机微信获取最后消息时间（最高优先级）
+    const timeFromPhone = this.getPhoneLastMessageTime();
     const timeFromChat = this.extractTimeFromChat(context);
+    
+    // 🔥 比较手机时间和聊天记录时间，取最新的
+    if (timeFromPhone && timeFromChat) {
+        const phoneTimestamp = timeFromPhone.timestamp || 0;
+        const chatTimestamp = timeFromChat.timestamp || 0;
+        
+        if (phoneTimestamp > chatTimestamp) {
+            console.log('⏰ [时间管理] 使用手机最后消息时间:', timeFromPhone.time);
+            return timeFromPhone;
+        } else {
+            console.log('⏰ [时间管理] 使用聊天记录时间:', timeFromChat.time);
+            return timeFromChat;
+        }
+    }
+    
+    // 🔥 只有手机时间
+    if (timeFromPhone) {
+        console.log('⏰ [时间管理] 使用手机最后消息时间:', timeFromPhone.time);
+        return timeFromPhone;
+    }
+    
+    // 🔹 情况3：从聊天记录提取时间
     if (timeFromChat) {
         console.log('⏰ [时间管理] 从聊天记录提取:', timeFromChat);
         return timeFromChat;
     }
     
-    // 🔹 情况3：使用剧情初始时间（智能加载联系人时生成）
+    // 🔹 情况4：使用剧情初始时间（智能加载联系人时生成）
     const storyInitialTime = this.getStoryInitialTime();
     if (storyInitialTime) {
         return storyInitialTime;
     }
     
-    // 🔹 情况4：智能推断时间
+    // 🔹 情况5：智能推断时间
     const inferredTime = this.inferTimeFromLore(context);
     if (inferredTime) {
         console.log('⏰ [时间管理] 从设定推断:', inferredTime);
         return inferredTime;
     }
     
-    // 🔹 情况5：默认时间
+    // 🔹 情况6：默认时间
     console.log('⏰ [时间管理] 使用默认剧情时间');
     return this.getDefaultStoryTime();
 }
@@ -255,6 +278,61 @@ parseTimeToTimestamp(timeData) {
         const day = date.getDate();
         return `${year}年${month}月${day}日`;
     }
+
+    /**
+ * 🔥 新增：从手机微信获取最后一条消息的时间
+ */
+getPhoneLastMessageTime() {
+    try {
+        const storage = window.VirtualPhone?.storage;
+        if (!storage) return null;
+        
+        const wechatDataStr = storage.get('wechat_data', false);
+        if (!wechatDataStr) return null;
+        
+        const wechatData = JSON.parse(wechatDataStr);
+        
+        // 🔥 遍历所有聊天，找到最新的消息时间
+        let latestTime = null;
+        let latestTimestamp = 0;
+        
+        const messages = wechatData.messages || {};
+        
+        for (const chatId in messages) {
+            const chatMessages = messages[chatId];
+            if (chatMessages && chatMessages.length > 0) {
+                const lastMsg = chatMessages[chatMessages.length - 1];
+                
+                if (lastMsg.time && lastMsg.timestamp) {
+                    if (lastMsg.timestamp > latestTimestamp) {
+                        latestTimestamp = lastMsg.timestamp;
+                        latestTime = {
+                            time: lastMsg.time,
+                            date: lastMsg.date || this.formatDate(new Date(lastMsg.timestamp)),
+                            weekday: lastMsg.weekday || this.getWeekday(new Date(lastMsg.timestamp)),
+                            timestamp: lastMsg.timestamp,
+                            source: 'phone'
+                        };
+                    }
+                }
+            }
+        }
+        
+        return latestTime;
+        
+    } catch (e) {
+        console.warn('⚠️ 获取手机最后消息时间失败:', e);
+        return null;
+    }
+}
+
+/**
+ * 🔧 辅助方法：获取星期几
+ */
+getWeekday(date) {
+    const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    return weekdays[date.getDay()];
+}
     
     getContext() {
         return (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) 
