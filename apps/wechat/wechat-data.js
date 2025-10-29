@@ -131,37 +131,90 @@ export class WechatData {
         this.data.messages[chatId] = [];
     }
     
-    // 🔥 记录消息在酒馆对话中的位置
-try {
-    const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
-        ? SillyTavern.getContext() 
-        : null;
-    
-    if (context && context.chat && Array.isArray(context.chat)) {
-        // 🔥 统计真实对话数量（只计算用户和AI的对话）
-        let messageCount = 0;
-        for (let i = 0; i < context.chat.length; i++) {
-            if (context.chat[i].is_user !== undefined) {
-                messageCount++;
-            }
+    // 🔥🔥🔥 新增：自动时间递增逻辑 🔥🔥🔥
+    if (!message.time) {
+        // 如果消息没有指定时间，自动计算
+        const timeManager = window.VirtualPhone?.timeManager;
+        const currentStoryTime = timeManager 
+            ? timeManager.getCurrentStoryTime() 
+            : { time: '09:00', date: '2044年10月28日' };
+        
+        // 获取当前聊天的最后一条消息
+        const existingMessages = this.data.messages[chatId];
+        
+        if (existingMessages && existingMessages.length > 0) {
+            // 有历史消息，基于最后一条消息的时间+1分钟
+            const lastMsg = existingMessages[existingMessages.length - 1];
+            const lastTime = lastMsg.time || currentStoryTime.time;
+            
+            const [hour, minute] = lastTime.split(':').map(Number);
+            const totalMinutes = hour * 60 + minute + 1;
+            const newHour = Math.floor(totalMinutes / 60) % 24;
+            const newMinute = totalMinutes % 60;
+            
+            message.time = `${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`;
+            console.log(`⏰ [自动时间] 基于上条消息(${lastTime})推进 → ${message.time}`);
+            
+        } else {
+            // 没有历史消息，使用剧情时间
+            message.time = currentStoryTime.time;
+            console.log(`⏰ [自动时间] 首条消息，使用剧情时间 → ${message.time}`);
         }
+    }
+    
+    // 🔥 计算并存储时间戳
+    if (!message.timestamp) {
+        const timeManager = window.VirtualPhone?.timeManager;
+        const currentStoryTime = timeManager 
+            ? timeManager.getCurrentStoryTime() 
+            : { time: '09:00', date: '2044年10月28日' };
         
-        // 🔥 记录：这条手机消息发生在第几句对话之后
-        message.tavernMessageIndex = messageCount;
-        message.realTimestamp = Date.now();
+        const date = message.date || currentStoryTime.date;
+        const dateParts = date.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+        const timeParts = message.time.match(/(\d{1,2}):(\d{2})/);
         
-        console.log(`📍 [手机消息] 位置标记: 第${messageCount}句对话后 (酒馆消息总数=${context.chat.length})`);
-    } else {
-        // 如果无法获取上下文，标记为0（对话开始前）
+        if (dateParts && timeParts) {
+            const year = parseInt(dateParts[1]);
+            const month = parseInt(dateParts[2]) - 1;
+            const day = parseInt(dateParts[3]);
+            const hour = parseInt(timeParts[1]);
+            const minute = parseInt(timeParts[2]);
+            
+            message.timestamp = new Date(year, month, day, hour, minute).getTime();
+            message.date = date;
+            message.weekday = message.weekday || this.getWeekday(new Date(message.timestamp));
+        } else {
+            message.timestamp = Date.now();
+        }
+    }
+    
+    // 🔥 记录消息在酒馆对话中的位置
+    try {
+        const context = typeof SillyTavern !== 'undefined' && SillyTavern.getContext 
+            ? SillyTavern.getContext() 
+            : null;
+        
+        if (context && context.chat && Array.isArray(context.chat)) {
+            let messageCount = 0;
+            for (let i = 0; i < context.chat.length; i++) {
+                if (context.chat[i].is_user !== undefined) {
+                    messageCount++;
+                }
+            }
+            
+            message.tavernMessageIndex = messageCount;
+            message.realTimestamp = Date.now();
+            
+            console.log(`📍 [手机消息] 位置标记: 第${messageCount}句对话后 (时间=${message.time})`);
+        } else {
+            message.tavernMessageIndex = 0;
+            message.realTimestamp = Date.now();
+        }
+    } catch (e) {
+        console.error('❌ 记录索引失败:', e);
         message.tavernMessageIndex = 0;
         message.realTimestamp = Date.now();
-        console.warn('⚠️ 无法获取酒馆上下文，标记为对话开始前(0)');
     }
-} catch (e) {
-    console.error('❌ 记录索引失败:', e);
-    message.tavernMessageIndex = 0;
-    message.realTimestamp = Date.now();
-}
     
     this.data.messages[chatId].push(message);
     
@@ -172,6 +225,14 @@ try {
     }
     
     this.saveData();
+}
+
+/**
+ * 🔧 辅助方法：获取星期几
+ */
+getWeekday(date) {
+    const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    return weekdays[date.getDay()];
 }
     
     getContacts() {
