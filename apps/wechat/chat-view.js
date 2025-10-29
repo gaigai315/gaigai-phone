@@ -451,17 +451,12 @@ async sendMessage() {
     const userName = context?.name1 || '我';
     const userAvatar = this.app.wechatData.getUserInfo().avatar;
     
-    // 🎯 获取剧情时间
-const timeManager = window.VirtualPhone?.timeManager;
-const currentTime = timeManager 
-    ? timeManager.getCurrentStoryTime().time 
-    : new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-
+    // 🔥 不再手动指定时间，让 wechatData.addMessage 自动计算
 // 添加用户消息到微信
 this.app.wechatData.addMessage(this.app.currentChat.id, {
     from: 'me',
     content: this.inputText,
-    time: currentTime,  // ← 使用剧情时间
+    // ❌ 删除了 time: currentTime
     type: 'text',
     avatar: userAvatar
 });
@@ -557,33 +552,21 @@ async sendToAI(message) {
         const charName = context.name2 || this.app.currentChat.name;
         messages.forEach((msgText, index) => {
     setTimeout(() => {
-        // 使用剧情时间而不是现实时间
-        const timeManager = window.VirtualPhone?.timeManager;
-        const currentStoryTime = timeManager 
-            ? timeManager.getCurrentStoryTime() 
-            : { time: '21:30' };
-        
-        // 每条消息递增1分钟
-        const [hour, minute] = currentStoryTime.time.split(':').map(Number);
-        const totalMinutes = hour * 60 + minute + index + 1;
-        const msgHour = Math.floor(totalMinutes / 60) % 24;
-        const msgMinute = totalMinutes % 60;
-        const msgTime = `${String(msgHour).padStart(2, '0')}:${String(msgMinute).padStart(2, '0')}`;
-        
+        // 🔥 让 wechatData.addMessage 自动计算时间（基于上一条消息+1分钟）
         this.app.wechatData.addMessage(this.app.currentChat.id, {
             from: charName,
             content: msgText,
-            time: msgTime,  // 使用计算后的剧情时间
+            // ❌ 删除手动时间计算
             type: 'text',
             avatar: this.app.currentChat.avatar
         });
                 
-                // 最后一条消息时刷新界面
-                if (index === messages.length - 1) {
-                    this.app.render();
-                }
-            }, index * 800); // 每条消息间隔800ms
-        });
+        // 最后一条消息时刷新界面
+        if (index === messages.length - 1) {
+            this.app.render();
+        }
+    }, index * 800); // 每条消息间隔800ms
+});
         
         console.log('✅ 手机消息发送成功');
         
